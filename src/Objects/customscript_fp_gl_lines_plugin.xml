@@ -1,0 +1,13 @@
+<customglplugin scriptid="customscript_fp_gl_lines_plugin">
+  <description></description>
+  <isinactive>F</isinactive>
+  <loglevel>DEBUG</loglevel>
+  <name>FP GL Lines Plugin</name>
+  <notifyadmins>F</notifyadmins>
+  <notifyemails></notifyemails>
+  <notifyowner>T</notifyowner>
+  <notifyuser>F</notifyuser>
+  <runasrole></runasrole>
+  <scriptfile>[/SuiteScripts/FiscalPlatform/fp_gl_lines_plugin.js]</scriptfile>
+  <status>RELEASED</status>
+</customglplugin>

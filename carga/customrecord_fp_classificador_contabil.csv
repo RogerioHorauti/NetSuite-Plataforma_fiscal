@@ -1,0 +1,9 @@
+custrecord_fp_imposto_cc,custrecord_fp_natureza_cc,custrecord_fp_perna_cc,custrecord_fp_compoe_total_cc,custrecord_fp_conta_tributo_cc,custrecord_fp_contrapartida_origem_cc,custrecord_fp_contrapartida_cc,_referencia_nao_mapear
+ICMS,DEBITO,C,NAO,2310.7 ICMS on Sales - Payable,CONTA_FIXA,5010.4 ICMS - Sales Expense,tributo no passivo; contrapartida e a deducao de receita
+PIS,DEBITO,C,NAO,2310.10 PIS on Sales - Payable,CONTA_FIXA,5010.1 PIS - Sales Expense,
+COFINS,DEBITO,C,NAO,2310.2 COFINS on Sales - Payable,CONTA_FIXA,5010.2 COFINS - Sales Expense,
+IPI,DEBITO,C,SIM,2310.8 IPI on Sales - Payable,CONTA_DO_PARCEIRO,,IPI nao e receita (DL 1.598/77 art.12 4o): contrapartida e o a receber
+ICMS,RECUPERAVEL_INTEGRAL,D,NAO,1310.4 ICMS on Purchases - Credit,CONTA_DA_LINHA,,"expurgo do custo, CPC 16 R1 item 11"
+PIS,RECUPERAVEL_INTEGRAL,D,NAO,1310.8 PIS on Purchases - Credit,CONTA_DA_LINHA,,
+COFINS,RECUPERAVEL_INTEGRAL,D,NAO,1310.9 COFINS on Purchases - Credit,CONTA_DA_LINHA,,
+IPI,RECUPERAVEL_INTEGRAL,D,SIM,1310.5 IPI on Purchases - Credit,CONTA_DO_PARCEIRO,,"IPI veio por fora: contrapartida e o fornecedor, nao o estoque"

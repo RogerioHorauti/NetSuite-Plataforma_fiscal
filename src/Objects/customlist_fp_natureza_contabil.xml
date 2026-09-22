@@ -1,0 +1,56 @@
+<customlist scriptid="customlist_fp_natureza_contabil">
+  <description></description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>FP - Natureza Contábil</name>
+  <customvalues>
+    <customvalue scriptid="val_64527_t1647270_508">
+      <isinactive>F</isinactive>
+      <value>DEBITO</value>
+    </customvalue>
+    <customvalue scriptid="val_64528_t1647270_439">
+      <isinactive>F</isinactive>
+      <value>RECUPERAVEL_INTEGRAL</value>
+    </customvalue>
+    <customvalue scriptid="val_64529_t1647270_314">
+      <isinactive>F</isinactive>
+      <value>RECUPERAVEL_RATEIO</value>
+    </customvalue>
+    <customvalue scriptid="val_64530_t1647270_770">
+      <isinactive>F</isinactive>
+      <value>RECUPERAVEL_PRESUMIDO</value>
+    </customvalue>
+    <customvalue scriptid="val_64531_t1647270_171">
+      <isinactive>F</isinactive>
+      <value>CUSTO</value>
+    </customvalue>
+    <customvalue scriptid="val_64532_t1647270_873">
+      <isinactive>F</isinactive>
+      <value>SUSPENSO</value>
+    </customvalue>
+    <customvalue scriptid="val_64533_t1647270_679">
+      <isinactive>F</isinactive>
+      <value>DIFERIDO</value>
+    </customvalue>
+    <customvalue scriptid="val_64534_t1647270_841">
+      <isinactive>F</isinactive>
+      <value>RETIDO_FONTE</value>
+    </customvalue>
+    <customvalue scriptid="val_64535_t1647270_127">
+      <isinactive>F</isinactive>
+      <value>ST_A_RECOLHER</value>
+    </customvalue>
+    <customvalue scriptid="val_64536_t1647270_441">
+      <isinactive>F</isinactive>
+      <value>ST_JA_RECOLHIDO</value>
+    </customvalue>
+    <customvalue scriptid="val_64537_t1647270_848">
+      <isinactive>F</isinactive>
+      <value>ESTORNO_DEBITO</value>
+    </customvalue>
+    <customvalue scriptid="val_64538_t1647270_104">
+      <isinactive>F</isinactive>
+      <value>ESTORNO_ST</value>
+    </customvalue>
+  </customvalues>
+</customlist>

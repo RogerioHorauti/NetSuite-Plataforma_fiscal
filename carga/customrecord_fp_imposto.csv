@@ -1,0 +1,32 @@
+Name,custrecord_fp_codigo_impo,custrecord_fp_esfera_impo,custrecord_fp_reforma_impo,custrecord_fp_descricao_impo
+ICMS,ICMS,Estadual,,Imposto sobre Circulação de Mercadorias e Serviços. Competência estadual.
+ICMS Substituição Tributária,ICMS_ST,Estadual,,ICMS retido antecipadamente pelo substituto tributário.
+ICMS DIFAL,ICMS_DIFAL,Estadual,,Diferencial de alíquota nas operações interestaduais para consumidor final.
+FCP — Fundo de Combate à Pobreza,FCP,Estadual,,Adicional de até 2% sobre o ICMS em operações com produtos sujeitos ao ST.
+FCP-ST,FCP_ST,Estadual,,FCP retido por substituição tributária.
+IPI,IPI,Federal,,Imposto sobre Produtos Industrializados. Competência federal.
+PIS,PIS,Federal,,"Programa de Integração Social. Cumulativo 0,65% ou não-cumulativo 1,65%."
+COFINS,COFINS,Federal,,"Contribuição para o Financiamento da Seguridade Social. 3% ou 7,6%."
+ISS / ISSQN,ISS,Municipal,,Imposto Sobre Serviços. Competência municipal. Alíquota de 2% a 5%.
+ISS Retido na Fonte,ISS_RETIDO,Municipal,,ISS retido pelo tomador do serviço.
+IPI-Importação,IPI_IMP,Federal,,IPI incidente no desembaraço aduaneiro (base = aduaneiro + II).
+ICMS-Importação,ICMS_IMP,Estadual,,"ICMS incidente na importação, cálculo por dentro (base inclui II e IPI)."
+II — Imposto de Importação,II,Federal,,
+PIS-Importação,PIS_IMP,Federal,,
+COFINS-Importação,COFINS_IMP,Federal,,
+Taxa Siscomex,TX_SISCOMEX,Federal,,
+AFRMM — Ad. Frete Marinha Mercante,AFRMM,Federal,,
+DAS (Simples Nacional),DAS,Federal,,Documento de Arrecadacao do Simples Nacional
+CBS-Importação,CBS_IMP,Federal,,
+IBS-Importação,IBS_ESTADUAL_IMP,Estadual,,"IBS Estadual na importação (LC 214/2025, arts. 69 e 71) — cinde o IBS_IMP, que dobrava os dois entes num código só"
+IBS-Importação,IBS_IMP,Estadual,,
+IBS-Importação,IBS_MUNICIPAL_IMP,Estadual,,"IBS Municipal na importação (LC 214/2025, arts. 69 e 71) — cinde o IBS_IMP, que dobrava os dois entes num código só"
+CBS — Contribuição sobre Bens e Serviços,CBS,Federal,LC 214,Substitui PIS e COFINS. Competência federal. Vigência progressiva a partir de 2026.
+IBS Estadual — Imposto sobre Bens e Serviços,IBS_ESTADUAL,Estadual,LC 214,"Parcela estadual do IBS, que substituirá o ICMS. Vigência progressiva a partir de 2029."
+IBS Municipal — Imposto sobre Bens e Serviços,IBS_MUNICIPAL,Municipal,LC 214,"Parcela municipal do IBS, que substituirá o ISS."
+IS — Imposto Seletivo,IS,Federal,LC 214,Incide sobre produtos prejudiciais à saúde ou ao meio ambiente.
+IRRF — Imposto de Renda Retido na Fonte,IRRF,Federal,,Retenção de IR sobre pagamentos a PF ou PJ conforme tabela progressiva.
+INSS Retido,INSS,Federal,,Contribuição previdenciária retida na fonte — 11% sobre serviços.
+CSLL Retida,CSLL,Federal,,Contribuição Social sobre Lucro Líquido retida na fonte.
+PIS Retido na Fonte,PIS_RETIDO,Federal,,"PIS retido sobre pagamentos a prestadores de serviços — 0,65%."
+COFINS Retida na Fonte,COFINS_RETIDO,Federal,,COFINS retida sobre pagamentos a prestadores de serviços — 3%.

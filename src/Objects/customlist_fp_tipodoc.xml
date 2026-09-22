@@ -1,0 +1,34 @@
+<customlist scriptid="customlist_fp_tipodoc">
+  <description>Codigo do catalogo de tipo de documento do FiscalPlatform</description>
+  <isinactive>F</isinactive>
+  <ismatrixoption>F</ismatrixoption>
+  <isordered>T</isordered>
+  <name>FP - Tipo de Documento Fiscal</name>
+  <customvalues>
+    <customvalue scriptid="val_fp_tipodoc_nfe">
+      <abbreviation>NFE</abbreviation>
+      <isinactive>F</isinactive>
+      <value>NFE</value>
+    </customvalue>
+    <customvalue scriptid="val_fp_tipodoc_nfce">
+      <abbreviation>NFCE</abbreviation>
+      <isinactive>F</isinactive>
+      <value>NFCE</value>
+    </customvalue>
+    <customvalue scriptid="val_fp_tipodoc_nfse">
+      <abbreviation>NFSE</abbreviation>
+      <isinactive>F</isinactive>
+      <value>NFSE</value>
+    </customvalue>
+    <customvalue scriptid="val_fp_tipodoc_cte">
+      <abbreviation>CTE</abbreviation>
+      <isinactive>F</isinactive>
+      <value>CTE</value>
+    </customvalue>
+    <customvalue scriptid="val_fp_tipodoc_mdfe">
+      <abbreviation>MDFE</abbreviation>
+      <isinactive>F</isinactive>
+      <value>MDFE</value>
+    </customvalue>
+  </customvalues>
+</customlist>

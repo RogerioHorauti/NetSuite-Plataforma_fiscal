@@ -1,0 +1,20 @@
+<customlist scriptid="customlist_fp_origem_conta">
+  <description></description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>FP - Origem da Conta</name>
+  <customvalues>
+    <customvalue scriptid="val_origem_conta_1">
+      <isinactive>F</isinactive>
+      <value>CONTA_FIXA</value>
+    </customvalue>
+    <customvalue scriptid="val_origem_conta_2">
+      <isinactive>F</isinactive>
+      <value>CONTA_DA_LINHA</value>
+    </customvalue>
+    <customvalue scriptid="val_origem_conta_3">
+      <isinactive>F</isinactive>
+      <value>CONTA_DO_PARCEIRO</value>
+    </customvalue>
+  </customvalues>
+</customlist>

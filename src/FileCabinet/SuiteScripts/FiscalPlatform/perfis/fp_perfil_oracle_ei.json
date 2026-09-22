@@ -1,0 +1,133 @@
+{
+  "perfil": "oracle_ei",
+  "descricao": "Reaproveitamento dos scriptids do SuiteApp Electronic Invoicing da Oracle (bundle 436209 / com.netsuite.electronicinvoicing). Alvo: cliente que troca o bundle da Oracle pelo nosso e não pode perder saved search, relatório, formulário, workflow e integração que apontam para esses ids.",
+
+  "_medicao": {
+    "quando": "2026-09-04",
+    "como": "unzip de 'Bundle 436209.zip' (~/Downloads/suitesuccess) e extração dos scriptids por grep no conteúdo do bundle",
+    "raiz_do_zip": "com.netsuite.electronicinvoicing/",
+    "confianca": [
+      "ALTA para a EXISTÊNCIA do scriptid: ele aparece no fonte do próprio bundle.",
+      "NÃO MEDIDO: tipo do campo (Free-Form Text × List/Record × Document), tamanho, se é gravável",
+      "por script de terceiro, e o internal id de cada valor de lista.",
+      "",
+      "⚠ ANTES DE ATIVAR ESTE PERFIL, conferir na conta, campo por campo: Customization > Lists,",
+      "Records & Fields > Transaction Body Fields, e Records Browser da versão da conta. Campo",
+      "List/Record recebendo string nossa GRAVA E NÃO RECLAMA — e a saved search do cliente não",
+      "acha nada. É a falha mais cara desta camada inteira."
+    ]
+  },
+
+  "deteccao": {
+    "bundleIds": ["436209"],
+    "suiteAppIds": ["com.netsuite.electronicinvoicing"],
+    "assinatura": {
+      "tipo": "customrecord",
+      "id": "customrecord_psg_ei_standards"
+    },
+    "_nota_assinatura": [
+      "A assinatura é um CUSTOM RECORD TYPE e não um campo: record type é o que o SuiteApp cria e",
+      "mantém entre versões, campo entra e sai de release.",
+      "customrecord_psg_ei_standards e não customrecord_psg_ei_inbound_edoc porque o segundo é o",
+      "próprio registro que mapeamos em DOC_ENTRADA — sonda e alvo não devem ser a mesma coisa.",
+      "",
+      "NÃO existe API suportada de SuiteScript que liste bundle instalado por número. O 436209 e o",
+      "application id ficam aqui como DOCUMENTAÇÃO de qual SuiteApp este perfil espelha; a detecção",
+      "efetiva é a sonda acima."
+    ]
+  },
+
+  "transacao": {
+    "DOC_NUMERO": "custbody_fiscal_doc_number",
+    "DOC_SERIE": "custbody_fiscal_doc_series",
+    "DOC_STATUS": "custbody_psg_ei_status",
+    "DOC_XML": "custbody_psg_ei_certified_edoc",
+    "DOC_DANFE": "custbody_edoc_generated_pdf",
+
+    "NATUREZA": "custbody_operation_nature",
+    "FRETE_MODALIDADE": "custbody_freight_mode",
+
+    "ICMS_TOTAL": "custbody_icms_total",
+    "ICMS_BASE": "custbody_icms_taxbase",
+    "ICMS_ST_TOTAL": "custbody_icms_st_total",
+    "ICMS_ST_BASE": "custbody_icms_st_taxbase",
+    "IPI_TOTAL": "custbody_ipi_total",
+    "PIS_TOTAL": "custbody_pis_total",
+    "COFINS_TOTAL": "custbody_cofins_total",
+    "NF_TOTAL": "custbody_nfe_total",
+    "PRODUTOS_TOTAL": "custbody_prod_svc_total",
+    "FRETE_TOTAL": "custbody_freight_total",
+    "SEGURO_TOTAL": "custbody_insurance_total",
+    "DESCONTO_TOTAL": "custbody_discount_total",
+    "OUTRAS_DESPESAS_TOTAL": "custbody_other_accessory_total"
+  },
+
+  "linha": {},
+
+  "item": {},
+
+  "registros": {
+    "DOC_ENTRADA": "customrecord_psg_ei_inbound_edoc"
+  },
+
+  "valores": {
+    "DOC_STATUS": {
+      "_PENDENTE_DE_MEDICAO": [
+        "custbody_psg_ei_status no Electronic Invoicing é campo de STATUS de e-document, e o",
+        "vocabulário dele é do fluxo DELE (Ready for Sending / Sent / Certified / ...), não do",
+        "nosso (RASCUNHO / AUTORIZADA / REJEITADA / CANCELADA).",
+        "",
+        "PREENCHER com o internal id de cada valor, lido na conta, ANTES de ativar o perfil:",
+        "  Customization > Lists, Records & Fields > Transaction Body Fields > custbody_psg_ei_status",
+        "  → ver o List/Record de origem e listar os valores.",
+        "",
+        "Enquanto esta seção estiver com _PENDENTE_DE_MEDICAO, DOC_STATUS deve ficar em",
+        "somenteLeitura (já está): melhor não gravar do que gravar um valor que o campo não aceita."
+      ]
+    }
+  },
+
+  "somenteLeitura": [
+    "DOC_STATUS"
+  ],
+  "_nota_somenteLeitura": [
+    "DOC_STATUS entra aqui por DOIS motivos independentes, e cada um bastaria:",
+    "",
+    "1. o vocabulário de valor ainda não foi medido (ver `valores` acima);",
+    "2. o Electronic Invoicing TEM SCRIPT PRÓPRIO escrevendo neste campo. Campo em disputa entre",
+    "   dois bundles perde dado, e quem ganha depende de ordem de execução de User Event — que",
+    "   não é nossa para controlar. Nosso status canônico fica no DOC_STATUS do perfil original",
+    "   (custbody_fp_status), que o overlay parcial resolve sozinho.",
+    "",
+    "Regra geral para esta lista: campo do outro bundle que o outro bundle AINDA escreve é",
+    "somente-leitura para nós. Reaproveitar id serve para o acervo do cliente continuar lendo —",
+    "não para os dois bundles brigarem pela escrita."
+  ],
+
+  "naoMapeado": [
+    "TIPODOC",
+    "DOC_CHAVE",
+    "DOC_CSTAT",
+    "DOC_XMOTIVO",
+    "DOC_PROTOCOLO",
+    "DOC_UUID",
+    "DOC_IDEXTERNO",
+    "SIM_STATUS",
+    "SIM_RESUMO",
+    "SIM_PAYLOAD",
+    "CORRID"
+  ],
+  "_nota_naoMapeado": [
+    "MEDIDO: o Electronic Invoicing (436209) NÃO traz campo de chave de acesso de 44 dígitos, nem",
+    "cStat, nem xMotivo, nem protocolo. Ele é o motor de e-document genérico (UBL, Peppol) — a",
+    "parte especificamente brasileira da chave/protocolo mora no com.netsuite.brazillocalization,",
+    "que é outro perfil (fp_perfil_oracle_brl.json, ainda não escrito).",
+    "",
+    "Todas as chaves desta lista resolvem para o id do perfil original, automaticamente, pelo",
+    "overlay parcial do fp_fields.js. Elas estão listadas aqui como DOCUMENTAÇÃO — para o próximo",
+    "leitor não procurar um mapeamento que deliberadamente não existe.",
+    "",
+    "CORRID e SIM_* nunca serão mapeadas em perfil nenhum: são mecanismo nosso (mensagem síncrona",
+    "e prova do payload enviado), não têm equivalente em bundle de terceiro, e não deveriam ter."
+  ]
+}

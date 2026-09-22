@@ -1,0 +1,5 @@
+<subtab scriptid="custtab_fp_fiscal">
+  <parent></parent>
+  <tabtype>TRANSACTION</tabtype>
+  <title>FiscalPlatform</title>
+</subtab>

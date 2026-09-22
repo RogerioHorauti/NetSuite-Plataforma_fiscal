@@ -1,0 +1,20 @@
+<customlist scriptid="customlist_fp_sim_nao_indif">
+  <description></description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>FP - Sim / Não / Indiferente</name>
+  <customvalues>
+    <customvalue scriptid="val_sim_nao_indif_1">
+      <isinactive>F</isinactive>
+      <value>SIM</value>
+    </customvalue>
+    <customvalue scriptid="val_sim_nao_indif_2">
+      <isinactive>F</isinactive>
+      <value>NAO</value>
+    </customvalue>
+    <customvalue scriptid="val_sim_nao_indif_3">
+      <isinactive>F</isinactive>
+      <value>INDIFERENTE</value>
+    </customvalue>
+  </customvalues>
+</customlist>
