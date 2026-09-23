@@ -29,7 +29,6 @@
     "DOC_CSTAT": "custbody_fp_cstat",
     "DOC_XMOTIVO": "custbody_fp_xmotivo",
     "DOC_PROTOCOLO": "custbody_fp_protocolo",
-    "DOC_UUID": "custbody_fp_uuid",
     "DOC_IDEXTERNO": "custbody_fp_idexterno",
     "DOC_XML": "custbody_fp_xml",
     "DOC_ENTRADA_SAIDA": "custbody_fp_entrada_saida",

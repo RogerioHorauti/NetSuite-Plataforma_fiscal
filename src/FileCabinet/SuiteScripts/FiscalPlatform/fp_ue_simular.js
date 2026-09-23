@@ -230,7 +230,7 @@ define([
    *
    * Por que esses dois e não os outros: são o que o usuário DECLARA — o dado que só o ERP tem.
    * Ficam na aba principal, ao lado dos campos que ele já preenche, sem troca de aba. Todo o
-   * RETORNO (chave, número, série, status, cStat, xMotivo, protocolo, uuid, XML, DANFE, simulação)
+   * RETORNO (chave, número, série, status, cStat, xMotivo, protocolo, XML, DANFE, simulação)
    * mora no subtab `custtab_fp_fiscal` por atribuição declarativa no XML — é consulta, não
    * digitação, e não disputa espaço com o cabeçalho da nota.
    *

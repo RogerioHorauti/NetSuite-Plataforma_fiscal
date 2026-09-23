@@ -34,7 +34,7 @@
  *
  *   · `custbody_fp_tipodoc` e `custbody_fp_natureza` → `<subtab></subtab>` vazio, posicionados
  *     aqui logo depois do `memo`. São DECLARAÇÃO: o usuário digita, e tem de ver sem trocar de aba.
- *   · chave, número, série, status, cStat, xMotivo, protocolo, uuid, XML, DANFE, sim_* →
+ *   · chave, número, série, status, cStat, xMotivo, protocolo, XML, DANFE, sim_* →
  *     `<subtab>[scriptid=custtab_fp_fiscal]</subtab>`. São RETORNO: consulta, não digitação.
  */
 define(['N/ui/serverWidget', 'N/log'], function (serverWidget, log) {
