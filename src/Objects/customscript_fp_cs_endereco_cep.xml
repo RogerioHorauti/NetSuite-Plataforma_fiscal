@@ -1,0 +1,10 @@
+<clientscript scriptid="customscript_fp_cs_endereco_cep">
+  <description>Preenche logradouro, bairro, cidade, UF e codigo IBGE a partir do CEP. Anexar ao Custom Address Form em Customization &gt; Forms &gt; Address Forms.</description>
+  <isinactive>F</isinactive>
+  <name>FP CEP no Endereco</name>
+  <notifyadmins>F</notifyadmins>
+  <notifyemails></notifyemails>
+  <notifyowner>T</notifyowner>
+  <notifyuser>F</notifyuser>
+  <scriptfile>[/SuiteScripts/FiscalPlatform/fp_cs_endereco_cep.js]</scriptfile>
+</clientscript>

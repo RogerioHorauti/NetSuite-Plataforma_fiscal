@@ -16,7 +16,7 @@
   <help></help>
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
-  <label>FP - client_id OAuth</label>
+  <label>client_id OAuth</label>
   <linktext></linktext>
   <maxlength>200</maxlength>
   <maxvalue></maxvalue>

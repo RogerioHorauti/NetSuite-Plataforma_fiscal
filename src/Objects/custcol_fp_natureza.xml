@@ -1,36 +1,42 @@
-<othercustomfield scriptid="custrecord_fp_conta_estorno_contra">
+<transactioncolumncustomfield scriptid="custcol_fp_natureza">
   <accesslevel>2</accesslevel>
   <applyformatting>F</applyformatting>
-  <checkspelling>F</checkspelling>
+  <colexpense>F</colexpense>
+  <colgrouponinvoices>F</colgrouponinvoices>
+  <colitemfulfillment>T</colitemfulfillment>
+  <colitemreceipt>T</colitemreceipt>
+  <coljournal>F</coljournal>
+  <colkititem>F</colkititem>
+  <colopportunity>F</colopportunity>
+  <colpurchase>T</colpurchase>
+  <colsale>T</colsale>
+  <coltransferorder>T</coltransferorder>
   <defaultchecked>F</defaultchecked>
   <defaultselection></defaultselection>
   <defaultvalue></defaultvalue>
-  <description>A outra perna do estorno. Escolha contabil, nao do codigo: o plug-in nao adivinha para onde devolver o valor que o motor nativo tirou.</description>
+  <description>Natureza desta linha, sobrepondo a do cabecalho. Precedencia do motor: linha declarada > cabecalho declarado > resolvedor de CFOP — e cabecalho NAO silencia o resolvedor nas linhas que calaram.</description>
   <displayheight></displayheight>
   <displaytype>NORMAL</displaytype>
   <displaywidth></displaywidth>
   <dynamicdefault></dynamicdefault>
   <encryptatrest>F</encryptatrest>
   <fieldtype>SELECT</fieldtype>
-  <globalsearch>F</globalsearch>
   <help></help>
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
-  <label>Conta que Recebe o Estorno</label>
+  <label>Natureza da Operação</label>
   <linktext></linktext>
   <maxlength></maxlength>
   <maxvalue></maxvalue>
   <minvalue></minvalue>
   <onparentdelete></onparentdelete>
-  <rectype>-117</rectype>
   <searchcomparefield></searchcomparefield>
   <searchdefault></searchdefault>
   <searchlevel>2</searchlevel>
-  <selectrecordtype>-112</selectrecordtype>
+  <selectrecordtype>[scriptid=customrecord_fp_natureza_operacao]</selectrecordtype>
   <showhierarchy>F</showhierarchy>
-  <showinlist>F</showinlist>
   <sourcefilterby></sourcefilterby>
   <sourcefrom></sourcefrom>
   <sourcelist></sourcelist>
   <storevalue>T</storevalue>
-</othercustomfield>
+</transactioncolumncustomfield>

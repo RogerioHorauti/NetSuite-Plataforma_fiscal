@@ -1,11 +1,18 @@
-<othercustomfield scriptid="custrecord_fp_api_secret">
+<itemcustomfield scriptid="custitem_fp_ncm">
   <accesslevel>2</accesslevel>
+  <appliestogroup>F</appliestogroup>
+  <appliestoinventory>T</appliestoinventory>
+  <appliestoitemassembly>T</appliestoitemassembly>
+  <appliestokit>T</appliestokit>
+  <appliestononinventory>T</appliestononinventory>
+  <appliestoothercharge>F</appliestoothercharge>
+  <appliestoservice>F</appliestoservice>
   <applyformatting>F</applyformatting>
   <checkspelling>F</checkspelling>
   <defaultchecked>F</defaultchecked>
   <defaultselection></defaultselection>
   <defaultvalue></defaultvalue>
-  <description>Script id do segredo em Setup > Company > Secrets Management. Guarda a REFERENCIA, nunca o valor: client_secret em campo texto e credencial em claro.</description>
+  <description>NCM do produto, 8 digitos. O motor recusa a linha sem ele: "A linha nao informou ncm nem codigoServicoLc116". E cadastro do produto, nao regra fiscal — descreve a mercadoria, nao decide tributo.</description>
   <displayheight></displayheight>
   <displaytype>NORMAL</displaytype>
   <displaywidth></displaywidth>
@@ -16,13 +23,14 @@
   <help></help>
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
-  <label>Script Id do Secret</label>
+  <isparent>F</isparent>
+  <label>NCM</label>
   <linktext></linktext>
-  <maxlength>100</maxlength>
+  <maxlength>10</maxlength>
   <maxvalue></maxvalue>
   <minvalue></minvalue>
   <onparentdelete></onparentdelete>
-  <rectype>-117</rectype>
+  <parentsubtab></parentsubtab>
   <searchcomparefield></searchcomparefield>
   <searchdefault></searchdefault>
   <searchlevel>2</searchlevel>
@@ -33,4 +41,5 @@
   <sourcefrom></sourcefrom>
   <sourcelist></sourcelist>
   <storevalue>T</storevalue>
-</othercustomfield>
+  <subtab>[scriptid=custtab_fp_fiscal_item]</subtab>
+</itemcustomfield>

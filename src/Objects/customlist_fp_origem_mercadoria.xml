@@ -1,0 +1,44 @@
+<customlist scriptid="customlist_fp_origem_mercadoria">
+  <description>Tabela A do CST de ICMS. O CODIGO abre o valor e e o que vai no payload (origemProduto, validado por ORIGENS_TABELA_A no DTO); a descricao esta junto porque quem preenche o cadastro do item precisa escolher certo.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>FP - Origem da Mercadoria</name>
+  <customvalues>
+    <customvalue scriptid="val_origem_merc_0">
+      <isinactive>F</isinactive>
+      <value>0 - Nacional, exceto as indicadas nos códigos 3 a 5 e 8</value>
+    </customvalue>
+    <customvalue scriptid="val_origem_merc_1">
+      <isinactive>F</isinactive>
+      <value>1 - Estrangeira - Importação direta, exceto a do código 6</value>
+    </customvalue>
+    <customvalue scriptid="val_origem_merc_2">
+      <isinactive>F</isinactive>
+      <value>2 - Estrangeira - Adquirida no mercado interno, exceto a do código 7</value>
+    </customvalue>
+    <customvalue scriptid="val_origem_merc_3">
+      <isinactive>F</isinactive>
+      <value>3 - Nacional, conteúdo de importação superior a 40% e até 70%</value>
+    </customvalue>
+    <customvalue scriptid="val_origem_merc_4">
+      <isinactive>F</isinactive>
+      <value>4 - Nacional, produção conforme processos produtivos básicos</value>
+    </customvalue>
+    <customvalue scriptid="val_origem_merc_5">
+      <isinactive>F</isinactive>
+      <value>5 - Nacional, conteúdo de importação inferior ou igual a 40%</value>
+    </customvalue>
+    <customvalue scriptid="val_origem_merc_6">
+      <isinactive>F</isinactive>
+      <value>6 - Estrangeira - Importação direta, sem similar nacional (lista CAMEX)</value>
+    </customvalue>
+    <customvalue scriptid="val_origem_merc_7">
+      <isinactive>F</isinactive>
+      <value>7 - Estrangeira - Adquirida no mercado interno, sem similar nacional (lista CAMEX)</value>
+    </customvalue>
+    <customvalue scriptid="val_origem_merc_8">
+      <isinactive>F</isinactive>
+      <value>8 - Nacional, conteúdo de importação superior a 70%</value>
+    </customvalue>
+  </customvalues>
+</customlist>

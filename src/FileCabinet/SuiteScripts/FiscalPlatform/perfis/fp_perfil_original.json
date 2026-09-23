@@ -94,6 +94,7 @@
     "ITEM_CEST": "custitem_fp_cest",
     "ITEM_ORIGEM": "custitem_fp_origem",
     "ITEM_CODIGO_FISCAL": "custitem_fp_codigo_fiscal",
+    "ITEM_SERVICO_LC116": "custitem_fp_servico_lc116",
     "_nota": [
       "NCM e CEST são CADASTRO, não régua: eles descrevem a mercadoria, não decidem tributo.",
       "O motor tem cadastro próprio de item (/api/v1/item); qual das duas pontas é a fonte é",

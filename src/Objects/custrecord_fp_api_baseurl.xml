@@ -16,7 +16,7 @@
   <help></help>
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
-  <label>FP - Base URL da API</label>
+  <label>Base URL da API</label>
   <linktext></linktext>
   <maxlength>300</maxlength>
   <maxvalue></maxvalue>

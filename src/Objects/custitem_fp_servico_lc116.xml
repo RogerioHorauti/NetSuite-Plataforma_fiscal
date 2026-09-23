@@ -1,11 +1,18 @@
-<othercustomfield scriptid="custrecord_fp_api_secret">
+<itemcustomfield scriptid="custitem_fp_servico_lc116">
   <accesslevel>2</accesslevel>
+  <appliestogroup>F</appliestogroup>
+  <appliestoinventory>F</appliestoinventory>
+  <appliestoitemassembly>F</appliestoitemassembly>
+  <appliestokit>F</appliestokit>
+  <appliestononinventory>F</appliestononinventory>
+  <appliestoothercharge>F</appliestoothercharge>
+  <appliestoservice>T</appliestoservice>
   <applyformatting>F</applyformatting>
   <checkspelling>F</checkspelling>
   <defaultchecked>F</defaultchecked>
   <defaultselection></defaultselection>
   <defaultvalue></defaultvalue>
-  <description>Script id do segredo em Setup > Company > Secrets Management. Guarda a REFERENCIA, nunca o valor: client_secret em campo texto e credencial em claro.</description>
+  <description>Subitem da lista anexa a LC 116/2003, na forma NN.NN (ex.: 1.01 ou 01.01). E o que o motor exige no lugar do NCM quando a linha e SERVICO: "informe o NCM quando for MERCADORIA, ou o subitem da lista anexa a LC 116/2003 quando for SERVICO". Seis digitos (99.01.01) sao da lista nacional da NFS-e, que desdobra estes subitens e NAO e esta lista.</description>
   <displayheight></displayheight>
   <displaytype>NORMAL</displaytype>
   <displaywidth></displaywidth>
@@ -16,13 +23,14 @@
   <help></help>
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
-  <label>Script Id do Secret</label>
+  <isparent>F</isparent>
+  <label>Serviço LC 116</label>
   <linktext></linktext>
-  <maxlength>100</maxlength>
+  <maxlength>6</maxlength>
   <maxvalue></maxvalue>
   <minvalue></minvalue>
   <onparentdelete></onparentdelete>
-  <rectype>-117</rectype>
+  <parentsubtab></parentsubtab>
   <searchcomparefield></searchcomparefield>
   <searchdefault></searchdefault>
   <searchlevel>2</searchlevel>
@@ -33,4 +41,5 @@
   <sourcefrom></sourcefrom>
   <sourcelist></sourcelist>
   <storevalue>T</storevalue>
-</othercustomfield>
+  <subtab>[scriptid=custtab_fp_fiscal_item]</subtab>
+</itemcustomfield>

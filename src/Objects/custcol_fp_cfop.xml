@@ -1,36 +1,42 @@
-<othercustomfield scriptid="custrecord_fp_api_secret">
+<transactioncolumncustomfield scriptid="custcol_fp_cfop">
   <accesslevel>2</accesslevel>
   <applyformatting>F</applyformatting>
-  <checkspelling>F</checkspelling>
+  <colexpense>F</colexpense>
+  <colgrouponinvoices>F</colgrouponinvoices>
+  <colitemfulfillment>T</colitemfulfillment>
+  <colitemreceipt>T</colitemreceipt>
+  <coljournal>F</coljournal>
+  <colkititem>F</colkititem>
+  <colopportunity>F</colopportunity>
+  <colpurchase>T</colpurchase>
+  <colsale>T</colsale>
+  <coltransferorder>T</coltransferorder>
   <defaultchecked>F</defaultchecked>
   <defaultselection></defaultselection>
   <defaultvalue></defaultvalue>
-  <description>Script id do segredo em Setup > Company > Secrets Management. Guarda a REFERENCIA, nunca o valor: client_secret em campo texto e credencial em claro.</description>
+  <description>CFOP desta linha, 4 digitos. E OVERRIDE: em branco, quem resolve e o motor — ele devolveu 6102 sozinho no teste. Texto e nao lista de propósito: a plataforma JA valida CFOP contra a tabela dela, e manter 619 registros aqui seria a segunda copia de uma regua que ja existe do outro lado. CFOP invalido volta recusado pelo motor, com a mensagem dele.</description>
   <displayheight></displayheight>
   <displaytype>NORMAL</displaytype>
   <displaywidth></displaywidth>
   <dynamicdefault></dynamicdefault>
   <encryptatrest>F</encryptatrest>
   <fieldtype>TEXT</fieldtype>
-  <globalsearch>F</globalsearch>
   <help></help>
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
-  <label>Script Id do Secret</label>
+  <label>CFOP</label>
   <linktext></linktext>
-  <maxlength>100</maxlength>
+  <maxlength>4</maxlength>
   <maxvalue></maxvalue>
   <minvalue></minvalue>
   <onparentdelete></onparentdelete>
-  <rectype>-117</rectype>
   <searchcomparefield></searchcomparefield>
   <searchdefault></searchdefault>
   <searchlevel>2</searchlevel>
   <selectrecordtype></selectrecordtype>
   <showhierarchy>F</showhierarchy>
-  <showinlist>F</showinlist>
   <sourcefilterby></sourcefilterby>
   <sourcefrom></sourcefrom>
   <sourcelist></sourcelist>
   <storevalue>T</storevalue>
-</othercustomfield>
+</transactioncolumncustomfield>

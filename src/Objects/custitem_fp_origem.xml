@@ -1,36 +1,45 @@
-<othercustomfield scriptid="custrecord_fp_api_secret">
+<itemcustomfield scriptid="custitem_fp_origem">
   <accesslevel>2</accesslevel>
+  <appliestogroup>F</appliestogroup>
+  <appliestoinventory>T</appliestoinventory>
+  <appliestoitemassembly>T</appliestoitemassembly>
+  <appliestokit>T</appliestokit>
+  <appliestononinventory>T</appliestononinventory>
+  <appliestoothercharge>F</appliestoothercharge>
+  <appliestoservice>F</appliestoservice>
   <applyformatting>F</applyformatting>
   <checkspelling>F</checkspelling>
   <defaultchecked>F</defaultchecked>
   <defaultselection></defaultselection>
   <defaultvalue></defaultvalue>
-  <description>Script id do segredo em Setup > Company > Secrets Management. Guarda a REFERENCIA, nunca o valor: client_secret em campo texto e credencial em claro.</description>
+  <description>Origem conforme a Tabela A do CST de ICMS. Lista fechada: o payload leva so o digito (0 a 8), que e o que o DTO valida em ORIGENS_TABELA_A.</description>
   <displayheight></displayheight>
   <displaytype>NORMAL</displaytype>
   <displaywidth></displaywidth>
   <dynamicdefault></dynamicdefault>
   <encryptatrest>F</encryptatrest>
-  <fieldtype>TEXT</fieldtype>
+  <fieldtype>SELECT</fieldtype>
   <globalsearch>F</globalsearch>
   <help></help>
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
-  <label>Script Id do Secret</label>
+  <isparent>F</isparent>
+  <label>Origem da Mercadoria</label>
   <linktext></linktext>
-  <maxlength>100</maxlength>
+  <maxlength></maxlength>
   <maxvalue></maxvalue>
   <minvalue></minvalue>
   <onparentdelete></onparentdelete>
-  <rectype>-117</rectype>
+  <parentsubtab></parentsubtab>
   <searchcomparefield></searchcomparefield>
   <searchdefault></searchdefault>
   <searchlevel>2</searchlevel>
-  <selectrecordtype></selectrecordtype>
+  <selectrecordtype>[scriptid=customlist_fp_origem_mercadoria]</selectrecordtype>
   <showhierarchy>F</showhierarchy>
   <showinlist>F</showinlist>
   <sourcefilterby></sourcefilterby>
   <sourcefrom></sourcefrom>
   <sourcelist></sourcelist>
   <storevalue>T</storevalue>
-</othercustomfield>
+  <subtab>[scriptid=custtab_fp_fiscal_item]</subtab>
+</itemcustomfield>

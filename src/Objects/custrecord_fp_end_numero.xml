@@ -1,11 +1,11 @@
-<othercustomfield scriptid="custrecord_fp_api_secret">
+<othercustomfield scriptid="custrecord_fp_end_numero">
   <accesslevel>2</accesslevel>
   <applyformatting>F</applyformatting>
   <checkspelling>F</checkspelling>
   <defaultchecked>F</defaultchecked>
   <defaultselection></defaultselection>
   <defaultvalue></defaultvalue>
-  <description>Script id do segredo em Setup > Company > Secrets Management. Guarda a REFERENCIA, nunca o valor: client_secret em campo texto e credencial em claro.</description>
+  <description>Numero do logradouro, separado. O NetSuite nao o decompoe: ele vem grudado no addr1 ("Rua dos Buritis, 1"), e a SEFAZ quer o numero em campo proprio. Aceita S/N. rectype -289 e Address na enumeracao do SDF.</description>
   <displayheight></displayheight>
   <displaytype>NORMAL</displaytype>
   <displaywidth></displaywidth>
@@ -16,13 +16,13 @@
   <help></help>
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
-  <label>Script Id do Secret</label>
+  <label>Número</label>
   <linktext></linktext>
-  <maxlength>100</maxlength>
+  <maxlength>10</maxlength>
   <maxvalue></maxvalue>
   <minvalue></minvalue>
   <onparentdelete></onparentdelete>
-  <rectype>-117</rectype>
+  <rectype>-289</rectype>
   <searchcomparefield></searchcomparefield>
   <searchdefault></searchdefault>
   <searchlevel>2</searchlevel>

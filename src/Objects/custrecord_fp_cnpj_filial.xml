@@ -5,7 +5,7 @@
   <defaultchecked>F</defaultchecked>
   <defaultselection></defaultselection>
   <defaultvalue></defaultvalue>
-  <description>CNPJ da filial, 14 DIGITOS SEM MASCARA. E a chave que o FiscalPlatform usa para achar a branch (cnpjEmpresa no payload). O banco la so aceita digitos (chk_branches_cnpj_digitos) e nada completa zero a esquerda: CNPJ com zero suprimido nao acha filial nenhuma.</description>
+  <description>CNPJ da filial. Pode digitar com ou sem mascara — o bundle manda so os 14 digitos. MEDIDO: com maxlength 14 o NetSuite truncava "10.664.687/0001-13" em "10.664.687/000" e sobravam 11 digitos, que nao acham filial nenhuma. E a chave que o FiscalPlatform usa para achar a branch, e nada do lado de la completa zero a esquerda.</description>
   <displayheight></displayheight>
   <displaytype>NORMAL</displaytype>
   <displaywidth></displaywidth>
@@ -16,9 +16,9 @@
   <help></help>
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
-  <label>FP - CNPJ da Filial</label>
+  <label>CNPJ da Filial</label>
   <linktext></linktext>
-  <maxlength>14</maxlength>
+  <maxlength>18</maxlength>
   <maxvalue></maxvalue>
   <minvalue></minvalue>
   <onparentdelete></onparentdelete>

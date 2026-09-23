@@ -18,6 +18,13 @@
  * integração de terceiro, coluna de lista. Reusar o MESMO scriptid faz esse acervo continuar
  * funcionando sem que ninguém toque nele. É a diferença entre migração e projeto de migração.
  *
+ * ── ⚠ NÃO CARREGUE ESTE MÓDULO EM CLIENT SCRIPT ───────────────────────────────────────────────
+ *
+ * Ele depende de `N/cache`, e **`N/cache` não existe no cliente**. MEDIDO no deploy de 2026-09-23:
+ * `MODULE_DOES_NOT_EXIST: Module does not exist: N/cache.js`, e o objeto do client script falhou
+ * inteiro na criação — não foi erro em runtime, foi o deploy recusando. Client script do bundle
+ * usa scriptid literal, que é seguro justamente nos campos que só nós temos.
+ *
  * ── AS TRÊS CAMADAS DE ORIGEM DE UM CAMPO, nesta ordem de preferência ──────────────────────────
  *
  * 1. NATIVO do NetSuite (`padrao()`): `tranid`, `externalid`, `subsidiary`, `location`, `entity`,
