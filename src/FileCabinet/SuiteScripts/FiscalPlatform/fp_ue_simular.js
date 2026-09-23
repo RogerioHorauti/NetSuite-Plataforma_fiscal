@@ -97,13 +97,17 @@ define([
    * campo fora de lugar), e nenhuma das duas pode impedir o registro de abrir.
    */
   /**
-   * O que o `beforeSubmit` deixa para o `afterSubmit` anexar.
+   * Chave da sessão onde o `beforeSubmit` deixa o rastro para o `afterSubmit` anexar.
    *
-   * Escopo de módulo, e é seguro: um User Event roda uma vez por save de um registro, e as duas
-   * funções são a mesma execução. Zerado no início de cada `beforeSubmit` para que um save que
-   * não simula não herde o rastro do anterior.
+   * SESSÃO e não variável de módulo, e a diferença importa: no `beforeSubmit` de uma transação
+   * NOVA ainda não existe id, então o anexo só pode acontecer no `afterSubmit` — e o que
+   * atravessa as duas funções com garantia é a sessão, não o escopo do módulo. O `corrId` entra
+   * na chave porque é o que identifica ESTA passagem: dois saves em abas diferentes não podem
+   * ler o rastro um do outro.
    */
-  var rastro = null;
+  function chaveRastro(corrId) {
+    return 'fp_rastro_' + corrId;
+  }
 
   function beforeLoad(scriptContext) {
     try {
@@ -155,7 +159,6 @@ define([
     // PRIMEIRA LINHA, e a ordem importa: o id de correlação tem de existir antes de qualquer
     // coisa que possa lançar. É a correção do defeito do AVLR — ver o docblock de `fp_msg.js`.
     var corrId;
-    rastro = null;
 
     try {
       corrId = fpMsg.garantirCorrId(scriptContext.newRecord);
@@ -181,12 +184,12 @@ define([
       // de milhares de caracteres, e campo texto trunca em silêncio — o pior jeito de perder
       // justamente a prova do que foi enviado. O anexo acontece no `afterSubmit`, porque na
       // CRIAÇÃO a transação ainda não tem id e `record.attach` não teria a que anexar.
-      rastro = { payload: payload, resposta: null };
+      guardarRastro(corrId, { payload: payload, resposta: null });
 
       if (!resposta.ok) {
         // RECUSA DO MOTOR. O texto dele vai INTEIRO para a tela — sem traduzir, sem resumir.
         gravarLogico(scriptContext.newRecord, 'SIM_STATUS', 'RECUSADO');
-        rastro.resposta = resposta.body;
+        guardarRastro(corrId, { payload: payload, resposta: resposta.body });
 
         fpMsg.erro(corrId, fpMsg.ORIGEM.FISCALPLATFORM, resposta.code, mensagensDaRecusa(resposta.body));
         log.error('fp_ue_simular.recusa', { code: resposta.code, body: resposta.body });
@@ -198,7 +201,7 @@ define([
       var aplicado = fpMapSimular.aplicar(scriptContext.newRecord, resposta.body);
 
       gravarLogico(scriptContext.newRecord, 'SIM_STATUS', 'SIMULADO');
-      rastro.resposta = resposta.body;
+      guardarRastro(corrId, { payload: payload, resposta: resposta.body });
 
       fpMsg.sucesso(corrId, aplicado.resumo);
 
@@ -422,12 +425,23 @@ define([
     }
 
     try {
-      anexarRastro(scriptContext.newRecord.type, id);
+      anexarRastro(scriptContext.newRecord, id);
     } catch (e) {
       // Anexo é PROVA, não parte do save. Falhar aqui não pode desfazer nada do que já gravou.
       log.error('fp_ue_simular.afterSubmit/rastro', { name: e.name, message: e.message });
-    } finally {
-      rastro = null;
+    }
+  }
+
+  /** Guarda na sessão. Serializa aqui para o `afterSubmit` só precisar ler e gravar. */
+  function guardarRastro(corrId, dados) {
+    if (!corrId) return;
+    try {
+      runtime.getCurrentSession().set({
+        name: chaveRastro(corrId),
+        value: JSON.stringify(dados)
+      });
+    } catch (e) {
+      log.error('fp_ue_simular.guardarRastro', e.message || e);
     }
   }
 
@@ -438,25 +452,51 @@ define([
    * caracteres. Campo texto do NetSuite trunca em silêncio, e o que se perderia é exatamente a
    * prova de que a divergência foi do envio e não do motor — a hipótese mais frequente.
    *
-   * Pasta `-10` (Attachments Received), padrão em qualquer conta. O nome carrega tipo, id e
-   * instante, para achar sem abrir.
+   * A PASTA vem do parâmetro `custscript_fp_pasta_payload` — INTEGER com o internal id da pasta,
+   * preferência de empresa. **Em branco não anexa**, e o log diz por quê: espalhar arquivo numa
+   * pasta que ninguém escolheu é pior que não anexar.
    */
-  function anexarRastro(tipo, id) {
-    if (!rastro || !id) return;
+  function anexarRastro(newRecord, id) {
+    if (!id) return;
 
+    var corrId = newRecord.getValue({ fieldId: fpFields.id('CORRID') });
+    if (!corrId) return;
+
+    var sessao = runtime.getCurrentSession();
+    var bruto = sessao.get({ name: chaveRastro(corrId) });
+    if (!bruto) return;
+
+    // Limpa ANTES de anexar: falha no anexo não pode deixar o rastro preso na sessão para o
+    // próximo save da mesma aba encontrar e anexar de novo, agora na transação errada.
+    sessao.set({ name: chaveRastro(corrId), value: '' });
+
+    // INTEGER, não select: `file.create` quer o internal id da pasta, e o id da pasta não vive no
+    // mesmo espaço de numeração do tipo de registro. `getParameter` de INTEGER devolve número.
+    var pasta = runtime.getCurrentScript().getParameter({ name: 'custscript_fp_pasta_payload' });
+    if (!pasta) {
+      log.audit('fp_ue_simular.anexarRastro',
+        'parâmetro "Pasta do Payload" não definido nas Preferências da Empresa — payload e ' +
+        'retorno NÃO foram anexados. Sem eles, "o motor errou" e "eu mandei errado" ficam ' +
+        'indistinguíveis.');
+      return;
+    }
+
+    var rastro = JSON.parse(bruto);
+    var tipo = newRecord.type;
     var carimbo = instante();
-    anexar(tipo, id, 'FP-' + tipo + '-' + id + '-' + carimbo + '-payload.json', rastro.payload);
+
+    anexar(pasta, tipo, id, 'FP-' + tipo + '-' + id + '-' + carimbo + '-payload.json', rastro.payload);
     if (rastro.resposta) {
-      anexar(tipo, id, 'FP-' + tipo + '-' + id + '-' + carimbo + '-retorno.json', rastro.resposta);
+      anexar(pasta, tipo, id, 'FP-' + tipo + '-' + id + '-' + carimbo + '-retorno.json', rastro.resposta);
     }
   }
 
-  function anexar(tipo, id, nome, conteudo) {
+  function anexar(pasta, tipo, id, nome, conteudo) {
     var arquivo = file.create({
       name: nome,
       fileType: file.Type.JSON,
       contents: JSON.stringify(conteudo, null, 1),
-      folder: -10,
+      folder: pasta,
       isOnline: false
     });
 

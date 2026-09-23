@@ -7,6 +7,31 @@
   <notifyowner>T</notifyowner>
   <notifyuser>F</notifyuser>
   <scriptfile>[/SuiteScripts/FiscalPlatform/fp_ue_simular.js]</scriptfile>
+  <scriptcustomfields>
+    <scriptcustomfield scriptid="custscript_fp_pasta_payload">
+      <accesslevel>2</accesslevel>
+      <applyformatting>F</applyformatting>
+      <checkspelling>F</checkspelling>
+      <defaultchecked>F</defaultchecked>
+      <defaultselection></defaultselection>
+      <defaultvalue></defaultvalue>
+      <description>Internal id da pasta do File Cabinet onde o payload e o retorno sao gravados antes de serem anexados a transacao. Numero, nao lista: file.create espera o id da pasta, e o tipo de registro de pasta nao e o mesmo espaco de numeracao dos ids de pasta. EM BRANCO NAO ANEXA, e o log avisa — espalhar arquivo em pasta que ninguem escolheu e pior que nao anexar.</description>
+      <displayheight></displayheight>
+      <displaytype>NORMAL</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <fieldtype>INTEGER</fieldtype>
+      <help></help>
+      <isformula>F</isformula>
+      <ismandatory>F</ismandatory>
+      <label>Pasta do Payload</label>
+      <linktext></linktext>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <setting>COMPANY</setting>
+      <storevalue>T</storevalue>
+    </scriptcustomfield>
+  </scriptcustomfields>
   <scriptdeployments>
     <scriptdeployment scriptid="customdeploy1">
       <allemployees>F</allemployees>
