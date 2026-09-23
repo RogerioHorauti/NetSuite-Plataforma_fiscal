@@ -460,11 +460,13 @@ define([
     var rastro = JSON.parse(bruto);
     log.debug("json", rastro)
     var tipo = newRecord.type;
-    var carimbo = instante();
 
-    anexar(pasta, tipo, id, 'FP-' + tipo + '-' + id + '-' + carimbo + '-payload.json', rastro.payload);
+    // NOME SÓ COM O ID DA TRANSAÇÃO, sem carimbo de hora: mesmo nome na mesma pasta faz o File
+    // Cabinet SUBSTITUIR o arquivo. Com carimbo, cada save deixava um par novo — dezesseis
+    // arquivos numa tarde de teste. O que interessa é o último payload, não o histórico deles.
+    anexar(pasta, tipo, id, 'FP-' + tipo + '-' + id + '-payload.json', rastro.payload);
     if (rastro.resposta) {
-      anexar(pasta, tipo, id, 'FP-' + tipo + '-' + id + '-' + carimbo + '-retorno.json', rastro.resposta);
+      anexar(pasta, tipo, id, 'FP-' + tipo + '-' + id + '-retorno.json', rastro.resposta);
     }
   }
 
@@ -479,10 +481,16 @@ define([
 
     var idArquivo = arquivo.save();
 
-    record.attach({
-      record: { type: 'file', id: idArquivo },
-      to: { type: tipo, id: id }
-    });
+    // Substituindo o arquivo, o id é o mesmo e ele já está anexado. Reanexar não pode derrubar
+    // o afterSubmit de um save que já deu certo.
+    try {
+      record.attach({
+        record: { type: 'file', id: idArquivo },
+        to: { type: tipo, id: id }
+      });
+    } catch (e) {
+      log.debug('fp_ue_simular.anexar', nome + ' já anexado: ' + (e.message || e));
+    }
 
     log.audit('fp_ue_simular.anexar', nome + ' (file ' + idArquivo + ')');
   }
@@ -492,14 +500,6 @@ define([
     var v = {};
     if (campo) v[campo] = valor;
     return v;
-  }
-
-  /** `AAAAMMDD-HHMMSS`, para dois saves no mesmo dia não colidirem no nome. */
-  function instante() {
-    var d = new Date();
-    function z(n) { return (n < 10 ? '0' : '') + n; }
-    return d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + '-' +
-           z(d.getHours()) + z(d.getMinutes()) + z(d.getSeconds());
   }
 
   return {
