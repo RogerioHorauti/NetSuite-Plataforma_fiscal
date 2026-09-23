@@ -39,7 +39,7 @@
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
   <isparent>F</isparent>
-  <label>FP - Modalidade do Frete</label>
+  <label>Modalidade do Frete</label>
   <linktext></linktext>
   <maxlength>1</maxlength>
   <maxvalue></maxvalue>

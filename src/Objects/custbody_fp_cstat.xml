@@ -39,7 +39,7 @@
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
   <isparent>F</isparent>
-  <label>FP - cStat</label>
+  <label>cStat</label>
   <linktext></linktext>
   <maxlength>4</maxlength>
   <maxvalue></maxvalue>

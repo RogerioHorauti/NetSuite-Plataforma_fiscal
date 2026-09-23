@@ -39,7 +39,7 @@
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
   <isparent>F</isparent>
-  <label>FP - idExterno</label>
+  <label>idExterno</label>
   <linktext></linktext>
   <maxlength>60</maxlength>
   <maxvalue></maxvalue>

@@ -39,7 +39,7 @@
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
   <isparent>F</isparent>
-  <label>FP - Chave de Acesso</label>
+  <label>Chave de Acesso</label>
   <linktext></linktext>
   <maxlength>44</maxlength>
   <maxvalue></maxvalue>

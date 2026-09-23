@@ -39,7 +39,7 @@
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
   <isparent>F</isparent>
-  <label>FP - Status da Simulacao</label>
+  <label>Status da Simulação</label>
   <linktext></linktext>
   <maxlength>20</maxlength>
   <maxvalue></maxvalue>
