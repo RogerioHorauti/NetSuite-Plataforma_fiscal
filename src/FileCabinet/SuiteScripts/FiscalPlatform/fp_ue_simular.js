@@ -77,17 +77,28 @@ define([
    * emissão e o Map/Reduce de entrada salvam a transação, e sem esta guarda o save deles reentra
    * aqui e simula de novo o que já foi emitido.
    */
-  var CONTEXTOS_BLOQUEADOS = [
-    runtime.ContextType.CSV_IMPORT,
-    runtime.ContextType.WEBSERVICES,
-    runtime.ContextType.RESTWEBSERVICES,
-    runtime.ContextType.MAP_REDUCE,
-    runtime.ContextType.SCHEDULED,
-    runtime.ContextType.SUITELET,
-    runtime.ContextType.WORKFLOW,
-    runtime.ContextType.BUNDLE_INSTALLATION,
-    runtime.ContextType.USEREVENT
-  ];
+  /**
+   * ⚠ FUNÇÃO, não constante de módulo.
+   *
+   * MEDIDO no deploy de 2026-09-23: ler `runtime.ContextType.*` no corpo do `define` derruba o
+   * script inteiro com `SUITESCRIPT_API_UNAVAILABLE_IN_DEFINE — All SuiteScript API Modules are
+   * unavailable while executing your define callback`. O módulo é injetado, mas **tocá-lo antes
+   * de o callback terminar é proibido**, mesmo para ler um enum. Vale para qualquer `N/*` no
+   * bundle: nada de API no escopo do módulo.
+   */
+  function contextosBloqueados() {
+    return [
+      runtime.ContextType.CSV_IMPORT,
+      runtime.ContextType.WEBSERVICES,
+      runtime.ContextType.RESTWEBSERVICES,
+      runtime.ContextType.MAP_REDUCE,
+      runtime.ContextType.SCHEDULED,
+      runtime.ContextType.SUITELET,
+      runtime.ContextType.WORKFLOW,
+      runtime.ContextType.BUNDLE_INSTALLATION,
+      runtime.ContextType.USEREVENT
+    ];
+  }
 
   /**
    * Organiza o formulário e pinta o que o save deixou na sessão.
@@ -281,7 +292,7 @@ define([
         scriptContext.type !== scriptContext.UserEventType.EDIT) return false;
 
     // GUARDA 3
-    if (CONTEXTOS_BLOQUEADOS.indexOf(runtime.executionContext) > -1) {
+    if (contextosBloqueados().indexOf(runtime.executionContext) > -1) {
       log.debug('fp_ue_simular', 'pulado em ' + runtime.executionContext);
       return false;
     }
@@ -412,7 +423,7 @@ define([
   function afterSubmit(scriptContext) {
     var id = scriptContext.newRecord.id;
     var campoIdExterno = fpFields.id('DOC_IDEXTERNO');
-
+    log.debug('campoIdExterno', campoIdExterno)
     try {
       record.submitFields({
         type: scriptContext.newRecord.type,
@@ -460,10 +471,12 @@ define([
     if (!id) return;
 
     var corrId = newRecord.getValue({ fieldId: fpFields.id('CORRID') });
+    log.debug('corrId', corrId)
     if (!corrId) return;
 
     var sessao = runtime.getCurrentSession();
     var bruto = sessao.get({ name: chaveRastro(corrId) });
+    log.debug('bruto', bruto)
     if (!bruto) return;
 
     // Limpa ANTES de anexar: falha no anexo não pode deixar o rastro preso na sessão para o
@@ -482,6 +495,7 @@ define([
     }
 
     var rastro = JSON.parse(bruto);
+    log.debug("json", rastro)
     var tipo = newRecord.type;
     var carimbo = instante();
 

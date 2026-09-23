@@ -905,3 +905,25 @@ Com o estorno ativo e o `Tax Amt` ainda em −14, o GL fechou assim: débitos **
 **997,45**; `7001` zera (D 14 padrão, C 14 estorno) e `4000` fica 186, igual ao recebível. Com o
 `Cost Estimate Type` em `Custom`, o −14 não nasce e o estorno não tem o que estornar — as seis
 linhas do FiscalPlatform saem sozinhas.
+
+---
+
+## 12. Armadilhas de SuiteScript que custaram deploy, medidas em 2026-09-23
+
+| o que | a prova | a regra que fica |
+|---|---|---|
+| **Nada de API no corpo do `define`** | `var CONTEXTOS_BLOQUEADOS = [runtime.ContextType.CSV_IMPORT, ...]` derrubou o script inteiro: `SUITESCRIPT_API_UNAVAILABLE_IN_DEFINE — All SuiteScript API Modules are unavailable while executing your define callback` | O módulo é injetado, mas **tocá-lo antes de o callback terminar é proibido, mesmo para ler um enum**. Constante que depende de `N/*` vira função |
+| **`N/cache` e `N/file` não existem em Client Script** | `MODULE_DOES_NOT_EXIST: Module does not exist: N/cache.js`, e o objeto do client script falhou na **criação**, não em runtime | Foi o que fez os perfis virarem módulo AMD |
+| **`search.create()` é preguiçoso** | `SSS_INVALID_SRCH_COL` nasce no `.each()`, não no `create()`. `try` em volta só da criação deixava o erro subir até o `beforeSubmit` e derrubar o save | `create`, `run` e `each` no mesmo `try` |
+| **Saved search e SuiteQL não veem o mesmo** | `custitem_fp_servico_lc116` aplica só a Service: coluna **inválida** em `search.create({type:'item'})` mesmo existindo; `SELECT` no SuiteQL devolve 200 | Lookup de item por SuiteQL |
+| **`getSubrecord` de endereço devolve `undefined`** no `beforeSubmit` | Payload saía sem `numero`, `municipio` e `uf` com o endereço preenchido na tela | Endereço por SuiteQL em `transactionshippingaddress` |
+| **`getSublistText` devolve `undefined`** em parte dos contextos | Unidade saía vazia sem nada acusar | Texto de lista por SuiteQL em lote |
+| **SuiteQL não aceita alias no `WHERE`** | `internalid AS id ... WHERE id IN (2)` → **400**; `WHERE internalid IN (2)` → 200 | Coluna de filtro separada do SELECT |
+| **`SELECT *` do SuiteQL omite coluna nula** | `custrecord_fp_cclasstrib_imp` "sumiu" da listagem e nunca foi removido | Existência se testa com `SELECT <coluna>`: 400 não existe, 200 existe |
+| **`maxlength` trunca em silêncio** | CNPJ com máscara (18 chars) num campo de 14 virou `10.664.687/000` → 11 dígitos | Campo de CNPJ com 18, e guarda de 14 dígitos no mapeador |
+| **`scriptcustomfield` de pasta é INTEGER** | `selectrecordtype -10` passou no validador e estava errado: `-10` é o **id da pasta** Attachments Received, não um tipo de registro | `file.create` quer o id da pasta; os dois espaços de numeração não se misturam |
+| **`setting` de parâmetro de script** | `SCRIPT`, `DEPLOYMENT` e `ENTRY` recusados pelo validador; **`COMPANY`** aceito | Preferência de empresa |
+| **`transactioncolumncustomfield` não aceita** `checkspelling`, `globalsearch`, `isparent`, `colreturnauthorization`, `colvendorreturnauthorization` | avisos do `project:validate --server` | — |
+| **`othercustomfield` não aceita** `availabletosso`, `ismatrixoption` | idem | — |
+| **`rectype` de `othercustomfield`** | Location `-103`, Subsidiary `-117`, Account `-112`, Role `-118`, **Address `-289`** | Sondar chutando não acha: `-289` não estava entre os onze que testei |
+| **O deploy APAGA** campo de custom record e custom list removidos do projeto | os 6 campos do classificador e a `customlist_fp_sentido` sumiram sozinhos | Só o **registro inteiro** sobrevive e precisa de UI |
