@@ -220,70 +220,59 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       return Object.keys(dest).length ? dest : null;
     }
 
-    /** Subrecord de endereço da transação. Envio antes de cobrança: a mercadoria vai para o envio. */
-/**
-/**
-     * Endereço por SuiteQL, NÃO pelo subrecord.
+    /**
+     * Endereço do DESTINATÁRIO = endereço de FATURAMENTO.
      *
-     * ⚠ MEDIDO: `getSubrecord({fieldId:'shippingaddress'})` no `beforeSubmit` devolve `undefined`
-     * nos campos — o payload saía sem `numero`, `municipio` e `uf` com o endereço preenchido na
-     * tela. Mesmo motivo que tirou o `getSublistText` daqui: API que falha calada é pior que API
-     * que falha.
+     * Não é o de entrega, e a distinção é do layout, não de preferência: o grupo `dest` da NF-e
+     * identifica a quem a operação é destinada — o cadastro, o mesmo endereço do CNPJ/IE. Quando
+     * a mercadoria vai para outro lugar, isso é o grupo `entrega` (Local de Entrega), informado
+     * SÓ quando difere do destinatário, e que não existe neste DTO. Mandar o endereço de entrega
+     * como `dest` troca o destinatário da nota.
      *
-     * Uma tabela só: `transactionshippingaddress`, o endereço COMO ESTÁ NA TRANSAÇÃO. É o que
-     * vale — a nota sai para onde a transação diz, e ela pode sobrescrever o cadastro. Não há
-     * segunda tentativa em `entityaddress`: endereço de cadastro não é o endereço da nota, e cair
-     * nele mascararia uma transação sem endereço em vez de acusá-la.
-     *
-     * Colunas medidas em 2026-09-23: `nkey, addr1, addr2, addr3, city, state, dropdownstate, zip,
-     * country, custrecord_fp_end_numero`. NÃO são `address1/2/3` (esse é o nome no motor de busca)
-     * e não existe `internalid` — a chave é `nkey`.
+     * SUBRECORD, não consulta: no `beforeSubmit` de CRIAÇÃO a transação ainda não está no
+     * banco, e a linha do endereço não existe para ser lida. Medido em 23/09/2026 na invoice
+     * 2232: `shipaddresslist` volta vazio no `beforeSubmit` — `billaddresslist` não foi medido,
+     * e por isso ele entra no log de falha abaixo em vez de virar a fonte.
      */
     function endereco(newRecord) {
-      // `shipaddresslist` e SO ele: e o id da entrada do address book escolhida na transacao.
-      // `shippingaddress` e o subrecord, nao um id, e `billaddresslist` e OUTRO endereco —
-      // encadear os tres trocaria entrega por cobranca em silencio.
-      var id = newRecord.getValue({ fieldId: 'shipaddresslist' });
-      if (!id) {
-        log.audit('fp_md_map_simular.endereco',
-          'transacao sem endereco de entrega escolhido — o destinatario sai sem logradouro, ' +
-          'municipio e UF, e a SEFAZ vai recusar.');
-        return null;
+      var sub = null;
+      try {
+        sub = newRecord.getSubrecord({ fieldId: 'billingaddress' });
+      } catch (e) {
+        log.error('fp_md_map_simular.endereco', 'getSubrecord billingaddress: ' + (e.message || e));
       }
 
-      // A coluna do numero entra so se a chave resolver: sem ela na SQL, a consulta quebraria
-      // inteira e o endereco sairia vazio por causa de um campo opcional.
       var campoNumero = fpFields.idEndereco('END_NUMERO');
-      var cols = 'addr1, addr2, addr3, city, state, dropdownstate, zip';
-      if (campoNumero) cols += ', ' + campoNumero;
+      var end = sub ? {
+        addr1: ler(sub, 'addr1'),
+        addr2: ler(sub, 'addr2'),
+        addr3: ler(sub, 'addr3'),
+        numero: campoNumero ? ler(sub, campoNumero) : '',
+        city: ler(sub, 'city'),
+        state: ler(sub, 'state'),
+        zip: ler(sub, 'zip')
+      } : null;
 
+      if (end && (end.addr1 || end.city)) return end;
+
+      // NÃO ACHOU. O que cada fonte tinha vai para o log — é a medição que diz qual usar, e sem
+      // ela a próxima tentativa seria chute. Sai daqui assim que o caso estiver fechado.
+      log.audit('fp_md_map_simular.endereco',
+        'destinatário sem endereço, e a SEFAZ vai recusar. subrecord=' + (sub ? 'sim' : 'não') +
+        ' addr1="' + (end ? end.addr1 : '') + '" city="' + (end ? end.city : '') +
+        '" billaddresslist=' + newRecord.getValue({ fieldId: 'billaddresslist' }) +
+        ' billaddress="' + newRecord.getValue({ fieldId: 'billaddress' }) + '"');
+      return null;
+    }
+
+    /** Campo ausente no subrecord não pode derrubar a leitura dos outros. */
+    function ler(sub, campo) {
       try {
-        var r = query.runSuiteQL({
-          query: 'SELECT ' + cols + ' FROM transactionshippingaddress WHERE nkey = ?',
-          params: [id]
-        }).asMappedResults();
-
-        if (!r.length) {
-          log.audit('fp_md_map_simular.endereco',
-            'endereço ' + id + ' não está em transactionshippingaddress — o destinatário sai sem ' +
-            'logradouro, município e UF.');
-          return null;
-        }
-
-        var e = r[0];
-        return {
-          addr1: e.addr1,
-          addr2: e.addr2,
-          addr3: e.addr3,
-          numero: campoNumero ? e[campoNumero] : '',
-          city: e.city,
-          // `dropdownstate` traz a sigla quando o país tem lista de UF; `state` é o texto livre.
-          state: e.dropdownstate || e.state,
-          zip: e.zip
-        };
-      } catch (err) {
-        log.error('fp_md_map_simular.endereco', (err.message || err));
-        return null;
+        var v = sub.getValue({ fieldId: campo });
+        return v === null || v === undefined ? '' : String(v);
+      } catch (e) {
+        log.debug('fp_md_map_simular.ler', campo + ': ' + (e.message || e));
+        return '';
       }
     }
 
