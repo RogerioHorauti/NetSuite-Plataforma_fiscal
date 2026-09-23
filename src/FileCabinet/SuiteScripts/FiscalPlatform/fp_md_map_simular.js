@@ -90,6 +90,15 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         return null;
       }
 
+      // AS LINHAS PRIMEIRO, e a ordem não é estética: `payload` abaixo lê `linhas`, e `var`
+      // é hoisted — montado antes, o campo sairia `undefined` e o JSON iria sem linha nenhuma,
+      // que é justamente o único campo obrigatório do DTO.
+      var linhas = montarLinhas(newRecord);
+      if (!linhas.length) {
+        log.debug('fp_md_map_simular', 'sem linha de item com valor — nada a simular');
+        return null;
+      }
+
       // Exatamente os campos do DTO, e nada além. Acrescentar aqui sem acrescentar lá
       // produz um campo que o Nest descarta calado.
       var payload = { cnpjEmpresa: cnpj, linhas: linhas };
@@ -102,12 +111,6 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
 
       var dest = montarDestinatario(newRecord);
       if (dest) payload.destinatario = dest;
-
-      var linhas = montarLinhas(newRecord);
-      if (!linhas.length) {
-        log.debug('fp_md_map_simular', 'sem linha de item com valor — nada a simular');
-        return null;
-      }
 
       return payload;
     }
@@ -241,14 +244,26 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
      * e não existe `internalid` — a chave é `nkey`.
      */
     function endereco(newRecord) {
-      var id = primeiroValor(newRecord, ['shipaddresslist', 'shippingaddress',
-                                         'billaddresslist', 'billingaddress']);
-      if (!id) return null;
+      // `shipaddresslist` e SO ele: e o id da entrada do address book escolhida na transacao.
+      // `shippingaddress` e o subrecord, nao um id, e `billaddresslist` e OUTRO endereco —
+      // encadear os tres trocaria entrega por cobranca em silencio.
+      var id = newRecord.getValue({ fieldId: 'shipaddresslist' });
+      if (!id) {
+        log.audit('fp_md_map_simular.endereco',
+          'transacao sem endereco de entrega escolhido — o destinatario sai sem logradouro, ' +
+          'municipio e UF, e a SEFAZ vai recusar.');
+        return null;
+      }
+
+      // A coluna do numero entra so se a chave resolver: sem ela na SQL, a consulta quebraria
+      // inteira e o endereco sairia vazio por causa de um campo opcional.
+      var campoNumero = fpFields.idEndereco('END_NUMERO');
+      var cols = 'addr1, addr2, addr3, city, state, dropdownstate, zip';
+      if (campoNumero) cols += ', ' + campoNumero;
 
       try {
         var r = query.runSuiteQL({
-          query: 'SELECT addr1, addr2, addr3, city, state, dropdownstate, zip, ' +
-                 campoNumero + ' FROM transactionshippingaddress WHERE nkey = ?',
+          query: 'SELECT ' + cols + ' FROM transactionshippingaddress WHERE nkey = ?',
           params: [id]
         }).asMappedResults();
 
@@ -264,7 +279,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
           addr1: e.addr1,
           addr2: e.addr2,
           addr3: e.addr3,
-          numero: e[campoNumero],
+          numero: campoNumero ? e[campoNumero] : '',
           city: e.city,
           // `dropdownstate` traz a sigla quando o país tem lista de UF; `state` é o texto livre.
           state: e.dropdownstate || e.state,
@@ -276,18 +291,6 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       }
     }
 
-
-    function primeiroValor(newRecord, campos) {
-      for (var i = 0; i < campos.length; i++) {
-        try {
-          var v = newRecord.getValue({ fieldId: campos[i] });
-          if (v) return v;
-        } catch (e) {
-          // campo ausente neste tipo de transação
-        }
-      }
-      return null;
-    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // linhas
@@ -547,7 +550,7 @@ var out = buscarItens(lista, colunas, mapa);
       var CAMPO = camposImposto();
       var SUBLIST = CAMPO.SUBLIST;
       removeImpostos(newRecord, SUBLIST);
-      if (!json || !json.linhas) return { resumo: '' };
+      if (!json || !json.linhas) return;
 
       var linha = 0;
 
@@ -575,7 +578,6 @@ var out = buscarItens(lista, colunas, mapa);
         });
       });
 
-      return { linhas: linha };
     }
 
     function gravar(newRecord, sublist, linha, campo, valor) {
@@ -660,22 +662,6 @@ var out = buscarItens(lista, colunas, mapa);
       } catch (e) {
         log.debug('fp_md_map_simular.resolverTextos', sql + ' → ' + (e.message || e));
         return {};
-      }
-    }
-
-    /** Texto do campo quando ele é lista; o valor cru quando não é. */
-    function valorOuTexto(rec, campo) {
-      try {
-        var t = rec.getText({ fieldId: campo });
-        if (t) return String(t);
-      } catch (e) {
-        // não é select
-      }
-      try {
-        var v = rec.getValue({ fieldId: campo });
-        return v ? String(v) : '';
-      } catch (e) {
-        return '';
       }
     }
 

@@ -208,11 +208,13 @@ define([
 
       // SUCESSO. Os valores do motor são REFLETIDOS, não conferidos: o NetSuite não recalcula para
       // checar. Divergência se investiga no payload gravado acima.
-      var aplicado = fpMapSimular.aplicar(scriptContext.newRecord, resposta.body);
+      fpMapSimular.aplicar(scriptContext.newRecord, resposta.body);
 
       guardarRastro(corrId, { payload: payload, resposta: resposta.body });
 
-      fpMsg.sucesso(corrId, aplicado.linhas + ' linha(s) de imposto na aba fiscal.');
+      // Sem resumo: o que foi apurado está no sublist, linha por linha. Contar linha na
+      // mensagem é ruído que cresce junto com a nota.
+      fpMsg.sucesso(corrId, '');
 
       // O `avisos[]` do motor é canal dele, e ausência é significativa: `undefined` quer dizer
       // "esta resposta não avaliou avisos", não "não há aviso". Só pinta quando veio com conteúdo.
@@ -360,38 +362,6 @@ define([
       return registro.getLineCount({ sublistId: 'item' });
     } catch (e) {
       return 0;
-    }
-  }
-
-  /**
-   * Grava por NOME LÓGICO, resolvendo pela camada de compatibilidade.
-   *
-   * Duas recusas silenciosas, e as duas são de propósito:
-   *   · chave que não resolve em perfil nenhum → não grava (campo opcional é a regra desta
-   *     arquitetura, não a exceção — ver `fp_fields.js`);
-   *   · chave marcada `somenteLeitura` no perfil ativo → NÃO GRAVA. Campo do outro bundle que o
-   *     outro bundle ainda escreve é campo em disputa, e quem ganha depende de ordem de execução
-   *     de User Event, que não é nossa. Ver ARQUITETURA-COMPATIBILIDADE.md §7.
-   */
-  function gravarLogico(registro, chave, valorNovo) {
-    var campo = fpFields.id(chave);
-    if (!campo) {
-      log.debug('fp_ue_simular.gravarLogico', chave + ' não resolve no perfil ativo — não gravado');
-      return;
-    }
-    if (fpFields.somenteLeitura(chave)) {
-      log.debug('fp_ue_simular.gravarLogico', chave + ' é somenteLeitura no perfil ativo — não gravado');
-      return;
-    }
-    gravar(registro, campo, fpFields.valor(chave, valorNovo));
-  }
-
-  function gravar(registro, campo, valorNovo) {
-    try {
-      registro.setValue({ fieldId: campo, value: valorNovo });
-    } catch (e) {
-      // Campo ausente neste tipo de transação. Fica no log e segue — não é motivo para o save cair.
-      log.error('fp_ue_simular.gravar', campo + ': ' + (e.message || e));
     }
   }
 

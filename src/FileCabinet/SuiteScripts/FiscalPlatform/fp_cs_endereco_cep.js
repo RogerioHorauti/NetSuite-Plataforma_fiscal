@@ -35,7 +35,7 @@
  * não respondeu, e falha de todas termina em campo vazio e aviso, nunca em exceção.
  *
  */
-define(['N/https', 'N/log', './fp_fields'], function (https, log, fpFields) {
+define(['N/https', 'N/log'], function (https, log) {
 
   /** Campos NATIVOS do endereço. Nada de Brazil Localization: não está instalada nesta conta. */
   var CAMPO = {
@@ -46,15 +46,6 @@ define(['N/https', 'N/log', './fp_fields'], function (https, log, fpFields) {
     CIDADE: 'city',
     UF: 'state'
   };
-
-  /**
-   * A camada de compatibilidade É carregada aqui, e passou a poder ser.
-   *
-   * Ela dependia de `N/file` e `N/cache`, que não existem em Client Script — o deploy de
-   * 2026-09-23 recusou o objeto com `MODULE_DOES_NOT_EXIST: Module does not exist: N/cache.js`.
-   * Os perfis viraram módulo AMD e as duas dependências sumiram, então client script do bundle
-   * deixou de ser obrigado a chumbar scriptid.
-   */
 
   function fieldChanged(contexto) {
     if (contexto.fieldId !== CAMPO.CEP) return;

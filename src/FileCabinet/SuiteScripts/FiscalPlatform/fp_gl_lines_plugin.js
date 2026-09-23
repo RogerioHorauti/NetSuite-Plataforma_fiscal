@@ -208,7 +208,6 @@ define(['N/query', 'N/log', './fp_fields'], function (query, log, fpFields) {
   }
 
   function executar(context) {
-    var C = campos();
     var tx = context.transactionRecord;
     var book = context.book;
 
@@ -683,7 +682,6 @@ function lancar(customLines, grupo, ctx) {
    * branco = não estorna, que é o default seguro.
    */
   function estornarImpostoNativo(context, tx) {
-    var C = campos();
     var cfg = configuracaoDoEstorno(tx);
     if (!cfg || !cfg.nativa) return;
 
