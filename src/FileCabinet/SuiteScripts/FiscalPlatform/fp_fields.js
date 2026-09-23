@@ -170,6 +170,11 @@ define(['N/search', 'N/runtime', 'N/log', './perfis/fp_perfil_original', './perf
     return resolver('location', chave);
   }
 
+  /** Campo FP na entity (customer/vendor). */
+  function idCliente(chave) {
+    return resolver('cliente', chave);
+  }
+
   /** Campo FP no registro de endereço. */
   function idEndereco(chave) {
     return resolver('endereco', chave);
@@ -398,6 +403,7 @@ function perfilConfigurado() {
     idClassificador: idClassificador,
     idSubsidiaria: idSubsidiaria,
     idLocation: idLocation,
+    idCliente: idCliente,
     idEndereco: idEndereco,
     idLog: idLog,
     idNatureza: idNatureza,

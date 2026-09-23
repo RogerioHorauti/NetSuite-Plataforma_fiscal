@@ -196,7 +196,14 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
 
       // `vatregnumber` é o "Tax Reg. Number" do Records Browser — o único campo nativo que
       // carrega CNPJ nesta conta, que não tem custentity nenhum.
-      var cad = lookup('customer', entity, ['companyname', 'entityid', 'vatregnumber', 'email', 'phone']);
+      var campoIe = fpFields.idCliente('IE');
+      var campoInd = fpFields.idCliente('IND_IE_DEST');
+
+      var colunas = ['companyname', 'entityid', 'vatregnumber', 'email', 'phone'];
+      if (campoIe) colunas.push(campoIe);
+      if (campoInd) colunas.push(campoInd);
+
+      var cad = lookup('customer', entity, colunas);
       if (cad) {
         var nome = texto(cad.companyname) || texto(cad.entityid);
         if (nome) dest.nome = nome;
@@ -204,6 +211,20 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         if (doc) dest.cnpjCpf = doc;
         if (cad.email) dest.email = texto(cad.email);
         if (cad.phone) dest.fone = texto(cad.phone);
+
+        if (campoIe) {
+          var ie = digitos(cad[campoIe]);
+          if (ie) dest.ie = ie;
+        }
+
+        // `indIeDest` vale mais que rótulo de cadastro: o motor deriva dele o
+        // `destinatarioContribuinte` (1 e 2 → true, 9 → false), e é isso que decide o DIFAL.
+        // `lookupFields` devolve List/Record como `[{value, text}]`; o código está no texto,
+        // pelo mesmo desenho da origem da mercadoria.
+        if (campoInd) {
+          var ind = codigoDoIndIeDest(cad[campoInd]);
+          if (ind) dest.indIeDest = ind;
+        }
       }
 
       var end = endereco(newRecord);
@@ -704,6 +725,16 @@ var out = buscarItens(lista, colunas, mapa);
     function codigoDoCfop(v) {
       var d = digitos(v);
       return d.length === 4 ? d : '';
+    }
+
+    /**
+     * `1`, `2` ou `9` a partir do valor da lista. Número, não string: o DTO tipa `indIeDest` como
+     * `number`, e mandar `"1"` faria o Nest descartar o campo sem dizer nada.
+     */
+    function codigoDoIndIeDest(v) {
+      var t = Array.isArray(v) && v.length ? (v[0].text || v[0].value) : v;
+      var m = /^\s*([129])(?:\s|-|$)/.exec(texto(t));
+      return m ? parseInt(m[1], 10) : 0;
     }
 
     function codigoDaOrigem(v) {

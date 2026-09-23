@@ -80,6 +80,19 @@ define([], function () {
       ]
     },
   
+    "cliente": {
+      "_nota": [
+        "Campos FP na ENTITY (customer e vendor). CNPJ/CPF NAO entra aqui: no Legacy Tax, que e o",
+        "que esta conta roda, ele e o `vatregnumber` NATIVO (Tax Reg. Number), e campo nativo fica",
+        "fora de perfil.",
+        "",
+        "IND_IE_DEST nao e detalhe de cadastro: o motor deriva dele o `destinatarioContribuinte`",
+        "(1 e 2 -> true, 9 -> false), e e isso que decide DIFAL. Sem ele o motor nao sabe."
+      ],
+      "IE": "custentity_fp_ie",
+      "IND_IE_DEST": "custentity_fp_ind_ie_dest"
+    },
+
     "endereco": {
       "_nota": "Campos no registro de ENDERECO (othercustomfield, rectype -289).",
       "END_NUMERO": "custrecord_fp_end_numero"
