@@ -47,6 +47,7 @@
  */
 define([
   'N/record',
+  'N/file',
   'N/runtime',
   'N/log',
   './fp_msg',
@@ -54,7 +55,7 @@ define([
   './fp_form',
   './fp_client',
   './fp_md_map_simular'
-], function (record, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular) {
+], function (record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular) {
   /** Tipos de transação em que a simulação roda. Fora desta lista, o script não faz nada. */
   var TIPOS = [
     'invoice',
@@ -95,6 +96,15 @@ define([
    * ORGANIZAR não pode engolir a MENSAGEM (o usuário perderia a rejeição da SEFAZ por causa de um
    * campo fora de lugar), e nenhuma das duas pode impedir o registro de abrir.
    */
+  /**
+   * O que o `beforeSubmit` deixa para o `afterSubmit` anexar.
+   *
+   * Escopo de módulo, e é seguro: um User Event roda uma vez por save de um registro, e as duas
+   * funções são a mesma execução. Zerado no início de cada `beforeSubmit` para que um save que
+   * não simula não herde o rastro do anterior.
+   */
+  var rastro = null;
+
   function beforeLoad(scriptContext) {
     try {
       organizarFormulario(scriptContext);
@@ -145,6 +155,7 @@ define([
     // PRIMEIRA LINHA, e a ordem importa: o id de correlação tem de existir antes de qualquer
     // coisa que possa lançar. É a correção do defeito do AVLR — ver o docblock de `fp_msg.js`.
     var corrId;
+    rastro = null;
 
     try {
       corrId = fpMsg.garantirCorrId(scriptContext.newRecord);
@@ -165,12 +176,17 @@ define([
       log.debug('resposta', resposta)
       // GUARDAR O PAYLOAD ENVIADO, sempre, e ANTES de olhar o resultado. Sem ele, "o motor errou"
       // e "eu mandei errado" são indistinguíveis — e a segunda é a hipótese mais frequente.
-      gravarLogico(scriptContext.newRecord, 'SIM_PAYLOAD', JSON.stringify(payload));
+      //
+      // Vai para ARQUIVO, não para campo: nota de centenas de linhas produz um payload de dezenas
+      // de milhares de caracteres, e campo texto trunca em silêncio — o pior jeito de perder
+      // justamente a prova do que foi enviado. O anexo acontece no `afterSubmit`, porque na
+      // CRIAÇÃO a transação ainda não tem id e `record.attach` não teria a que anexar.
+      rastro = { payload: payload, resposta: null };
 
       if (!resposta.ok) {
         // RECUSA DO MOTOR. O texto dele vai INTEIRO para a tela — sem traduzir, sem resumir.
         gravarLogico(scriptContext.newRecord, 'SIM_STATUS', 'RECUSADO');
-        gravarLogico(scriptContext.newRecord, 'SIM_RESUMO', '');
+        rastro.resposta = resposta.body;
 
         fpMsg.erro(corrId, fpMsg.ORIGEM.FISCALPLATFORM, resposta.code, mensagensDaRecusa(resposta.body));
         log.error('fp_ue_simular.recusa', { code: resposta.code, body: resposta.body });
@@ -182,12 +198,7 @@ define([
       var aplicado = fpMapSimular.aplicar(scriptContext.newRecord, resposta.body);
 
       gravarLogico(scriptContext.newRecord, 'SIM_STATUS', 'SIMULADO');
-      gravarLogico(scriptContext.newRecord, 'SIM_RESUMO', aplicado.resumo || '');
-
-      // SENTIDO DA OPERAÇÃO, na palavra do motor. O plug-in de GL precisa dele para achar a regra
-      // no classificador, e derivá-lo do tipo de transação erraria justamente onde dói: numa
-      // devolução de venda o documento é de venda e o movimento de mercadoria é de ENTRADA.
-      gravarLogico(scriptContext.newRecord, 'DOC_ENTRADA_SAIDA', resposta.body.entradaSaida || '');
+      rastro.resposta = resposta.body;
 
       fpMsg.sucesso(corrId, aplicado.resumo);
 
@@ -218,7 +229,6 @@ define([
 
       try {
         gravarLogico(scriptContext.newRecord, 'SIM_STATUS', 'INDISPONIVEL');
-        gravarLogico(scriptContext.newRecord, 'SIM_RESUMO', '');
       } catch (e3) {
         log.error('fp_ue_simular.beforeSubmit', 'falha ao marcar INDISPONIVEL: ' + (e3.message || e3));
       }
@@ -396,23 +406,83 @@ define([
     return [JSON.stringify(corpo)];
   }
 
-  function afterSubmit(scriptContext) 
-  {
+  function afterSubmit(scriptContext) {
+    var id = scriptContext.newRecord.id;
+    var campoIdExterno = fpFields.id('DOC_IDEXTERNO');
+
     try {
-      var id = record.submitFields({
+      record.submitFields({
         type: scriptContext.newRecord.type,
-          id: scriptContext.newRecord.id,
-          values: {
-            custbody_fp_idexterno: scriptContext.newRecord.id
-        },
-        options: {
-          enableSourcing: false,
-          ignoreMandatoryFields : true
-        }
-      });  
+        id: id,
+        values: montarValores(campoIdExterno, id),
+        options: { enableSourcing: false, ignoreMandatoryFields: true }
+      });
     } catch (e) {
-      log.error('fp_ue_simular.afterSubmit', { name: e.name, message: e.message, stack: e.stack })
+      log.error('fp_ue_simular.afterSubmit/idExterno', { name: e.name, message: e.message });
     }
+
+    try {
+      anexarRastro(scriptContext.newRecord.type, id);
+    } catch (e) {
+      // Anexo é PROVA, não parte do save. Falhar aqui não pode desfazer nada do que já gravou.
+      log.error('fp_ue_simular.afterSubmit/rastro', { name: e.name, message: e.message });
+    } finally {
+      rastro = null;
+    }
+  }
+
+  /**
+   * Grava payload e retorno como ARQUIVO e anexa à transação.
+   *
+   * Por que arquivo e não campo: nota de 999 linhas produz um payload de dezenas de milhares de
+   * caracteres. Campo texto do NetSuite trunca em silêncio, e o que se perderia é exatamente a
+   * prova de que a divergência foi do envio e não do motor — a hipótese mais frequente.
+   *
+   * Pasta `-10` (Attachments Received), padrão em qualquer conta. O nome carrega tipo, id e
+   * instante, para achar sem abrir.
+   */
+  function anexarRastro(tipo, id) {
+    if (!rastro || !id) return;
+
+    var carimbo = instante();
+    anexar(tipo, id, 'FP-' + tipo + '-' + id + '-' + carimbo + '-payload.json', rastro.payload);
+    if (rastro.resposta) {
+      anexar(tipo, id, 'FP-' + tipo + '-' + id + '-' + carimbo + '-retorno.json', rastro.resposta);
+    }
+  }
+
+  function anexar(tipo, id, nome, conteudo) {
+    var arquivo = file.create({
+      name: nome,
+      fileType: file.Type.JSON,
+      contents: JSON.stringify(conteudo, null, 1),
+      folder: -10,
+      isOnline: false
+    });
+
+    var idArquivo = arquivo.save();
+
+    record.attach({
+      record: { type: 'file', id: idArquivo },
+      to: { type: tipo, id: id }
+    });
+
+    log.audit('fp_ue_simular.anexar', nome + ' (file ' + idArquivo + ')');
+  }
+
+  /** `{ campo: valor }` sem chave dinâmica no literal, que o SuiteScript 1.0 não aceitava. */
+  function montarValores(campo, valor) {
+    var v = {};
+    if (campo) v[campo] = valor;
+    return v;
+  }
+
+  /** `AAAAMMDD-HHMMSS`, para dois saves no mesmo dia não colidirem no nome. */
+  function instante() {
+    var d = new Date();
+    function z(n) { return (n < 10 ? '0' : '') + n; }
+    return d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate()) + '-' +
+           z(d.getHours()) + z(d.getMinutes()) + z(d.getSeconds());
   }
 
   return {

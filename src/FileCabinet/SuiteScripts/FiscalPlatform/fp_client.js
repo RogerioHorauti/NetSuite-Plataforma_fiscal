@@ -779,13 +779,13 @@ define([
       type: search.Type.SUBSIDIARY,
       id: subsidiaria,
       columns: [
-        'custrecord_fp_api_baseurl',
-        'custrecord_fp_api_clientid',
-        'custrecord_fp_api_secret'
+        fpFields.idSubsidiaria('API_BASEURL'),
+        fpFields.idSubsidiaria('API_CLIENTID'),
+        fpFields.idSubsidiaria('API_SECRET')
       ]
     });
 
-    var base = (l.custrecord_fp_api_baseurl || '').replace(/\/+$/, '');
+    var base = (l[fpFields.idSubsidiaria('API_BASEURL')] || '').replace(/\/+$/, '');
     if (!base) {
       throw new Error(
         'fp_client: subsidiária ' + k + ' sem "FP - Base URL da API". Preencha os campos FP na ' +
@@ -795,8 +795,8 @@ define([
 
     var cfg = {
       baseUrl: base,
-      secretClientId: l.custrecord_fp_api_clientid || '',
-      secretSegredo: l.custrecord_fp_api_secret || '',
+      secretClientId: l[fpFields.idSubsidiaria('API_CLIENTID')] || '',
+      secretSegredo: l[fpFields.idSubsidiaria('API_SECRET')] || '',
       chaveCache: k,
       // TTL do cache abaixo do TTL do token, para nunca usar token no fio da navalha. O `/oauth/
       // token` do motor tem default 3.600 s (`oauth.dto.ts:26`); se o client for configurado com
@@ -821,10 +821,10 @@ define([
       var l = search.lookupFields({
         type: search.Type.LOCATION,
         id: location,
-        columns: ['custrecord_fp_cnpj_filial', 'custrecord_fp_serie_filial']
+        columns: [fpFields.idLocation('CNPJ'), fpFields.idLocation('SERIE')]
       });
-      var cnpj = String(l.custrecord_fp_cnpj_filial || '').replace(/\D/g, '');
-      return cnpj ? { cnpj: cnpj, serie: l.custrecord_fp_serie_filial || '' } : null;
+      var cnpj = String(l[fpFields.idLocation('CNPJ')] || '').replace(/\D/g, '');
+      return cnpj ? { cnpj: cnpj, serie: l[fpFields.idLocation('SERIE')] || '' } : null;
     } catch (e) {
       log.error('fp_client.cnpjDaFilial', 'location ' + location + ': ' + (e.message || e));
       return null;
@@ -858,19 +858,19 @@ define([
 
     try {
       var r = record.create({ type: tipo, isDynamic: false });
-      r.setValue({ fieldId: 'custrecord_fp_log_endpoint', value: String(url).substring(0, 300) });
-      r.setValue({ fieldId: 'custrecord_fp_log_metodo', value: metodo });
-      r.setValue({ fieldId: 'custrecord_fp_log_duracao', value: duracao });
+      r.setValue({ fieldId: fpFields.idLog('ENDPOINT'), value: String(url).substring(0, 300) });
+      r.setValue({ fieldId: fpFields.idLog('METODO'), value: metodo });
+      r.setValue({ fieldId: fpFields.idLog('DURACAO'), value: duracao });
       if (code !== null && code !== undefined) {
-        r.setValue({ fieldId: 'custrecord_fp_log_http', value: code });
+        r.setValue({ fieldId: fpFields.idLog('HTTP'), value: code });
       }
-      if (corpo) r.setValue({ fieldId: 'custrecord_fp_log_payload', value: corpo });
-      if (resposta) r.setValue({ fieldId: 'custrecord_fp_log_resposta', value: String(resposta) });
+      if (corpo) r.setValue({ fieldId: fpFields.idLog('PAYLOAD'), value: corpo });
+      if (resposta) r.setValue({ fieldId: fpFields.idLog('RESPOSTA'), value: String(resposta) });
       if (opcoes && opcoes.corrId) {
-        r.setValue({ fieldId: 'custrecord_fp_log_corrid', value: opcoes.corrId });
+        r.setValue({ fieldId: fpFields.idLog('CORRID'), value: opcoes.corrId });
       }
       if (opcoes && opcoes.transacao) {
-        r.setValue({ fieldId: 'custrecord_fp_log_transaction', value: opcoes.transacao });
+        r.setValue({ fieldId: fpFields.idLog('TRANSACAO'), value: opcoes.transacao });
       }
       r.save({ ignoreMandatoryFields: true });
     } catch (e) {

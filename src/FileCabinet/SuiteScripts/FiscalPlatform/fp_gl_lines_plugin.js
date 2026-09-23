@@ -29,9 +29,9 @@
  *   · DEBITO com `compoeTotalNf = false` (ICMS/PIS/COFINS) debita dedução de receita; com `true`
  *     (IPI) o tributo não é receita (DL 1.598/77 art. 12 §4º) e a perna devedora vira o a receber.
  *
- * Por isso o cadastro carrega Sentido e Compõe Total, e por isso o SENTIDO vem de
- * `custbody_fp_entrada_saida` — a palavra do próprio motor. Derivá-lo do tipo de transação erraria
- * exatamente onde dói: numa devolução de venda o documento é de venda e o movimento é de entrada.
+ * Por isso o cadastro carrega Sentido e Compõe Total, e por isso o SENTIDO vem da NATUREZA DE
+ * OPERAÇÃO declarada, que guarda o E/S. Derivá-lo do tipo de transação erraria exatamente onde
+ * dói: numa devolução de venda o documento é de venda e o movimento é de entrada.
  *
  * ── A PERNA VARIÁVEL ──────────────────────────────────────────────────────────────────────────
  *
@@ -91,28 +91,60 @@
  * possui classificador contábil nem sublist de impostos por linha —, então não há de-para a fazer:
  * em qualquer perfil eles resolveriam para si mesmos pelo overlay parcial.
  */
-define(['N/query', 'N/log'], function (query, log) {
-  var SUBLIST_IMPOSTOS = 'recmachcustrecord_fp_transacao_imp';
+define(['N/query', 'N/log', './fp_fields'], function (query, log, fpFields) {
+  /**
+   * Ids pela camada de compatibilidade, resolvidos UMA vez por execução.
+   *
+   * Antes eram literais aqui, com a justificativa de que `fp_fields` fazia `file.load` e o manual
+   * manda evitar API pesada no plug-in (p.11-12, p.82). Os perfis viraram módulo AMD: sumiram o
+   * `N/file` e o `N/cache`, e o que sobra é resolução em memória mais, no máximo, uma busca para
+   * descobrir o perfil ativo — que fica memoizada. A justificativa caiu, e o literal com ela.
+   */
+  var ids = null;
 
-  var IMP = {
-    TAXCODIGO: 'custrecord_fp_taxcodigo_imp',
-    NATUREZA: 'custrecord_fp_naturezacontabil_imp',
-    VALOR: 'custrecord_fp_valor_imp',
-    COMPOE: 'custrecord_fp_compoetotalnf_imp',
-    LINHA: 'custrecord_fp_numerolinha_imp',
-    BASE: 'custrecord_fp_base_calculo_imp',
-    ALIQUOTA: 'custrecord_fp_aliquota_imp',
-    PERNA: 'custrecord_fp_perna_imp',
-    GERA: 'custrecord_fp_geralancamento_imp',
-    RAZAO: 'custrecord_fp_razaoperna_imp'
-  };
-
-  var CAMPO_SENTIDO = 'custbody_fp_entrada_saida';
-  var CAMPO_NATUREZA = 'custbody_fp_natureza';
+  function campos() {
+    if (ids) return ids;
+    ids = {
+      SUBLIST: fpFields.idImposto('SUBLIST'),
+      IMP: {
+        TAXCODIGO: fpFields.idImposto('TAXCODIGO'),
+        NATUREZA: fpFields.idImposto('NATUREZA_CONTABIL'),
+        VALOR: fpFields.idImposto('VALOR'),
+        COMPOE: fpFields.idImposto('COMPOE_TOTAL'),
+        LINHA: fpFields.idImposto('NUMERO_LINHA'),
+        BASE: fpFields.idImposto('BASE_CALCULO'),
+        ALIQUOTA: fpFields.idImposto('ALIQUOTA'),
+        PERNA: fpFields.idImposto('PERNA'),
+        GERA: fpFields.idImposto('GERA_LANCAMENTO'),
+        RAZAO: fpFields.idImposto('RAZAO_PERNA'),
+        TRANSACAO: fpFields.idImposto('TRANSACAO')
+      },
+      CC: {
+        IMPOSTO: fpFields.idClassificador('IMPOSTO'),
+        NATUREZA: fpFields.idClassificador('NATUREZA'),
+        PERNA: fpFields.idClassificador('PERNA'),
+        COMPOE: fpFields.idClassificador('COMPOE_TOTAL'),
+        CONTA_TRIBUTO: fpFields.idClassificador('CONTA_TRIBUTO'),
+        CONTRA_ORIGEM: fpFields.idClassificador('CONTRAPARTIDA_ORIGEM'),
+        CONTRA: fpFields.idClassificador('CONTRAPARTIDA'),
+        CODIGO_IMPOSTO: fpFields.idClassificador('CODIGO_IMPOSTO')
+      },
+      REG: {
+        IMPOSTOS: fpFields.registro('IMPOSTOS'),
+        IMPOSTO: fpFields.registro('IMPOSTO'),
+        CLASSIFICADOR: fpFields.registro('CLASSIFICADOR')
+      },
+      NATUREZA_TX: fpFields.id('NATUREZA'),
+      NUMERO: fpFields.id('DOC_NUMERO'),
+      SERIE: fpFields.id('DOC_SERIE'),
+      CHAVE: fpFields.id('DOC_CHAVE'),
+      SUB_NATIVO: fpFields.idSubsidiaria('CONTA_IMPOSTO_NATIVO'),
+      SUB_ESTORNO: fpFields.idSubsidiaria('CONTA_ESTORNO_CONTRA')
+    };
+    return ids;
+  }
 
   /** Estorno do imposto nativo — as duas contas são cadastro na subsidiária, não palpite daqui. */
-  var CAMPO_CONTA_NATIVO  = 'custrecord_fp_conta_imposto_nativo';
-  var CAMPO_CONTA_ESTORNO = 'custrecord_fp_conta_estorno_contra';
 
   /**
    * Identidade do documento para o histórico do lançamento.
@@ -121,10 +153,7 @@ define(['N/query', 'N/log'], function (query, log) {
    * em transação apenas simulada a nota ainda não foi gerada, e o histórico sai com o número do
    * documento do ERP. Cada um entra no texto se, e só se, estiver preenchido.
    */
-  var CAMPO_NUMERO = 'custbody_fp_numero';
-  var CAMPO_SERIE  = 'custbody_fp_serie';
-  var CAMPO_CHAVE  = 'custbody_fp_chave';
-
+  
   /** Essência econômica por natureza (ITG 2000 itens 6 "d" e 8). Redação, não régua fiscal:
    *  nenhuma entrada aqui decide CST, base, alíquota ou conta. `{t}` = tributo, `{op}` = sentido. */
   var FRASE = {
@@ -180,6 +209,7 @@ define(['N/query', 'N/log'], function (query, log) {
   }
 
   function executar(context) {
+    var C = campos();
     var tx = context.transactionRecord;
     var book = context.book;
 
@@ -195,8 +225,8 @@ define(['N/query', 'N/log'], function (query, log) {
     var sentido = lerSentido(tx);
     if (!sentido) {
       log.audit('fp_gl_lines_plugin',
-        'sem sentido da operacao: nem ' + CAMPO_SENTIDO + ' nem a natureza de operacao o dizem. ' +
-        'O lancamento sai; o historico fica sem "sobre vendas/compras".');
+        'sem natureza de operação na transação, ou natureza sem E/S. O lançamento sai; ' +
+        'o histórico fica sem "sobre vendas/compras".');
     }
 
 
@@ -255,46 +285,48 @@ define(['N/query', 'N/log'], function (query, log) {
   }
 
   function lerImpostosDoSublist(tx) {
+    var C = campos();
     var linhas = [];
     try {
-      var n = tx.getLineCount({ sublistId: SUBLIST_IMPOSTOS });
+      var n = tx.getLineCount({ sublistId: C.SUBLIST });
       if (!n || n < 0) return [];
 
       for (var i = 0; i < n; i++) {
         linhas.push({
-          imposto: texto(tx.getSublistValue({ sublistId: SUBLIST_IMPOSTOS, fieldId: IMP.TAXCODIGO, line: i })),
-          natureza: texto(tx.getSublistValue({ sublistId: SUBLIST_IMPOSTOS, fieldId: IMP.NATUREZA, line: i })),
-          valor: numero(tx.getSublistValue({ sublistId: SUBLIST_IMPOSTOS, fieldId: IMP.VALOR, line: i })),
-          compoe: booleano(tx.getSublistValue({ sublistId: SUBLIST_IMPOSTOS, fieldId: IMP.COMPOE, line: i })),
-          base: numero(tx.getSublistValue({ sublistId: SUBLIST_IMPOSTOS, fieldId: IMP.BASE, line: i })),
-          aliquota: numero(tx.getSublistValue({ sublistId: SUBLIST_IMPOSTOS, fieldId: IMP.ALIQUOTA, line: i })),
-          perna: texto(tx.getSublistValue({ sublistId: SUBLIST_IMPOSTOS, fieldId: IMP.PERNA, line: i })).toUpperCase(),
-          gera: booleano(tx.getSublistValue({ sublistId: SUBLIST_IMPOSTOS, fieldId: IMP.GERA, line: i })),
-          razao: texto(tx.getSublistValue({ sublistId: SUBLIST_IMPOSTOS, fieldId: IMP.RAZAO, line: i }))
+          imposto: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.TAXCODIGO, line: i })),
+          natureza: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.NATUREZA, line: i })),
+          valor: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.VALOR, line: i })),
+          compoe: booleano(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.COMPOE, line: i })),
+          base: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.BASE, line: i })),
+          aliquota: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.ALIQUOTA, line: i })),
+          perna: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.PERNA, line: i })).toUpperCase(),
+          gera: booleano(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.GERA, line: i })),
+          razao: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.RAZAO, line: i }))
         });
       }
     } catch (e) {
       log.debug('fp_gl_lines_plugin.lerImpostosDoSublist',
-        'sublist ' + SUBLIST_IMPOSTOS + ' não legível aqui (' + (e.message || e) + ') — caindo na consulta');
+        'sublist ' + C.SUBLIST + ' não legível aqui (' + (e.message || e) + ') — caindo na consulta');
       return [];
     }
     return linhas;
   }
 
   function lerImpostosPorConsulta(idTransacao) {
+    var C = campos();
     var sql =
       'SELECT ' +
-      '  ' + IMP.TAXCODIGO + ' AS imposto, ' +
-      '  ' + IMP.NATUREZA + ' AS natureza, ' +
-      '  ' + IMP.VALOR + ' AS valor, ' +
-      '  ' + IMP.COMPOE + ' AS compoe, ' +
-      '  ' + IMP.BASE + ' AS base, ' +
-      '  ' + IMP.ALIQUOTA + ' AS aliquota, ' +
-      '  ' + IMP.PERNA + ' AS perna, ' +
-      '  ' + IMP.GERA + ' AS gera, ' +
-      '  ' + IMP.RAZAO + ' AS razao ' +
-      'FROM customrecord_fp_impostos ' +
-      'WHERE custrecord_fp_transacao_imp = ? AND isinactive = \'F\'';
+      '  ' + C.IMP.TAXCODIGO + ' AS imposto, ' +
+      '  ' + C.IMP.NATUREZA + ' AS natureza, ' +
+      '  ' + C.IMP.VALOR + ' AS valor, ' +
+      '  ' + C.IMP.COMPOE + ' AS compoe, ' +
+      '  ' + C.IMP.BASE + ' AS base, ' +
+      '  ' + C.IMP.ALIQUOTA + ' AS aliquota, ' +
+      '  ' + C.IMP.PERNA + ' AS perna, ' +
+      '  ' + C.IMP.GERA + ' AS gera, ' +
+      '  ' + C.IMP.RAZAO + ' AS razao ' +
+      'FROM ' + C.REG.IMPOSTOS + ' ' +
+      'WHERE ' + C.IMP.TRANSACAO + ' = ? AND isinactive = ' + "'F'";
 
     var linhas = [];
     try {
@@ -320,33 +352,26 @@ define(['N/query', 'N/log'], function (query, log) {
   }
 
   /**
-   * Sentido pela palavra do motor; na falta dela, pela natureza de operação declarada.
+   * Sentido pela NATUREZA DE OPERAÇÃO declarada, e só por ela.
    *
-   * O fallback não é redundância: transação salva ANTES de `custbody_fp_entrada_saida` existir
-   * não tem o campo preenchido, e o GL dela pode ser recalculado a qualquer momento (o manual
-   * avisa, p.4 e p.94, que uma atualização de custo faz o plug-in rodar de novo). Quem abriu o
-   * pedido já escolheu a natureza, e `customrecord_fp_natureza_operacao` guarda o E/S dela —
-   * é dado que já existe, não trabalho novo para ninguém.
+   * Não há campo de sentido na transação: quem abriu o pedido já escolheu a natureza, e
+   * `customrecord_fp_natureza_operacao` guarda o E/S dela. É dado que já existe — duplicá-lo num
+   * campo de transação seria uma segunda verdade que alguém teria de manter sincronizada.
    */
   function lerSentido(tx) {
-    var s = normalizarSentido(tx.getValue({ fieldId: CAMPO_SENTIDO }));
-    if (s) return s;
-
-    var natureza = numero(tx.getValue({ fieldId: CAMPO_NATUREZA }));
+    var C = campos();
+    var natureza = numero(tx.getValue({ fieldId: C.NATUREZA_TX }));
     if (!natureza) return null;
 
     try {
       var r = query.runSuiteQL({
-        query: 'SELECT custrecord_fp_entrada_saida AS es FROM customrecord_fp_natureza_operacao WHERE id = ?',
+        query: 'SELECT ' + fpFields.idNatureza('ENTRADA_SAIDA') + ' AS es FROM ' +
+               fpFields.registro('NATUREZA_OPERACAO') + ' WHERE id = ?',
         params: [natureza]
       }).asMappedResults();
       if (r.length) {
-        s = normalizarSentido(r[0].es);
-        if (s) {
-          log.debug('fp_gl_lines_plugin.lerSentido',
-            'sentido veio da natureza de operação (' + s + '), não de ' + CAMPO_SENTIDO);
-          return s;
-        }
+        var s = normalizarSentido(r[0].es);
+        if (s) return s;
       }
     } catch (e) {
       log.error('fp_gl_lines_plugin.lerSentido', e.message || e);
@@ -428,17 +453,18 @@ define(['N/query', 'N/log'], function (query, log) {
    * string canônica (`DEBITO`, `ENTRADA`), não o internal id do valor da lista nesta conta.
    */
   function carregarRegua() {
+    var C = campos();
     var sql =
       'SELECT ' +
-      '  i.custrecord_fp_codigo_impo AS imposto, ' +
-      '  BUILTIN.DF(c.custrecord_fp_natureza_cc) AS natureza, ' +
-      '  c.custrecord_fp_perna_cc AS perna, ' +
-      '  BUILTIN.DF(c.custrecord_fp_compoe_total_cc) AS compoe, ' +
-      '  BUILTIN.DF(c.custrecord_fp_contrapartida_origem_cc) AS contra_origem, ' +
-      '  c.custrecord_fp_conta_tributo_cc AS conta_tributo, ' +
-      '  c.custrecord_fp_contrapartida_cc AS conta_contra ' +
-      'FROM customrecord_fp_classificador_contabil c ' +
-      'JOIN customrecord_fp_imposto i ON i.id = c.custrecord_fp_imposto_cc ' +
+      '  i.' + C.CC.CODIGO_IMPOSTO + ' AS imposto, ' +
+      '  BUILTIN.DF(c.' + C.CC.NATUREZA + ') AS natureza, ' +
+      '  c.' + C.CC.PERNA + ' AS perna, ' +
+      '  BUILTIN.DF(c.' + C.CC.COMPOE + ') AS compoe, ' +
+      '  BUILTIN.DF(c.' + C.CC.CONTRA_ORIGEM + ') AS contra_origem, ' +
+      '  c.' + C.CC.CONTA_TRIBUTO + ' AS conta_tributo, ' +
+      '  c.' + C.CC.CONTRA + ' AS conta_contra ' +
+      'FROM ' + C.REG.CLASSIFICADOR + ' c ' +
+      'JOIN ' + C.REG.IMPOSTO + ' i ON i.id = c.' + C.CC.IMPOSTO + ' ' +
       "WHERE c.isinactive = 'F'";
 
     try {
@@ -613,9 +639,10 @@ function lancar(customLines, grupo, ctx) {
    * documento é o `tranid` do NetSuite.
    */
   function identidadeDoDocumento(tx) {
-    var numero = texto(valorDe(tx, CAMPO_NUMERO));
-    var serie = texto(valorDe(tx, CAMPO_SERIE));
-    var chave = texto(valorDe(tx, CAMPO_CHAVE));
+    var C = campos();
+    var numero = texto(valorDe(tx, C.NUMERO));
+    var serie = texto(valorDe(tx, C.SERIE));
+    var chave = texto(valorDe(tx, C.CHAVE));
     var tranid = texto(valorDe(tx, 'tranid'));
 
     var documento = null;
@@ -659,6 +686,7 @@ function lancar(customLines, grupo, ctx) {
    * branco = não estorna, que é o default seguro.
    */
   function estornarImpostoNativo(context, tx) {
+    var C = campos();
     var cfg = configuracaoDoEstorno(tx);
     if (!cfg || !cfg.nativa) return;
 
@@ -710,15 +738,16 @@ function lancar(customLines, grupo, ctx) {
    * ida ao banco, e governança no plug-in é 1000 unidades para o arquivo inteiro (manual p.83).
    */
   function configuracaoDoEstorno(tx) {
+    var C = campos();
     var sub = numero(valorDe(tx, 'subsidiary'));
     if (!sub) return null;
     try {
       var r = query.runSuiteQL({
         query:
-          'SELECT s.' + CAMPO_CONTA_NATIVO + ' AS nativa, ' +
-          '       s.' + CAMPO_CONTA_ESTORNO + ' AS contra, ' +
+          'SELECT s.' + C.SUB_NATIVO + ' AS nativa, ' +
+          '       s.' + C.SUB_ESTORNO + ' AS contra, ' +
           '       a.accttype AS tipo ' +
-          'FROM subsidiary s LEFT JOIN account a ON a.id = s.' + CAMPO_CONTA_NATIVO + ' ' +
+          'FROM subsidiary s LEFT JOIN account a ON a.id = s.' + C.SUB_NATIVO + ' ' +
           'WHERE s.id = ?',
         params: [sub]
       }).asMappedResults();

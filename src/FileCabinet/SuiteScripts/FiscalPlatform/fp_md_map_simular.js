@@ -73,12 +73,6 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
      * location, ou com location sem CNPJ. Quem chama trata como "não simula agora" e deixa salvar.
      */
     function montar(newRecord) {
-      var linhas = montarLinhas(newRecord);
-      if (!linhas.length) {
-        log.debug('fp_md_map_simular', 'sem linha de item com valor — nada a simular');
-        return null;
-      }
-
       var cnpj = cnpjDaFilial(newRecord);
       if (!cnpj) {
         log.debug('fp_md_map_simular',
@@ -108,6 +102,12 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
 
       var dest = montarDestinatario(newRecord);
       if (dest) payload.destinatario = dest;
+
+      var linhas = montarLinhas(newRecord);
+      if (!linhas.length) {
+        log.debug('fp_md_map_simular', 'sem linha de item com valor — nada a simular');
+        return null;
+      }
 
       return payload;
     }
@@ -221,37 +221,69 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       return Object.keys(dest).length ? dest : null;
     }
 
-    /**
-     * Campo de número no endereço. Literal, e não pela camada de compatibilidade: `fp_fields`
-     * resolve campo de TRANSAÇÃO, item e linha — endereço não está nas seções do perfil, e este
-     * campo é nosso e só nosso.
-     */
-    var CAMPO_END_NUMERO = 'custrecord_fp_end_numero';
-
     /** Subrecord de endereço da transação. Envio antes de cobrança: a mercadoria vai para o envio. */
+/**
+/**
+     * Endereço por SuiteQL, NÃO pelo subrecord.
+     *
+     * ⚠ MEDIDO: `getSubrecord({fieldId:'shippingaddress'})` no `beforeSubmit` devolve `undefined`
+     * nos campos — o payload saía sem `numero`, `municipio` e `uf` com o endereço preenchido na
+     * tela. Mesmo motivo que tirou o `getSublistText` daqui: API que falha calada é pior que API
+     * que falha.
+     *
+     * Uma tabela só: `transactionshippingaddress`, o endereço COMO ESTÁ NA TRANSAÇÃO. É o que
+     * vale — a nota sai para onde a transação diz, e ela pode sobrescrever o cadastro. Não há
+     * segunda tentativa em `entityaddress`: endereço de cadastro não é o endereço da nota, e cair
+     * nele mascararia uma transação sem endereço em vez de acusá-la.
+     *
+     * Colunas medidas em 2026-09-23: `nkey, addr1, addr2, addr3, city, state, dropdownstate, zip,
+     * country, custrecord_fp_end_numero`. NÃO são `address1/2/3` (esse é o nome no motor de busca)
+     * e não existe `internalid` — a chave é `nkey`.
+     */
     function endereco(newRecord) {
-      var campos = ['shippingaddress', 'billingaddress'];
+      var id = primeiroValor(newRecord, ['shipaddresslist', 'shippingaddress',
+                                         'billaddresslist', 'billingaddress']);
+      if (!id) return null;
+
+      try {
+        var r = query.runSuiteQL({
+          query: 'SELECT addr1, addr2, addr3, city, state, dropdownstate, zip, ' +
+                 campoNumero + ' FROM transactionshippingaddress WHERE nkey = ?',
+          params: [id]
+        }).asMappedResults();
+
+        if (!r.length) {
+          log.audit('fp_md_map_simular.endereco',
+            'endereço ' + id + ' não está em transactionshippingaddress — o destinatário sai sem ' +
+            'logradouro, município e UF.');
+          return null;
+        }
+
+        var e = r[0];
+        return {
+          addr1: e.addr1,
+          addr2: e.addr2,
+          addr3: e.addr3,
+          numero: e[campoNumero],
+          city: e.city,
+          // `dropdownstate` traz a sigla quando o país tem lista de UF; `state` é o texto livre.
+          state: e.dropdownstate || e.state,
+          zip: e.zip
+        };
+      } catch (err) {
+        log.error('fp_md_map_simular.endereco', (err.message || err));
+        return null;
+      }
+    }
+
+
+    function primeiroValor(newRecord, campos) {
       for (var i = 0; i < campos.length; i++) {
         try {
-          var sub = newRecord.getSubrecord({ fieldId: campos[i] });
-          if (!sub) continue;
-          // `state` é select quando o país tem lista de UF, e aí `getValue` devolve o
-          // internal id. `dropdownstate` guarda a sigla; `state` guarda o texto quando é livre.
-          // MEDIDO em `entityaddress`: nesta conta `addr3` é o BAIRRO ("Centro", "Vila Parque
-          // Jabaquara") e `addr2` é o complemento. Inverter os dois mandaria o complemento como
-          // bairro para a SEFAZ.
-          var e = {
-            addr1: sub.getValue({ fieldId: 'addr1' }),
-            addr2: sub.getValue({ fieldId: 'addr2' }),
-            addr3: sub.getValue({ fieldId: 'addr3' }),
-            numero: sub.getValue({ fieldId: CAMPO_END_NUMERO }),
-            city: sub.getValue({ fieldId: 'city' }),
-            state: valorOuTexto(sub, 'dropdownstate') || valorOuTexto(sub, 'state'),
-            zip: sub.getValue({ fieldId: 'zip' })
-          };
-          if (e.addr1 || e.city || e.zip) return e;
-        } catch (err) {
-          // Tipo de transação sem esse subrecord. Tenta o próximo.
+          var v = newRecord.getValue({ fieldId: campos[i] });
+          if (v) return v;
+        } catch (e) {
+          // campo ausente neste tipo de transação
         }
       }
       return null;
@@ -289,7 +321,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var campoNat = fpFields.idLinha('LINHA_NATUREZA');
       var naturezas = campoNat
         ? resolverTextos(colunaDaLinha(newRecord, total, campoNat),
-            'SELECT id AS id, name AS txt FROM customrecord_fp_natureza_operacao', 'id')
+            'SELECT id AS id, name AS txt FROM ' + fpFields.registro('NATUREZA_OPERACAO'), 'id')
         : {};
 
       var linhas = [];
@@ -480,23 +512,30 @@ var out = buscarItens(lista, colunas, mapa);
     // resultado do motor → sublist de impostos
     // ─────────────────────────────────────────────────────────────────────────
 
-    var SUBLIST = 'recmachcustrecord_fp_transacao_imp';
-
-    var CAMPO = {
-      LINHA: 'custrecord_fp_numerolinha_imp',
-      TAXCODIGO: 'custrecord_fp_taxcodigo_imp',
-      CST: 'custrecord_fp_cst_imp',
-      CCLASSTRIB: 'custrecord_fp_cclasstrib_imp',
-      BASE: 'custrecord_fp_base_calculo_imp',
-      REDUCAO: 'custrecord_fp_reducaobase_imp',
-      ALIQUOTA: 'custrecord_fp_aliquota_imp',
-      VALOR: 'custrecord_fp_valor_imp',
-      NATUREZA: 'custrecord_fp_naturezacontabil_imp',
-      COMPOE: 'custrecord_fp_compoetotalnf_imp',
-      PERNA: 'custrecord_fp_perna_imp',
-      GERA: 'custrecord_fp_geralancamento_imp',
-      RAZAO: 'custrecord_fp_razaoperna_imp'
-    };
+    /**
+     * Tudo pela camada de compatibilidade, nada chumbado.
+     *
+     * Montado SOB DEMANDA e não no nível do módulo: resolver o perfil custa, e pagar isso no load
+     * de todo script — inclusive nos saves que nem simulam — seria custo em troca de nada.
+     */
+    function camposImposto() {
+      return {
+        SUBLIST: fpFields.idImposto('SUBLIST'),
+        LINHA: fpFields.idImposto('NUMERO_LINHA'),
+        TAXCODIGO: fpFields.idImposto('TAXCODIGO'),
+        CST: fpFields.idImposto('CST'),
+        CCLASSTRIB: fpFields.idImposto('CCLASSTRIB'),
+        BASE: fpFields.idImposto('BASE_CALCULO'),
+        REDUCAO: fpFields.idImposto('REDUCAO_BASE'),
+        ALIQUOTA: fpFields.idImposto('ALIQUOTA'),
+        VALOR: fpFields.idImposto('VALOR'),
+        NATUREZA: fpFields.idImposto('NATUREZA_CONTABIL'),
+        COMPOE: fpFields.idImposto('COMPOE_TOTAL'),
+        PERNA: fpFields.idImposto('PERNA'),
+        GERA: fpFields.idImposto('GERA_LANCAMENTO'),
+        RAZAO: fpFields.idImposto('RAZAO_PERNA')
+      };
+    }
 
     /**
      * Reflete `linhas[].impostos[]` no sublist. Reflexo, nunca recálculo.
@@ -506,7 +545,9 @@ var out = buscarItens(lista, colunas, mapa);
      * por cima da linha 1 — sem erro, sem log, e com o total certo na tela.
      */
     function aplicar(newRecord, json) {
-      removeImpostos(newRecord);
+      var CAMPO = camposImposto();
+      var SUBLIST = CAMPO.SUBLIST;
+      removeImpostos(newRecord, SUBLIST);
       if (!json || !json.linhas) return { resumo: '' };
 
       var linha = 0;
@@ -516,23 +557,23 @@ var out = buscarItens(lista, colunas, mapa);
       json.linhas.forEach(function (l, i) {
         var num = l.numeroItem || (i + 1);
         (l.impostos || []).forEach(function (t) {
-          gravar(newRecord, linha, CAMPO.LINHA, num);
-          gravar(newRecord, linha, CAMPO.TAXCODIGO, t.taxCodigo);
-          gravar(newRecord, linha, CAMPO.CST, t.cst);
-          gravar(newRecord, linha, CAMPO.CCLASSTRIB, t.cclasstrib);
-          gravar(newRecord, linha, CAMPO.BASE, t.baseCalculo);
-          gravar(newRecord, linha, CAMPO.REDUCAO, t.reducaoBase);
-          gravar(newRecord, linha, CAMPO.ALIQUOTA, t.aliquota);
-          gravar(newRecord, linha, CAMPO.VALOR, t.valor);
-          gravar(newRecord, linha, CAMPO.NATUREZA, t.naturezaContabil);
-          gravar(newRecord, linha, CAMPO.COMPOE, t.compoeTotalNf === true);
+          gravar(newRecord, SUBLIST, linha, CAMPO.LINHA, num);
+          gravar(newRecord, SUBLIST, linha, CAMPO.TAXCODIGO, t.taxCodigo);
+          gravar(newRecord, SUBLIST, linha, CAMPO.CST, t.cst);
+          gravar(newRecord, SUBLIST, linha, CAMPO.CCLASSTRIB, t.cclasstrib);
+          gravar(newRecord, SUBLIST, linha, CAMPO.BASE, t.baseCalculo);
+          gravar(newRecord, SUBLIST, linha, CAMPO.REDUCAO, t.reducaoBase);
+          gravar(newRecord, SUBLIST, linha, CAMPO.ALIQUOTA, t.aliquota);
+          gravar(newRecord, SUBLIST, linha, CAMPO.VALOR, t.valor);
+          gravar(newRecord, SUBLIST, linha, CAMPO.NATUREZA, t.naturezaContabil);
+          gravar(newRecord, SUBLIST, linha, CAMPO.COMPOE, t.compoeTotalNf === true);
 
           // O contrato da perna: a plataforma decide, o ERP reflete.
           // `perna` vazia não é dado faltando — é a plataforma dizendo que NÃO decide o caso,
           // e a razão é o que explica isso para o contador.
-          gravar(newRecord, linha, CAMPO.PERNA, t.sentidoDaPernaFixa || '');
-          gravar(newRecord, linha, CAMPO.GERA, t.geraLancamento === true);
-          gravar(newRecord, linha, CAMPO.RAZAO, t.razaoDaPerna || '');
+          gravar(newRecord, SUBLIST, linha, CAMPO.PERNA, t.sentidoDaPernaFixa || '');
+          gravar(newRecord, SUBLIST, linha, CAMPO.GERA, t.geraLancamento === true);
+          gravar(newRecord, SUBLIST, linha, CAMPO.RAZAO, t.razaoDaPerna || '');
 
           var cod = t.taxCodigo || '?';
           if (!Object.prototype.hasOwnProperty.call(totais, cod)) { totais[cod] = 0; ordem.push(cod); }
@@ -554,20 +595,21 @@ var out = buscarItens(lista, colunas, mapa);
       return partes.join(' · ');
     }
 
-    function gravar(newRecord, linha, campo, valor) {
-      if (valor === null || valor === undefined) return;
+    function gravar(newRecord, sublist, linha, campo, valor) {
+      if (valor === null || valor === undefined || !campo) return;
       try {
-        newRecord.setSublistValue({ sublistId: SUBLIST, fieldId: campo, value: valor, line: linha });
+        newRecord.setSublistValue({ sublistId: sublist, fieldId: campo, value: valor, line: linha });
       } catch (e) {
         log.error('fp_md_map_simular.gravar', campo + ' linha ' + linha + ': ' + (e.message || e));
       }
     }
 
-    function removeImpostos(newRecord) {
+    function removeImpostos(newRecord, sublist) {
+      if (!sublist) return;
       try {
-        var n = newRecord.getLineCount({ sublistId: SUBLIST });
+        var n = newRecord.getLineCount({ sublistId: sublist });
         for (var i = 0; i < n; i++) {
-          newRecord.removeLine({ sublistId: SUBLIST, line: 0 });
+          newRecord.removeLine({ sublistId: sublist, line: 0 });
         }
       } catch (e) {
         log.error('fp_md_map_simular.removeImpostos', e.message || e);

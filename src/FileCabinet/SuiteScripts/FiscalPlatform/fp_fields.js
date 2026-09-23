@@ -18,12 +18,14 @@
  * integração de terceiro, coluna de lista. Reusar o MESMO scriptid faz esse acervo continuar
  * funcionando sem que ninguém toque nele. É a diferença entre migração e projeto de migração.
  *
- * ── ⚠ NÃO CARREGUE ESTE MÓDULO EM CLIENT SCRIPT ───────────────────────────────────────────────
+ * ── PERFIL É MÓDULO, NÃO ARQUIVO ──────────────────────────────────────────────────────────────
  *
- * Ele depende de `N/cache`, e **`N/cache` não existe no cliente**. MEDIDO no deploy de 2026-09-23:
- * `MODULE_DOES_NOT_EXIST: Module does not exist: N/cache.js`, e o objeto do client script falhou
- * inteiro na criação — não foi erro em runtime, foi o deploy recusando. Client script do bundle
- * usa scriptid literal, que é seguro justamente nos campos que só nós temos.
+ * Os perfis eram `.json` carregados com `file.load`, com `N/cache` em volta só para amortizar o
+ * custo. Viraram módulo AMD: some a ida ao File Cabinet, some o cache, e — o que mais importa —
+ * **este módulo passa a funcionar em Client Script**. Enquanto dependesse de `N/file` e
+ * `N/cache`, que não existem no cliente, todo client script do bundle era obrigado a chumbar
+ * scriptid. MEDIDO no deploy de 2026-09-23: `MODULE_DOES_NOT_EXIST: Module does not exist:
+ * N/cache.js`, e o objeto do client script falhou inteiro na criação.
  *
  * ── AS TRÊS CAMADAS DE ORIGEM DE UM CAMPO, nesta ordem de preferência ──────────────────────────
  *
@@ -56,12 +58,16 @@
  * o setup não ser manual; a decisão fica registrada. Divergência entre sonda e persistido vira
  * AVISO no log, nunca troca automática.
  */
-define(['N/file', 'N/cache', 'N/search', 'N/runtime', 'N/log'], function (file, cache, search, runtime, log) {
-  var PASTA_PERFIS = '/SuiteScripts/FiscalPlatform/perfis/';
+define(['N/search', 'N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil_oracle_ei'],
+  function (search, runtime, log, perfilOriginal, perfilOracleEi) {
+
+  /** Os perfis conhecidos, por nome. Acrescentar perfil é acrescentar aqui e no PERFIS_CONHECIDOS. */
+  var PERFIS = {
+    original: perfilOriginal,
+    oracle_ei: perfilOracleEi
+  };
   var PERFIL_ORIGINAL = 'original';
 
-  var NOME_CACHE = 'fp_perfil';
-  var TTL_CACHE = 3600;
 
   /**
    * Ordem de sondagem. A primeira assinatura encontrada ganha, então perfil MAIS ESPECÍFICO vem
@@ -144,6 +150,41 @@ define(['N/file', 'N/cache', 'N/search', 'N/runtime', 'N/log'], function (file, 
     return resolver('registros', chave);
   }
 
+  /** Campo do sublist de impostos. `SUBLIST` devolve o id do próprio sublist. */
+  function idImposto(chave) {
+    return resolver('impostos', chave);
+  }
+
+  /** Campo do classificador contábil. */
+  function idClassificador(chave) {
+    return resolver('classificador', chave);
+  }
+
+  /** Campo FP na Subsidiary. */
+  function idSubsidiaria(chave) {
+    return resolver('subsidiaria', chave);
+  }
+
+  /** Campo FP na Location. */
+  function idLocation(chave) {
+    return resolver('location', chave);
+  }
+
+  /** Campo FP no registro de endereço. */
+  function idEndereco(chave) {
+    return resolver('endereco', chave);
+  }
+
+  /** Campo do custom record de log. */
+  function idLog(chave) {
+    return resolver('log', chave);
+  }
+
+  /** Campo do cadastro de natureza de operação. */
+  function idNatureza(chave) {
+    return resolver('natureza_operacao', chave);
+  }
+
   /**
    * Valor de campo de lista, traduzido para o perfil ativo.
    *
@@ -186,27 +227,17 @@ define(['N/file', 'N/cache', 'N/search', 'N/runtime', 'N/log'], function (file, 
     return !!(p.somenteLeitura && p.somenteLeitura.indexOf(chave) > -1);
   }
 
-  /** Perfil ativo, carregado (memo → cache → config → sonda → original). */
+
+  /** Perfil ativo, resolvido uma vez por execução. Sem cache: os perfis são módulos, já em memória. */
   function perfilAtivo() {
-    if (memo) return memo;
-
-    var c = cache.getCache({ name: NOME_CACHE, scope: cache.Scope.PROTECTED });
-    var bruto = c.get({
-      key: 'ativo',
-      loader: function () {
-        return JSON.stringify(montarPerfilAtivo());
-      },
-      ttl: TTL_CACHE
-    });
-
-    memo = JSON.parse(bruto);
+    if (!memo) memo = montarPerfilAtivo();
     return memo;
   }
 
-  /** Invalida o cache — chamar depois de trocar o perfil na subsidiária. */
+
+  /** Esquece o perfil resolvido. Chamar depois de trocar o perfil na subsidiária. */
   function invalidar() {
     memo = null;
-    cache.getCache({ name: NOME_CACHE, scope: cache.Scope.PROTECTED }).remove({ key: 'ativo' });
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -226,7 +257,7 @@ define(['N/file', 'N/cache', 'N/search', 'N/runtime', 'N/log'], function (file, 
   }
 
   function montarPerfilAtivo() {
-    var original = carregarJson(PERFIL_ORIGINAL);
+    var original = carregarModulo(PERFIL_ORIGINAL);
 
     var escolhido = perfilConfigurado();
     var origem = 'configurado';
@@ -245,7 +276,7 @@ define(['N/file', 'N/cache', 'N/search', 'N/runtime', 'N/log'], function (file, 
 
     var perfil;
     try {
-      perfil = carregarJson(escolhido);
+      perfil = carregarModulo(escolhido);
     } catch (e) {
       // Perfil configurado que não carrega NÃO derruba nada: cai no original e grita no log.
       // O contrário — abortar — deixaria a conta inteira sem simulação por um JSON malformado.
@@ -270,9 +301,18 @@ define(['N/file', 'N/cache', 'N/search', 'N/runtime', 'N/log'], function (file, 
     };
   }
 
-  function carregarJson(nome) {
-    var f = file.load({ id: PASTA_PERFIS + 'fp_perfil_' + nome + '.json' });
-    return JSON.parse(f.getContents());
+
+  /**
+   * O perfil pelo nome, do mapa de módulos.
+   *
+   * Lança para nome desconhecido, e é de propósito: nome de perfil vem de constante deste arquivo
+   * ou de campo da subsidiária, e nos dois casos um valor que não existe é erro de configuração
+   * que precisa aparecer, não cair calado no original.
+   */
+  function carregarModulo(nome) {
+    var p = PERFIS[nome];
+    if (!p) throw new Error('fp_fields: perfil desconhecido: ' + nome);
+    return JSON.parse(JSON.stringify(p));
   }
 
   /**
@@ -281,6 +321,11 @@ define(['N/file', 'N/cache', 'N/search', 'N/runtime', 'N/log'], function (file, 
    * @returns {string|null}
    */
 function perfilConfigurado() {
+    // ⚠ O ÚNICO SCRIPTID LITERAL QUE PODE EXISTIR NO BUNDLE, e ele é literal por necessidade:
+    // este campo é o que DIZ qual perfil carregar. Resolvê-lo pela camada seria pedir ao perfil
+    // que decidisse qual perfil usar. É o bootstrap, e por isso não entra em perfil nenhum.
+    var CAMPO_PERFIL = 'custrecord_fp_perfil_compat';
+
     try {
       // O perfil mora num campo da SUBSIDIÁRIA, registro standard — não há custom record de
       // configuração. Vale a PRIMEIRA subsidiária que tiver o campo preenchido: bundle instalado
@@ -289,14 +334,14 @@ function perfilConfigurado() {
       var r = search
         .create({
           type: search.Type.SUBSIDIARY,
-          filters: [['custrecord_fp_perfil_compat', 'isnotempty', '']],
-          columns: ['custrecord_fp_perfil_compat']
+          filters: [[CAMPO_PERFIL, 'isnotempty', '']],
+          columns: [CAMPO_PERFIL]
         })
         .run()
         .getRange({ start: 0, end: 1 });
 
       if (!r || !r.length) return null;
-      return r[0].getValue({ name: 'custrecord_fp_perfil_compat' }) || null;
+      return r[0].getValue({ name: CAMPO_PERFIL }) || null;
     } catch (e) {
       // Campo ainda não existe (antes do primeiro deploy) — não é erro, é instalação nova.
       log.debug('fp_fields.perfilConfigurado', e.message || e);
@@ -318,7 +363,7 @@ function perfilConfigurado() {
       var nome = PERFIS_CONHECIDOS[i];
       var p;
       try {
-        p = carregarJson(nome);
+        p = carregarModulo(nome);
       } catch (e) {
         continue;
       }
@@ -349,6 +394,13 @@ function perfilConfigurado() {
     idLinha: idLinha,
     idItem: idItem,
     registro: registro,
+    idImposto: idImposto,
+    idClassificador: idClassificador,
+    idSubsidiaria: idSubsidiaria,
+    idLocation: idLocation,
+    idEndereco: idEndereco,
+    idLog: idLog,
+    idNatureza: idNatureza,
     valor: valor,
     somenteLeitura: somenteLeitura,
     perfilAtivo: perfilAtivo,
