@@ -199,7 +199,6 @@ define([
 
       if (!resposta.ok) {
         // RECUSA DO MOTOR. O texto dele vai INTEIRO para a tela — sem traduzir, sem resumir.
-        gravarLogico(scriptContext.newRecord, 'SIM_STATUS', 'RECUSADO');
         guardarRastro(corrId, { payload: payload, resposta: resposta.body });
 
         fpMsg.erro(corrId, fpMsg.ORIGEM.FISCALPLATFORM, resposta.code, mensagensDaRecusa(resposta.body));
@@ -211,7 +210,6 @@ define([
       // checar. Divergência se investiga no payload gravado acima.
       var aplicado = fpMapSimular.aplicar(scriptContext.newRecord, resposta.body);
 
-      gravarLogico(scriptContext.newRecord, 'SIM_STATUS', 'SIMULADO');
       guardarRastro(corrId, { payload: payload, resposta: resposta.body });
 
       fpMsg.sucesso(corrId, aplicado.resumo);
@@ -241,11 +239,6 @@ define([
 
       if (corrId) fpMsg.excecao(corrId, e);
 
-      try {
-        gravarLogico(scriptContext.newRecord, 'SIM_STATUS', 'INDISPONIVEL');
-      } catch (e3) {
-        log.error('fp_ue_simular.beforeSubmit', 'falha ao marcar INDISPONIVEL: ' + (e3.message || e3));
-      }
     }
   }
 

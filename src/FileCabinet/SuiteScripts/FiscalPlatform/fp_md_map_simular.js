@@ -532,8 +532,7 @@ var out = buscarItens(lista, colunas, mapa);
         NATUREZA: fpFields.idImposto('NATUREZA_CONTABIL'),
         COMPOE: fpFields.idImposto('COMPOE_TOTAL'),
         PERNA: fpFields.idImposto('PERNA'),
-        GERA: fpFields.idImposto('GERA_LANCAMENTO'),
-        RAZAO: fpFields.idImposto('RAZAO_PERNA')
+        GERA: fpFields.idImposto('GERA_LANCAMENTO')
       };
     }
 
@@ -568,12 +567,11 @@ var out = buscarItens(lista, colunas, mapa);
           gravar(newRecord, SUBLIST, linha, CAMPO.NATUREZA, t.naturezaContabil);
           gravar(newRecord, SUBLIST, linha, CAMPO.COMPOE, t.compoeTotalNf === true);
 
-          // O contrato da perna: a plataforma decide, o ERP reflete.
-          // `perna` vazia não é dado faltando — é a plataforma dizendo que NÃO decide o caso,
-          // e a razão é o que explica isso para o contador.
+          // O contrato da perna: a plataforma decide, o ERP reflete. `perna` vazia não é dado
+          // faltando — é a plataforma dizendo que NÃO decide o caso. A `razaoDaPerna`, que
+          // explica o porquê, não vira campo: ela está no retorno.json anexado à transação.
           gravar(newRecord, SUBLIST, linha, CAMPO.PERNA, t.sentidoDaPernaFixa || '');
           gravar(newRecord, SUBLIST, linha, CAMPO.GERA, t.geraLancamento === true);
-          gravar(newRecord, SUBLIST, linha, CAMPO.RAZAO, t.razaoDaPerna || '');
 
           var cod = t.taxCodigo || '?';
           if (!Object.prototype.hasOwnProperty.call(totais, cod)) { totais[cod] = 0; ordem.push(cod); }

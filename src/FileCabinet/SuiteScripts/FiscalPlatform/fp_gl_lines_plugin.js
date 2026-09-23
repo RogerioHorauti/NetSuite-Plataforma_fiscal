@@ -116,7 +116,6 @@ define(['N/query', 'N/log', './fp_fields'], function (query, log, fpFields) {
         ALIQUOTA: fpFields.idImposto('ALIQUOTA'),
         PERNA: fpFields.idImposto('PERNA'),
         GERA: fpFields.idImposto('GERA_LANCAMENTO'),
-        RAZAO: fpFields.idImposto('RAZAO_PERNA'),
         TRANSACAO: fpFields.idImposto('TRANSACAO')
       },
       CC: {
@@ -300,8 +299,8 @@ define(['N/query', 'N/log', './fp_fields'], function (query, log, fpFields) {
           base: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.BASE, line: i })),
           aliquota: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.ALIQUOTA, line: i })),
           perna: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.PERNA, line: i })).toUpperCase(),
-          gera: booleano(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.GERA, line: i })),
-          razao: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.RAZAO, line: i }))
+          gera: booleano(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.GERA, line: i }))
+
         });
       }
     } catch (e) {
@@ -323,8 +322,7 @@ define(['N/query', 'N/log', './fp_fields'], function (query, log, fpFields) {
       '  ' + C.IMP.BASE + ' AS base, ' +
       '  ' + C.IMP.ALIQUOTA + ' AS aliquota, ' +
       '  ' + C.IMP.PERNA + ' AS perna, ' +
-      '  ' + C.IMP.GERA + ' AS gera, ' +
-      '  ' + C.IMP.RAZAO + ' AS razao ' +
+      '  ' + C.IMP.GERA + ' AS gera ' +
       'FROM ' + C.REG.IMPOSTOS + ' ' +
       'WHERE ' + C.IMP.TRANSACAO + ' = ? AND isinactive = ' + "'F'";
 
@@ -340,8 +338,7 @@ define(['N/query', 'N/log', './fp_fields'], function (query, log, fpFields) {
           base: numero(r[i].base),
           aliquota: numero(r[i].aliquota),
           perna: texto(r[i].perna).toUpperCase(),
-          gera: booleano(r[i].gera),
-          razao: texto(r[i].razao)
+          gera: booleano(r[i].gera)
         });
       }
     } catch (e) {
@@ -415,7 +412,7 @@ define(['N/query', 'N/log', './fp_fields'], function (query, log, fpFields) {
                   '\u0000' + t.perna;
       if (!mapa[chave]) {
         mapa[chave] = { imposto: t.imposto, natureza: t.natureza, compoe: t.compoe,
-                        perna: t.perna, razao: t.razao,
+                        perna: t.perna,
                         valor: 0, base: 0, aliquota: null, aliquotaUnica: true };
         ordem.push(chave);
       }
@@ -533,9 +530,9 @@ function lancar(customLines, grupo, ctx) {
     // silencio, que e pior que nao lancar. A razao dela vai inteira para o log.
     if (grupo.perna !== DEBITO && grupo.perna !== CREDITO) {
       log.error('fp_gl_lines_plugin',
-        rotulo + ' — a plataforma NAO decidiu a perna: "' +
-        (grupo.razao || 'sem razao informada') + '". ' + formatar(grupo.valor) +
-        ' nao foi contabilizado. E pergunta para a contabilidade, nao erro de cadastro.');
+        rotulo + ' — a plataforma NAO decidiu a perna. ' + formatar(grupo.valor) +
+        ' nao foi contabilizado. O porque esta no razaoDaPerna do retorno.json anexado a ' +
+        'transacao. E pergunta para a contabilidade, nao erro de cadastro.');
       return false;
     }
 

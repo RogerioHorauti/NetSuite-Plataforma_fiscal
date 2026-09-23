@@ -128,7 +128,6 @@ define([], function () {
       "DOC_XMOTIVO",
       "DOC_PROTOCOLO",
       "DOC_IDEXTERNO",
-      "SIM_STATUS",
       "CORRID"
     ],
     "_nota_naoMapeado": [

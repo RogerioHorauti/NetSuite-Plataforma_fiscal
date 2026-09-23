@@ -54,9 +54,6 @@ define([], function () {
       "TIPODOC": "custbody_fp_tipodoc",
       "NATUREZA": "custbody_fp_natureza",
   
-      "_grupo_simulacao": "status da simulacao. O PAYLOAD e o RETORNO nao sao campo: viram ARQUIVO anexado a transacao, porque nota de centenas de linhas estoura qualquer campo texto em silencio",
-      "SIM_STATUS": "custbody_fp_sim_status",
-  
       "_grupo_infra": "mecanismo de mensagem síncrona — ver fp_msg.js",
       "CORRID": "custbody_fp_corrid",
   
@@ -141,8 +138,7 @@ define([], function () {
       "NATUREZA_CONTABIL": "custrecord_fp_naturezacontabil_imp",
       "COMPOE_TOTAL": "custrecord_fp_compoetotalnf_imp",
       "PERNA": "custrecord_fp_perna_imp",
-      "GERA_LANCAMENTO": "custrecord_fp_geralancamento_imp",
-      "RAZAO_PERNA": "custrecord_fp_razaoperna_imp"
+      "GERA_LANCAMENTO": "custrecord_fp_geralancamento_imp"
     },
 
     "classificador": {
