@@ -90,18 +90,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         return null;
       }
 
-      // AS LINHAS PRIMEIRO, e a ordem não é estética: `payload` abaixo lê `linhas`, e `var`
-      // é hoisted — montado antes, o campo sairia `undefined` e o JSON iria sem linha nenhuma,
-      // que é justamente o único campo obrigatório do DTO.
-      var linhas = montarLinhas(newRecord);
-      if (!linhas.length) {
-        log.debug('fp_md_map_simular', 'sem linha de item com valor — nada a simular');
-        return null;
-      }
-
       // Exatamente os campos do DTO, e nada além. Acrescentar aqui sem acrescentar lá
       // produz um campo que o Nest descarta calado.
-      var payload = { cnpjEmpresa: cnpj, linhas: linhas };
+      var payload = { cnpjEmpresa: cnpj };
 
       var natureza = naturezaDeclarada(newRecord);
       if (natureza) payload.naturezaOperacaoId = natureza;
@@ -111,6 +102,11 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
 
       var dest = montarDestinatario(newRecord);
       if (dest) payload.destinatario = dest;
+
+      // Atribuído aqui, e não no literal acima: `var` é hoisted, e lido antes desta linha o
+      // campo sairia `undefined` — sem linha nenhuma, que é o único obrigatório do DTO.
+      // Não há guarda de lista vazia: o NetSuite não salva transação sem linha.
+      payload.linhas = montarLinhas(newRecord);
 
       return payload;
     }
