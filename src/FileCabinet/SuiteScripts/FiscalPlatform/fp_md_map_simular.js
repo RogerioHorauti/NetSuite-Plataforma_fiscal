@@ -550,8 +550,6 @@ var out = buscarItens(lista, colunas, mapa);
       if (!json || !json.linhas) return { resumo: '' };
 
       var linha = 0;
-      var totais = {};
-      var ordem = [];
 
       json.linhas.forEach(function (l, i) {
         var num = l.numeroItem || (i + 1);
@@ -573,24 +571,11 @@ var out = buscarItens(lista, colunas, mapa);
           gravar(newRecord, SUBLIST, linha, CAMPO.PERNA, t.sentidoDaPernaFixa || '');
           gravar(newRecord, SUBLIST, linha, CAMPO.GERA, t.geraLancamento === true);
 
-          var cod = t.taxCodigo || '?';
-          if (!Object.prototype.hasOwnProperty.call(totais, cod)) { totais[cod] = 0; ordem.push(cod); }
-          totais[cod] += numero(t.valor);
           linha++;
         });
       });
 
-      return { resumo: resumir(totais, ordem) };
-    }
-
-    function resumir(totais, ordem) {
-      var partes = [];
-      for (var i = 0; i < ordem.length; i++) {
-        var k = ordem[i];
-        if (!totais[k]) continue;
-        partes.push(k + ' ' + moeda(totais[k]));
-      }
-      return partes.join(' · ');
+      return { linhas: linha };
     }
 
     function gravar(newRecord, sublist, linha, campo, valor) {
@@ -762,11 +747,6 @@ var out = buscarItens(lista, colunas, mapa);
     function numero(v) {
       var n = parseFloat(v);
       return isNaN(n) ? 0 : n;
-    }
-
-    function moeda(v) {
-      var n = (Math.round(v * 100) / 100).toFixed(2).split('.');
-      return n[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + n[1];
     }
 
     return {

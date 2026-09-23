@@ -58,53 +58,20 @@ define([], function () {
       "CORRID": "custbody_fp_corrid",
   
       "_grupo_transporte": "",
-      "FRETE_MODALIDADE": "custbody_fp_frete_modalidade",
+      "FRETE_MODALIDADE": "custbody_fp_frete_modalidade"
   
-      "_grupo_totais": [
-        "REFLEXO dos valores que o motor devolveu, e nada além disso.",
-        "Gravar aqui o ICMS que o motor calculou NÃO é duplicar régua: régua é DECIDIR alíquota,",
-        "base e CST. Guardar o resultado é reflexo, e é o que o próprio bundle da Oracle faz",
-        "(custbody_icms_total etc.). O que continua proibido é o ERP recalcular para conferir."
-      ],
-      "ICMS_TOTAL": "custbody_fp_icms_total",
-      "ICMS_BASE": "custbody_fp_icms_base",
-      "ICMS_ST_TOTAL": "custbody_fp_icms_st_total",
-      "ICMS_ST_BASE": "custbody_fp_icms_st_base",
-      "IPI_TOTAL": "custbody_fp_ipi_total",
-      "PIS_TOTAL": "custbody_fp_pis_total",
-      "COFINS_TOTAL": "custbody_fp_cofins_total",
-      "NF_TOTAL": "custbody_fp_nf_total",
-      "PRODUTOS_TOTAL": "custbody_fp_produtos_total",
-      "FRETE_TOTAL": "custbody_fp_frete_total",
-      "SEGURO_TOTAL": "custbody_fp_seguro_total",
-      "DESCONTO_TOTAL": "custbody_fp_desconto_total",
-      "OUTRAS_DESPESAS_TOTAL": "custbody_fp_outras_despesas_total"
     },
   
     "linha": {
       "LINHA_NATUREZA": "custcol_fp_natureza",
       "LINHA_CFOP": "custcol_fp_cfop",
-      "LINHA_CST_ICMS": "custcol_fp_cst_icms",
-      "LINHA_CST_IPI": "custcol_fp_cst_ipi",
-      "LINHA_CST_PIS": "custcol_fp_cst_pis",
-      "LINHA_CST_COFINS": "custcol_fp_cst_cofins",
-      "LINHA_CCLASSTRIB": "custcol_fp_cclasstrib",
-      "LINHA_ICMS_TOTAL": "custcol_fp_icms_total",
-      "LINHA_ICMS_BASE": "custcol_fp_icms_base",
-      "LINHA_IPI_TOTAL": "custcol_fp_ipi_total",
-      "LINHA_NUMERO_ITEM": "custcol_fp_numero_item",
-      "_nota_cst": [
-        "CST e cClassTrib aqui são o que o motor RESOLVEU e devolveu em linhas[].impostos[].",
-        "É valor de retorno gravado para consulta e conferência, não decisão. O bundle nunca",
-        "escolhe CST: se aparecer comparação literal de CST em SuiteScript, é defeito."
-      ]
+      "LINHA_NUMERO_ITEM": "custcol_fp_numero_item"
     },
   
     "item": {
       "ITEM_NCM": "custitem_fp_ncm",
       "ITEM_CEST": "custitem_fp_cest",
       "ITEM_ORIGEM": "custitem_fp_origem",
-      "ITEM_CODIGO_FISCAL": "custitem_fp_codigo_fiscal",
       "ITEM_SERVICO_LC116": "custitem_fp_servico_lc116",
       "_nota": [
         "NCM e CEST são CADASTRO, não régua: eles descrevem a mercadoria, não decidem tributo.",
@@ -193,8 +160,7 @@ define([], function () {
       "CLASSIFICADOR": "customrecord_fp_classificador_contabil",
       "NATUREZA_OPERACAO": "customrecord_fp_natureza_operacao",
       "DOC": "customrecord_fp_doc",
-      "LOG": "customrecord_fp_log",
-      "DOC_ENTRADA": "customrecord_fp_doc_entrada"
+      "LOG": "customrecord_fp_log"
     },
   
     "valores": {

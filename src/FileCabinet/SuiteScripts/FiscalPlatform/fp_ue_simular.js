@@ -212,7 +212,7 @@ define([
 
       guardarRastro(corrId, { payload: payload, resposta: resposta.body });
 
-      fpMsg.sucesso(corrId, aplicado.resumo);
+      fpMsg.sucesso(corrId, aplicado.linhas + ' linha(s) de imposto na aba fiscal.');
 
       // O `avisos[]` do motor é canal dele, e ausência é significativa: `undefined` quer dizer
       // "esta resposta não avaliou avisos", não "não há aviso". Só pinta quando veio com conteúdo.
