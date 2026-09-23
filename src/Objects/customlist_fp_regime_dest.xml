@@ -1,0 +1,32 @@
+<customlist scriptid="customlist_fp_regime_dest">
+  <description>Regime tributario do DESTINATARIO, eixo do resolvedor de ICMS. O CODIGO abre o valor e e o que vai no payload (REGIMES_DESTINATARIO no DTO). Em branco e seguro por desenho do motor: eixo nao declarado nao casa hipotese e a linha sai com imposto cheio, que e o erro que nao vira glosa.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>FP - Regime do Destinatario</name>
+  <customvalues>
+    <customvalue scriptid="val_regime_dest_sn">
+      <isinactive>F</isinactive>
+      <value>SN - Simples Nacional</value>
+    </customvalue>
+    <customvalue scriptid="val_regime_dest_mei">
+      <isinactive>F</isinactive>
+      <value>MEI - Microempreendedor Individual</value>
+    </customvalue>
+    <customvalue scriptid="val_regime_dest_lp">
+      <isinactive>F</isinactive>
+      <value>LP - Lucro Presumido</value>
+    </customvalue>
+    <customvalue scriptid="val_regime_dest_lr">
+      <isinactive>F</isinactive>
+      <value>LR - Lucro Real</value>
+    </customvalue>
+    <customvalue scriptid="val_regime_dest_isento">
+      <isinactive>F</isinactive>
+      <value>ISENTO - Entidade isenta ou imune</value>
+    </customvalue>
+    <customvalue scriptid="val_regime_dest_pf">
+      <isinactive>F</isinactive>
+      <value>PF - Pessoa Fisica</value>
+    </customvalue>
+  </customvalues>
+</customlist>

@@ -196,35 +196,47 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
 
       // `vatregnumber` é o "Tax Reg. Number" do Records Browser — o único campo nativo que
       // carrega CNPJ nesta conta, que não tem custentity nenhum.
-      var campoIe = fpFields.idCliente('IE');
-      var campoInd = fpFields.idCliente('IND_IE_DEST');
+      // MEDIDO: nesta conta não há nativo para CNPJ/CPF, razão social, indicador de IE nem
+      // regime do destinatário. O resto do destinatário — nome, e-mail, fone, endereço — é
+      // standard, e por isso não passa pelo perfil.
+      var C = {
+        cnpj: fpFields.idCliente('CNPJ_CPF'),
+        razao: fpFields.idCliente('RAZAO_SOCIAL'),
+        ie: fpFields.idCliente('IE'),
+        ind: fpFields.idCliente('IND_IE_DEST'),
+        regime: fpFields.idCliente('REGIME_TRIB')
+      };
 
-      var colunas = ['companyname', 'entityid', 'vatregnumber', 'email', 'phone'];
-      if (campoIe) colunas.push(campoIe);
-      if (campoInd) colunas.push(campoInd);
+      var colunas = ['companyname', 'entityid', 'email', 'phone'];
+      for (var k in C) {
+        if (Object.prototype.hasOwnProperty.call(C, k) && C[k]) colunas.push(C[k]);
+      }
 
       var cad = lookup('customer', entity, colunas);
       if (cad) {
-        var nome = texto(cad.companyname) || texto(cad.entityid);
+        // Razão social primeiro: `companyname` costuma guardar o nome fantasia, e a tag `xNome`
+        // do grupo E quer a razão social registrada.
+        var nome = (C.razao && texto(cad[C.razao])) || texto(cad.companyname) || texto(cad.entityid);
         if (nome) dest.nome = nome;
-        var doc = digitos(cad.vatregnumber);
+
+        var doc = C.cnpj && digitos(cad[C.cnpj]);
         if (doc) dest.cnpjCpf = doc;
+
         if (cad.email) dest.email = texto(cad.email);
         if (cad.phone) dest.fone = texto(cad.phone);
 
-        if (campoIe) {
-          var ie = digitos(cad[campoIe]);
-          if (ie) dest.ie = ie;
-        }
+        var ie = C.ie && digitos(cad[C.ie]);
+        if (ie) dest.ie = ie;
 
-        // `indIeDest` vale mais que rótulo de cadastro: o motor deriva dele o
-        // `destinatarioContribuinte` (1 e 2 → true, 9 → false), e é isso que decide o DIFAL.
-        // `lookupFields` devolve List/Record como `[{value, text}]`; o código está no texto,
-        // pelo mesmo desenho da origem da mercadoria.
-        if (campoInd) {
-          var ind = codigoDoIndIeDest(cad[campoInd]);
-          if (ind) dest.indIeDest = ind;
-        }
+        // `indIeDest` não é rótulo de cadastro: o motor deriva dele o `destinatarioContribuinte`
+        // (1 e 2 → true, 9 → false), e é isso que decide o DIFAL.
+        var ind = C.ind && codigoDaLista(cad[C.ind]);
+        if (ind) dest.indIeDest = parseInt(ind, 10);
+
+        // Regime em branco é SEGURO por desenho do motor: eixo não declarado não casa hipótese e
+        // a linha sai com imposto cheio — o erro que não vira glosa. Não inventar default aqui.
+        var regime = C.regime && codigoDaLista(cad[C.regime]);
+        if (regime) dest.regimeTributario = regime;
       }
 
       var end = endereco(newRecord);
@@ -728,13 +740,16 @@ var out = buscarItens(lista, colunas, mapa);
     }
 
     /**
-     * `1`, `2` ou `9` a partir do valor da lista. Número, não string: o DTO tipa `indIeDest` como
-     * `number`, e mandar `"1"` faria o Nest descartar o campo sem dizer nada.
+     * O CÓDIGO que abre o valor da lista — `1`, `SN`, `ISENTO`.
+     *
+     * As listas do bundle são todas "CÓDIGO - descrição": o código é o que o motor valida, e a
+     * descrição existe para quem preenche o cadastro escolher certo. `lookupFields` devolve
+     * List/Record como `[{value, text}]`, e é do texto que o código sai.
      */
-    function codigoDoIndIeDest(v) {
+    function codigoDaLista(v) {
       var t = Array.isArray(v) && v.length ? (v[0].text || v[0].value) : v;
-      var m = /^\s*([129])(?:\s|-|$)/.exec(texto(t));
-      return m ? parseInt(m[1], 10) : 0;
+      var m = /^\s*([A-Z0-9_]+)\s*-\s/.exec(texto(t));
+      return m ? m[1] : '';
     }
 
     function codigoDaOrigem(v) {
