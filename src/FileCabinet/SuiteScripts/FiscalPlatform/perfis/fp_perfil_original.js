@@ -153,7 +153,6 @@ define([], function () {
       "API_BASEURL": "custrecord_fp_api_baseurl",
       "API_CLIENTID": "custrecord_fp_api_clientid",
       "API_SECRET": "custrecord_fp_api_secret",
-      "PERFIL_COMPAT": "custrecord_fp_perfil_compat",
       "CONTA_IMPOSTO_NATIVO": "custrecord_fp_conta_imposto_nativo",
       "CONTA_ESTORNO_CONTRA": "custrecord_fp_conta_estorno_contra"
     },

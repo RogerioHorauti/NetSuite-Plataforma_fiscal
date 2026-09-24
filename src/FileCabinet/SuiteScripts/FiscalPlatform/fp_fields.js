@@ -46,20 +46,19 @@
  * o Electronic Invoicing (436209) não traz campo de chave de acesso de 44 dígitos; ela vem do
  * `original` mesmo com o perfil `oracle_ei` ativo. O `naoMapeado` de cada perfil declara isso.
  *
- * ── DETECÇÃO É DE INSTALAÇÃO, NÃO DE EXECUÇÃO ──────────────────────────────────────────────────
+ * ── DETECÇÃO: BUNDLE DO RUNTIME, E NADA MAIS ───────────────────────────────────────────────────
  *
- * Não existe API suportada de SuiteScript que liste bundle/SuiteApp instalado. A detecção é por
- * SONDA: existe o custom record que assina aquele SuiteApp? Por isso o perfil detectado é
- * PERSISTIDO no campo `custrecord_fp_perfil_compat` da SUBSIDIÁRIA na primeira vez, e daí em
- * diante o persistido VENCE. Fica em registro standard, não em custom record de configuração.
+ * `runtime.getCurrentScript().bundleIds`, o mesmo teste que o AvaTax V3 faz. Sem campo de
+ * configuração, sem consulta, sem sonda que provoca exceção.
  *
- * Um perfil que virasse sozinho passaria a gravar dado fiscal em outro campo e órfãozaria tudo
- * que foi gravado antes — em silêncio, porque nenhum dos dois campos dá erro. Detecção serve para
- * o setup não ser manual; a decisão fica registrada. Divergência entre sonda e persistido vira
- * AVISO no log, nunca troca automática.
+ * Havia um `custrecord_fp_perfil_compat` na subsidiária, onde uma pessoa escrevia o nome do
+ * perfil e esse valor vencia a detecção. Ele durou até alguém escrever um nome que não existe:
+ * `oracle_brl` derrubou o `beforeLoad` de toda transação. Campo de texto livre que escolhe qual
+ * scriptid o bundle vai gravar é um jeito caro de errar — o runtime já sabe a resposta, e não
+ * erra de digitação.
  */
-define(['N/search', 'N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil_oracle_ei'],
-  function (search, runtime, log, perfilOriginal, perfilOracleEi) {
+define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil_oracle_ei'],
+  function (runtime, log, perfilOriginal, perfilOracleEi) {
 
   /** Os perfis conhecidos, por nome. Acrescentar perfil é acrescentar aqui e no PERFIS_CONHECIDOS. */
   var PERFIS = {
@@ -272,13 +271,8 @@ define(['N/search', 'N/runtime', 'N/log', './perfis/fp_perfil_original', './perf
   function montarPerfilAtivo() {
     var original = carregarModulo(PERFIL_ORIGINAL);
 
-    var escolhido = perfilConfigurado();
-    var origem = 'configurado';
-
-    if (!escolhido) {
-      escolhido = sondar();
-      origem = escolhido ? 'sonda' : 'padrao';
-    }
+    var escolhido = sondar();
+    var origem = escolhido ? 'sonda' : 'padrao';
 
     if (!escolhido || escolhido === PERFIL_ORIGINAL) {
       original._original = clonarSecoes(original);
@@ -325,35 +319,6 @@ define(['N/search', 'N/runtime', 'N/log', './perfis/fp_perfil_original', './perf
         'detectar sozinho pelo SuiteApp instalado.');
     }
     return JSON.parse(JSON.stringify(p));
-  }
-
-  /**
-   * Perfil registrado na subsidiária. Vence a sonda — ver o docblock do módulo.
-   *
-   * @returns {string|null}
-   */
-function perfilConfigurado() {
-    // ⚠ O ÚNICO SCRIPTID LITERAL QUE PODE EXISTIR NO BUNDLE, e ele é literal por necessidade:
-    // este campo é o que DIZ qual perfil carregar. Resolvê-lo pela camada seria pedir ao perfil
-    // que decidisse qual perfil usar. É o bootstrap, e por isso não entra em perfil nenhum.
-    var CAMPO_PERFIL = 'custrecord_fp_perfil_compat';
-
-    // O perfil mora num campo da SUBSIDIÁRIA, registro standard — não há custom record de
-    // configuração. Vale a PRIMEIRA subsidiária que tiver o campo preenchido: bundle instalado
-    // é fato da conta inteira, não de uma subsidiária, então a primeira resposta serve para
-    // todas. Divergência entre subsidiárias seria erro de cadastro, e viraria aviso no log.
-    var r = search
-      .create({
-        type: search.Type.SUBSIDIARY,
-        filters: [[CAMPO_PERFIL, 'isnotempty', '']],
-        columns: [CAMPO_PERFIL]
-      })
-      .run()
-      .getRange({ start: 0, end: 1 });
-
-    if (!r || !r.length) return null;
-    return r[0].getValue({ name: CAMPO_PERFIL }) || null;
-  
   }
 
   /**
