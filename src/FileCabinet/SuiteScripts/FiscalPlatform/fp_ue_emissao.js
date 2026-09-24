@@ -33,9 +33,6 @@ define(['N/ui/serverWidget', 'N/url', 'N/runtime', 'N/log', './fp_fields'],
      */
     var TIPOS = ['invoice', 'vendorbill', 'vendorcredit', 'creditmemo', 'transferorder'];
 
-    /** A subaba que o `fp_ue_simular` monta. Campo sem container cai no topo do formulário. */
-    var SUBABA = 'custtab_fp_fiscal';
-
     function beforeLoad(scriptContext) {
       try {
         injetarBotoes(scriptContext);
@@ -66,21 +63,11 @@ define(['N/ui/serverWidget', 'N/url', 'N/runtime', 'N/log', './fp_fields'],
 
       var form = scriptContext.form;
 
-      // ⚠ RASTRO TEMPORÁRIO. "An unexpected error has occurred" ao abrir a transação não deixa
-      // rastro utilizável: se a exceção fosse do código daqui, o `catch` do `beforeLoad` a teria
-      // registrado. Estes passos existem para separar DUAS hipóteses que o sintoma não separa —
-      // erro neste código, ou erro na RENDERIZAÇÃO do formulário depois que ele retorna. Uma
-      // abertura de transação resolve, e então isto sai.
-      passo('1 inicio', scriptContext.newRecord.type + ' ' + id);
-
       form.clientScriptModulePath = './fp_cs_transacao.js';
-      passo('2 clientScriptModulePath', 'ok');
 
       var rotulo = 'Emitir ' + tipoDeclarado(scriptContext.newRecord);
-      passo('3 tipoDeclarado', rotulo);
 
       botao(form, 'custpage_fp_emitir', rotulo, scriptContext, id, 'emitir', true);
-      passo('4 botao emitir', 'ok');
 
       // Consultar só faz sentido depois de transmitida, e é o que resolve nota em PROCESSANDO.
       var campoStatus = fpFields.id('DOC_STATUS');
@@ -91,15 +78,8 @@ define(['N/ui/serverWidget', 'N/url', 'N/runtime', 'N/log', './fp_fields'],
       if (status) {
         botao(form, 'custpage_fp_consultar', 'Consultar SEFAZ', scriptContext, id, 'consultar', false);
       }
-      passo('5 botao consultar', status || '(sem status)');
 
       linkDoXml(form, scriptContext, id);
-      passo('6 link do xml', 'fim do beforeLoad');
-    }
-
-    /** Sai quando o caso fechar. Ver o bloco acima. */
-    function passo(qual, detalhe) {
-      log.audit('fp_ue_emissao.passo', qual + ' · ' + detalhe);
     }
 
     /**
@@ -121,15 +101,19 @@ define(['N/ui/serverWidget', 'N/url', 'N/runtime', 'N/log', './fp_fields'],
       var destino = endereco(scriptContext, id, 'xml');
       if (!destino) return;
 
-      // ⚠ `FieldType.URL` NÃO, e a troca é medida: com o endereço RELATIVO que o `resolveScript`
-      // devolve, o campo URL derrubava a renderização da transação inteira com "An unexpected
-      // error has occurred". `INLINEHTML` é uma âncora e pronto — sem regra de formatação de URL
-      // do NetSuite no meio.
+      // ⚠ NADA DE `container`, e as duas variantes foram medidas na conta, nesta ordem:
+      //
+      //   1. `FieldType.URL` com o endereço RELATIVO do `resolveScript` derruba a renderização.
+      //   2. `INLINEHTML` com `container` apontando para a subaba derruba igual.
+      //
+      // Nos dois casos o erro estoura DIRETO NA TELA, sem uma linha no log: o `try/catch` do
+      // `beforeLoad` não o alcança porque o formulário só é desenhado DEPOIS que ele retorna.
+      //
+      // Campo sem container aparece no corpo principal. É menos bonito e é o que renderiza.
       form.addField({
         id: 'custpage_fp_xml',
         type: serverWidget.FieldType.INLINEHTML,
-        label: 'XML',
-        container: SUBABA
+        label: 'XML'
       }).defaultValue = '<a href="' + destino + '">Baixar XML</a>';
     }
 
