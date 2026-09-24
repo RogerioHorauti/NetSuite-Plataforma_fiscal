@@ -1,0 +1,5 @@
+<subtab scriptid="custtab_fp_transporte">
+  <parent></parent>
+  <tabtype>TRANSACTION</tabtype>
+  <title>Transporte</title>
+</subtab>

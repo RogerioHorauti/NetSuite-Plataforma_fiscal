@@ -150,10 +150,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var indPres = codigoDaLista(valorTexto(newRecord, fpFields.id('IND_PRES')));
       if (indPres) payload.indPres = indPres;
 
-      // `modFrete` é o único campo obrigatório DENTRO de `transporte`: o grupo só existe se ele
-      // existir, senão o DTO recusa o objeto inteiro.
-      var modFrete = codigoDaLista(valorTexto(newRecord, fpFields.id('FRETE_MODALIDADE')));
-      if (modFrete) payload.transporte = { modFrete: modFrete };
+      var transporte = montarTransporte(newRecord);
+      if (transporte) payload.transporte = transporte;
 
       var fisco = valorTexto(newRecord, fpFields.id('INFADIC_FISCO'));
       if (fisco) payload.infAdicFisco = fisco;
@@ -278,6 +276,221 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       }
 
       return Object.keys(dest).length ? dest : null;
+    }
+
+    /**
+     * O GRUPO X — transporte. Só na emissão: ele não existe no DTO de simulação.
+     *
+     * `modFrete` é o ÚNICO obrigatório dentro dele, e sem ele o grupo não existe — o DTO recusaria
+     * o objeto. Por isso ele é a porta: sem modalidade declarada, nada de transporte vai.
+     *
+     * A transportadora sai do CADASTRO do fornecedor, pelos mesmos campos FP que o destinatário
+     * usa. Transportador se repete de nota em nota, e redigitar razão social a cada uma é como o
+     * dado diverge.
+     */
+    function montarTransporte(newRecord) {
+      var modFrete = codigoDaLista(valorTexto(newRecord, fpFields.id('FRETE_MODALIDADE')));
+      if (!modFrete) return null;
+
+      var t = { modFrete: modFrete };
+
+      var transportadora = montarTransportadora(newRecord);
+      if (transportadora) t.transportadora = transportadora;
+
+      var retencao = montarRetencao(newRecord);
+      if (retencao) t.retencaoIcms = retencao;
+
+      var veiculo = montarVeiculo(newRecord, 'VEICULO_PLACA', 'VEICULO_UF', 'VEICULO_RNTC');
+      if (veiculo) t.veiculo = veiculo;
+
+      var reboques = montarReboques(newRecord);
+      if (reboques.length) t.reboque = reboques;
+
+      var vagao = valorTexto(newRecord, fpFields.id('VAGAO'));
+      if (vagao) t.vagao = vagao;
+
+      var balsa = valorTexto(newRecord, fpFields.id('BALSA'));
+      if (balsa) t.balsa = balsa;
+
+      var volumes = montarVolumes(newRecord);
+      if (volumes.length) t.volumes = volumes;
+
+      return t;
+    }
+
+    function montarTransportadora(newRecord) {
+      var campo = fpFields.id('TRANSPORTADORA');
+      var id = campo && newRecord.getValue({ fieldId: campo });
+      if (!id) return null;
+
+      var cnpj = fpFields.idCliente('CNPJ_CPF');
+      var razao = fpFields.idCliente('RAZAO_SOCIAL');
+      var ie = fpFields.idCliente('IE');
+
+      var colunas = ['companyname', 'entityid'];
+      if (cnpj) colunas.push(cnpj);
+      if (razao) colunas.push(razao);
+      if (ie) colunas.push(ie);
+
+      var cad = lookup('vendor', id, colunas);
+      if (!cad) return null;
+
+      var t = {};
+      var nome = (razao && texto(cad[razao])) || texto(cad.companyname) || texto(cad.entityid);
+      if (nome) t.nome = nome;
+      if (cnpj && digitos(cad[cnpj])) t.cnpjCpf = digitos(cad[cnpj]);
+      if (ie && digitos(cad[ie])) t.ie = digitos(cad[ie]);
+
+      return Object.keys(t).length ? t : null;
+    }
+
+    /**
+     * `retTransp` é INDIVISÍVEL: os seis campos ou nenhum.
+     *
+     * Meio grupo é rejeição na SEFAZ, e a rejeição chega DEPOIS do número reservado. Recusar aqui,
+     * dizendo o que falta, custa um log; recusar lá custa um número.
+     */
+    function montarRetencao(newRecord) {
+      var r = {
+        vServ: numero(valorDeCorpo(newRecord, 'RET_VSERV')),
+        vBCRet: numero(valorDeCorpo(newRecord, 'RET_VBCRET')),
+        pICMSRet: numero(valorDeCorpo(newRecord, 'RET_PICMSRET')),
+        vICMSRet: numero(valorDeCorpo(newRecord, 'RET_VICMSRET')),
+        cfop: valorTexto(newRecord, fpFields.id('RET_CFOP')),
+        cMunFG: digitos(valorTexto(newRecord, fpFields.id('RET_CMUNFG')))
+      };
+
+      // Nenhum valor preenchido quer dizer frete sem retenção, que é o caso comum. Não é falta.
+      if (!r.vServ && !r.vICMSRet) return null;
+
+      var faltando = [];
+      for (var k in r) {
+        if (Object.prototype.hasOwnProperty.call(r, k) && !r[k]) faltando.push(k);
+      }
+      if (faltando.length) {
+        log.audit('fp_md_map_simular.montarRetencao',
+          'retTransp incompleto e por isso NAO foi enviado. Falta: ' + faltando.join(', ') +
+          '. O grupo e indivisivel, e meio grupo e rejeicao depois do numero reservado.');
+        return null;
+      }
+      return r;
+    }
+
+    function montarVeiculo(newRecord, kPlaca, kUf, kRntc) {
+      var placa = valorTexto(newRecord, fpFields.id(kPlaca));
+      if (!placa) return null;
+
+      var v = { placa: normalizarPlaca(placa) };
+
+      var uf = valorTexto(newRecord, fpFields.id(kUf));
+      if (uf) v.uf = uf.toUpperCase().substring(0, 2);
+
+      var rntc = valorTexto(newRecord, fpFields.id(kRntc));
+      if (rntc) v.rntc = rntc;
+
+      return v;
+    }
+
+    /**
+     * Até 5, que é o teto do leiaute.
+     *
+     * Cortar aqui é melhor que deixar a SEFAZ recusar a nota inteira por causa do sexto reboque —
+     * e o log diz que cortou, para ninguém procurar o que sumiu.
+     */
+    function montarReboques(newRecord) {
+      var sublist = fpFields.idReboque('SUBLIST');
+      var cPlaca = fpFields.idReboque('PLACA');
+      if (!sublist || !cPlaca) return [];
+
+      var out = [];
+      var total = contarSublist(newRecord, sublist);
+
+      for (var i = 0; i < total; i++) {
+        var placa = texto(valorDeSublist(newRecord, sublist, cPlaca, i));
+        if (!placa) continue;
+
+        if (out.length === 5) {
+          log.audit('fp_md_map_simular.montarReboques',
+            'a transacao tem mais de 5 reboques; os excedentes NAO foram enviados. O leiaute da ' +
+            'NF-e admite cinco.');
+          break;
+        }
+
+        var r = { placa: normalizarPlaca(placa) };
+        var uf = texto(valorDeSublist(newRecord, sublist, fpFields.idReboque('UF'), i));
+        if (uf) r.uf = uf.toUpperCase().substring(0, 2);
+        var rntc = texto(valorDeSublist(newRecord, sublist, fpFields.idReboque('RNTC'), i));
+        if (rntc) r.rntc = rntc;
+
+        out.push(r);
+      }
+      return out;
+    }
+
+    function montarVolumes(newRecord) {
+      var sublist = fpFields.idVolume('SUBLIST');
+      if (!sublist) return [];
+
+      var out = [];
+      var total = contarSublist(newRecord, sublist);
+
+      for (var i = 0; i < total; i++) {
+        var v = {};
+        seTiver(v, 'quantidade', numero(valorDeSublist(newRecord, sublist, fpFields.idVolume('QUANTIDADE'), i)));
+        seTiver(v, 'especie', texto(valorDeSublist(newRecord, sublist, fpFields.idVolume('ESPECIE'), i)));
+        seTiver(v, 'marca', texto(valorDeSublist(newRecord, sublist, fpFields.idVolume('MARCA'), i)));
+        seTiver(v, 'numeracao', texto(valorDeSublist(newRecord, sublist, fpFields.idVolume('NUMERACAO'), i)));
+        seTiver(v, 'pesoLiquido', numero(valorDeSublist(newRecord, sublist, fpFields.idVolume('PESO_LIQUIDO'), i)));
+        seTiver(v, 'pesoBruto', numero(valorDeSublist(newRecord, sublist, fpFields.idVolume('PESO_BRUTO'), i)));
+
+        // Um campo com os lacres separados por vírgula vira a lista repetível do leiaute. Uma
+        // terceira sublista dentro da sublista custaria mais para manter do que o dado vale.
+        var lacres = separarPorVirgula(valorDeSublist(newRecord, sublist, fpFields.idVolume('LACRES'), i));
+        if (lacres.length) v.lacres = lacres;
+
+        if (temAlgo(v)) out.push(v);
+      }
+      return out;
+    }
+
+    function normalizarPlaca(v) {
+      return texto(v).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    }
+
+    function separarPorVirgula(v) {
+      var partes = texto(v).split(',');
+      var out = [];
+      for (var i = 0; i < partes.length; i++) {
+        var x = partes[i].replace(/^\s+|\s+$/g, '');
+        if (x) out.push(x);
+      }
+      return out;
+    }
+
+    function seTiver(alvo, chave, valor) {
+      if (valor !== null && valor !== undefined && valor !== '' && valor !== 0) alvo[chave] = valor;
+    }
+
+    function temAlgo(o) {
+      for (var k in o) {
+        if (Object.prototype.hasOwnProperty.call(o, k)) return true;
+      }
+      return false;
+    }
+
+    function valorDeCorpo(newRecord, chave) {
+      var campo = fpFields.id(chave);
+      return campo ? newRecord.getValue({ fieldId: campo }) : null;
+    }
+
+    function valorDeSublist(newRecord, sublist, campo, linha) {
+      if (!campo) return null;
+      return newRecord.getSublistValue({ sublistId: sublist, fieldId: campo, line: linha });
+    }
+
+    function contarSublist(newRecord, sublist) {
+      var n = newRecord.getLineCount({ sublistId: sublist });
+      return n > 0 ? n : 0;
     }
 
     /**

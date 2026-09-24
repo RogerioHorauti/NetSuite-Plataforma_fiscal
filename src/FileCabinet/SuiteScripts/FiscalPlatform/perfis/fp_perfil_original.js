@@ -71,6 +71,18 @@ define([], function () {
         "e nao dizem de quem e a RESPONSABILIDADE pelo frete, que e o que o grupo X declara."
       ],
       "FRETE_MODALIDADE": "custbody_fp_frete_modalidade",
+      "TRANSPORTADORA": "custbody_fp_transportadora",
+      "VEICULO_PLACA": "custbody_fp_veiculo_placa",
+      "VEICULO_UF": "custbody_fp_veiculo_uf",
+      "VEICULO_RNTC": "custbody_fp_veiculo_rntc",
+      "VAGAO": "custbody_fp_vagao",
+      "BALSA": "custbody_fp_balsa",
+      "RET_VSERV": "custbody_fp_ret_vserv",
+      "RET_VBCRET": "custbody_fp_ret_vbcret",
+      "RET_PICMSRET": "custbody_fp_ret_picmsret",
+      "RET_VICMSRET": "custbody_fp_ret_vicmsret",
+      "RET_CFOP": "custbody_fp_ret_cfop",
+      "RET_CMUNFG": "custbody_fp_ret_cmunfg",
 
       "_grupo_adicionais": [
         "Campos do EmitirNotaDto que NAO existem no SimulacaoNotaInputDto -- so vao na emissao.",
@@ -132,6 +144,33 @@ define([], function () {
       ],
       "ISO": "custrecord_fp_pais_iso",
       "CPAIS": "custrecord_fp_pais_cpais"
+    },
+
+    "reboque": {
+      "_nota": "Sublista customrecord_fp_reboque, na subaba Transporte. Ate 5, omitidos em interestadual.",
+      "SUBLIST": "recmachcustrecord_fp_reb_transacao",
+      "TRANSACAO": "custrecord_fp_reb_transacao",
+      "PLACA": "custrecord_fp_reb_placa",
+      "UF": "custrecord_fp_reb_uf",
+      "RNTC": "custrecord_fp_reb_rntc"
+    },
+
+    "volume": {
+      "_nota": [
+        "Sublista customrecord_fp_volume, na MESMA subaba dos reboques -- duas sublistas numa",
+        "subaba viram ABAS dentro dela, que e como o bundle da Oracle organiza o transporte.",
+        "LACRES e um campo com os lacres separados por virgula; o mapeador divide. No leiaute e",
+        "lista repetivel, mas uma terceira sublista custaria mais do que o dado vale."
+      ],
+      "SUBLIST": "recmachcustrecord_fp_vol_transacao",
+      "TRANSACAO": "custrecord_fp_vol_transacao",
+      "QUANTIDADE": "custrecord_fp_vol_quantidade",
+      "ESPECIE": "custrecord_fp_vol_especie",
+      "MARCA": "custrecord_fp_vol_marca",
+      "NUMERACAO": "custrecord_fp_vol_numeracao",
+      "PESO_LIQUIDO": "custrecord_fp_vol_peso_liquido",
+      "PESO_BRUTO": "custrecord_fp_vol_peso_bruto",
+      "LACRES": "custrecord_fp_vol_lacres"
     },
 
     "endereco": {
@@ -240,6 +279,8 @@ define([], function () {
       "IMPOSTO": "customrecord_fp_imposto",
       "CLASSIFICADOR": "customrecord_fp_classificador_contabil",
       "NATUREZA_OPERACAO": "customrecord_fp_natureza_operacao",
+      "REBOQUE": "customrecord_fp_reboque",
+      "VOLUME": "customrecord_fp_volume",
       "PAIS": "customrecord_fp_pais",
       "DOC": "customrecord_fp_doc",
       "LOG": "customrecord_fp_log"

@@ -191,6 +191,16 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
     return out;
   }
 
+  /** Campo da sublista de reboques. */
+  function idReboque(chave) {
+    return resolver('reboque', chave);
+  }
+
+  /** Campo da sublista de volumes. */
+  function idVolume(chave) {
+    return resolver('volume', chave);
+  }
+
   /** Campo FP na entity (customer/vendor). */
   function idCliente(chave) {
     return resolver('cliente', chave);
@@ -395,6 +405,8 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
     idSubsidiaria: idSubsidiaria,
     idLocation: idLocation,
     chaves: chaves,
+    idReboque: idReboque,
+    idVolume: idVolume,
     idCliente: idCliente,
     idPais: idPais,
     idEndereco: idEndereco,
