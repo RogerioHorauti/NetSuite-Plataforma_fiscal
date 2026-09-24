@@ -13,7 +13,7 @@
  * NÃO consome numeração — e é só por isso que ele pode morar num caminho que roda a cada save.
  * Emissão tem endereço próprio: o Suitelet, por ação explícita.
  *
- * ── AS CINCO GUARDAS, e nenhuma é opcional ──────────────────────────────────────────────────────
+ * ── AS GUARDAS, e nenhuma é opcional ────────────────────────────────────────────────────────────
  *
  * 1. O `catch` NUNCA derruba o save. Motor fora do ar, timeout, 500 → grava o motivo, avisa, e
  *    deixa gravar. Simulação é conveniência; impedir o usuário de salvar um pedido porque o motor
@@ -48,6 +48,7 @@
 define([
   'N/record',
   'N/file',
+  'N/url',
   'N/runtime',
   'N/log',
   './fp_msg',
@@ -55,7 +56,7 @@ define([
   './fp_form',
   './fp_client',
   './fp_md_map_simular'
-], function (record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular) {
+], function (record, file, url, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular) {
   /** Tipos de transação em que a simulação roda. Fora desta lista, o script não faz nada. */
   var TIPOS = [
     'invoice',
@@ -132,6 +133,7 @@ define([
     try {
       fpMsg.pintar(scriptContext);
       organizarFormulario(scriptContext);
+      injetarBotoes(scriptContext);
     } catch (e) {
       log.error('fp_ue_simular.beforeLoad', { name: e.name, message: e.message, stack: e.stack });
     }
@@ -258,6 +260,55 @@ define([
    * A cadeia de âncoras existe porque `memo` não está em todo formulário customizado; caindo para
    * `entity`/`trandate`, os dois campos ainda ficam num lugar previsível em vez de irem para o fim.
    */
+  /**
+   * O BOTÃO DE EMISSÃO, injetado aqui porque o Suitelet não tem como se anunciar sozinho.
+   *
+   * Só em transação JÁ GRAVADA: o `idExterno` é o internal id, e num registro novo ele não
+   * existe. Emitir uma transação que ainda não foi salva não é uma operação que exista.
+   *
+   * Só em VIEW, nunca em EDIT. Em edição o usuário tem alterações não salvas na tela, e o
+   * Suitelet emitiria o que está no BANCO — emitir uma versão que ninguém está vendo é o tipo de
+   * surpresa que custa um número.
+   *
+   * `clientScriptModulePath` e não registro de script: um objeto SDF a menos.
+   */
+  function injetarBotoes(scriptContext) {
+    if (scriptContext.type !== scriptContext.UserEventType.VIEW) return;
+    if (TIPOS.indexOf(scriptContext.newRecord.type) === -1) return;
+
+    var id = scriptContext.newRecord.id;
+    if (!id) return;
+
+    var form = scriptContext.form;
+    form.clientScriptModulePath = './fp_cs_transacao.js';
+
+    var campoStatus = fpFields.id('DOC_STATUS');
+    var status = campoStatus
+      ? String(scriptContext.newRecord.getValue({ fieldId: campoStatus }) || '').toUpperCase()
+      : '';
+
+    botao(form, 'custpage_fp_emitir', 'Emitir NF-e', scriptContext, id, 'emitir');
+
+    // Consultar só faz sentido depois de transmitida, e é o que resolve nota em PROCESSANDO.
+    if (status) {
+      botao(form, 'custpage_fp_consultar', 'Consultar SEFAZ', scriptContext, id, 'consultar');
+    }
+  }
+
+  function botao(form, idBotao, rotulo, scriptContext, id, acao) {
+    var endereco = url.resolveScript({
+      scriptId: 'customscript_fp_sl_emissao',
+      deploymentId: 'customdeploy_fp_sl_emissao',
+      params: { tipo: scriptContext.newRecord.type, id: id, acao: acao }
+    });
+
+    form.addButton({
+      id: idBotao,
+      label: rotulo,
+      functionName: "abrirEmissao('" + endereco + "')"
+    });
+  }
+
   function organizarFormulario(scriptContext) {
     if (runtime.executionContext !== runtime.ContextType.USER_INTERFACE) return;
     if (TIPOS.indexOf(scriptContext.newRecord.type) === -1) return;
@@ -282,6 +333,22 @@ define([
 
   // ─────────────────────────────────────────────────────────────────────────────
 
+  /** `AUTORIZADA`, `CANCELADA`, `DENEGADA` — os três em que o documento existe na SEFAZ. */
+  function jaTransmitido(novoRegistro) {
+    var campo = fpFields.id('DOC_STATUS');
+    if (!campo) return false;
+
+    var status = String(novoRegistro.getValue({ fieldId: campo }) || '').toUpperCase();
+    if (!status) return false;
+
+    if (['AUTORIZADA', 'CANCELADA', 'DENEGADA'].indexOf(status) === -1) return false;
+
+    log.audit('fp_ue_simular',
+      'documento ' + status + ' — simulação não roda. Os tributos da transação são os que foram ' +
+      'transmitidos; recalcular faria o sublist divergir do XML que está na SEFAZ.');
+    return true;
+  }
+
   function deveRodar(scriptContext) {
     if (TIPOS.indexOf(scriptContext.newRecord.type) === -1) return false;
 
@@ -293,6 +360,19 @@ define([
       log.debug('fp_ue_simular', 'pulado em ' + runtime.executionContext);
       return false;
     }
+
+    // GUARDA 6 — DOCUMENTO JÁ TRANSMITIDO NÃO SIMULA MAIS.
+    //
+    // Os tributos de uma nota autorizada são os que FORAM TRANSMITIDOS: eles estão no XML
+    // assinado que a SEFAZ guarda. Recalcular depois disso sobrescreveria o sublist com um
+    // resultado que a régua de hoje produz — e régua muda, convênio muda, cadastro muda. O
+    // NetSuite passaria a mostrar um imposto que a nota não tem, sem erro nenhum, e a
+    // divergência só apareceria na conciliação ou na fiscalização.
+    //
+    // REJEITADA não entra na lista, e é de propósito: ela não existe na SEFAZ, o número dela
+    // não foi consumido e o caminho normal é corrigir o cadastro e emitir de novo — o que exige
+    // simular de novo.
+    if (jaTransmitido(scriptContext.newRecord)) return false;
 
     // GUARDA 4 — só no EDIT: no CREATE não há `oldRecord` com que comparar.
     // if (scriptContext.type === scriptContext.UserEventType.EDIT && !mudouAlgoRelevante(scriptContext)) {

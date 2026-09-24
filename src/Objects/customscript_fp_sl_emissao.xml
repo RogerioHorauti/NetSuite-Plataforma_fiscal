@@ -1,0 +1,48 @@
+<suitelet scriptid="customscript_fp_sl_emissao">
+  <description>Emissao, consulta e reconciliacao do documento fiscal. Ato explicito, fora do save: emitir consome numeracao e e irreversivel. Aberto pelo botao injetado no beforeLoad da transacao.</description>
+  <isinactive>F</isinactive>
+  <name>FP Emissao</name>
+  <notifyadmins>F</notifyadmins>
+  <notifyemails></notifyemails>
+  <notifyowner>T</notifyowner>
+  <notifyuser>F</notifyuser>
+  <scriptfile>[/SuiteScripts/FiscalPlatform/fp_sl_emissao.js]</scriptfile>
+  <scriptcustomfields>
+    <scriptcustomfield scriptid="custscript_fp_pasta_doc">
+      <accesslevel>2</accesslevel>
+      <applyformatting>F</applyformatting>
+      <checkspelling>F</checkspelling>
+      <defaultchecked>F</defaultchecked>
+      <defaultselection></defaultselection>
+      <defaultvalue></defaultvalue>
+      <description>Internal id da pasta do File Cabinet onde o XML autorizado e gravado antes de ser anexado a transacao. Numero, nao lista. EM BRANCO NAO ANEXA, e o log avisa: a chave e o protocolo ja estao na transacao e a URL no customrecord_fp_doc, entao a falta do anexo nao perde a autorizacao.</description>
+      <displayheight></displayheight>
+      <displaytype>NORMAL</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <fieldtype>INTEGER</fieldtype>
+      <help></help>
+      <isformula>F</isformula>
+      <ismandatory>F</ismandatory>
+      <label>Pasta do XML</label>
+      <linktext></linktext>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <setting>COMPANY</setting>
+      <storevalue>T</storevalue>
+    </scriptcustomfield>
+  </scriptcustomfields>
+  <scriptdeployments>
+    <scriptdeployment scriptid="customdeploy_fp_sl_emissao">
+      <allemployees>F</allemployees>
+      <allpartners>F</allpartners>
+      <allroles>T</allroles>
+      <audslctrole></audslctrole>
+      <isdeployed>T</isdeployed>
+      <loglevel>DEBUG</loglevel>
+      <runasrole>ADMINISTRATOR</runasrole>
+      <status>RELEASED</status>
+      <title>FP Emissao</title>
+    </scriptdeployment>
+  </scriptdeployments>
+</suitelet>
