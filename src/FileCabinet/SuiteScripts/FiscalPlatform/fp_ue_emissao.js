@@ -65,18 +65,44 @@ define(['N/ui/serverWidget', 'N/url', 'N/runtime', 'N/log', './fp_fields'],
 
       form.clientScriptModulePath = './fp_cs_transacao.js';
 
-      var rotulo = 'Emitir ' + tipoDeclarado(scriptContext.newRecord);
-
-      botao(form, 'custpage_fp_emitir', rotulo, scriptContext, id, 'emitir', true);
-
-      // Consultar só faz sentido depois de transmitida, e é o que resolve nota em PROCESSANDO.
       var campoStatus = fpFields.id('DOC_STATUS');
-      var status = campoStatus
-        ? String(scriptContext.newRecord.getValue({ fieldId: campoStatus }) || '')
-        : '';
+      var status = String((campoStatus &&
+        scriptContext.newRecord.getValue({ fieldId: campoStatus })) || '').toUpperCase();
 
-      if (status) {
+      // ── O QUE APARECE, E QUANDO ────────────────────────────────────────────────────────────
+      //
+      //   sem status              Emitir                    a nota ainda não existe
+      //   REJEITADA               Emitir + Inutilizar       corrigir e reemitir, ou fechar o número
+      //   ENVIADO / PROCESSANDO   Consultar                 assíncrono: falta o desfecho
+      //   AUTORIZADA              Cancelar + Carta          o documento existe e admite evento
+      //   CANCELADA / DENEGADA    nada                      acabou; resta o XML
+      //
+      // Botão que não leva a nada é pior que botão ausente: convida ao clique e devolve uma
+      // recusa que o usuário lê como defeito do sistema.
+
+      if (!status || status === 'REJEITADA') {
+        botao(form, 'custpage_fp_emitir', 'Emitir ' + tipoDeclarado(scriptContext.newRecord),
+          scriptContext, id, 'emitir', true);
+      }
+
+      // Inutilizar NÃO consome numeração: fecha a lacuna de um número que já se perdeu na
+      // rejeição. Número aberto é que vira pendência na apuração.
+      if (status === 'REJEITADA') {
+        botao(form, 'custpage_fp_inutilizar', 'Inutilizar número', scriptContext, id, 'inutilizar',
+          false, 'Justificativa da inutilização (15 a 255 caracteres):');
+      }
+
+      // ENVIADO é o caminho ASSÍNCRONO — prefeitura ou lote sem resposta síncrona, em que o
+      // desfecho de cada nota só vem pela consulta. É o único caso em que consultar resolve algo.
+      if (status === 'ENVIADO' || status === 'PROCESSANDO') {
         botao(form, 'custpage_fp_consultar', 'Consultar SEFAZ', scriptContext, id, 'consultar', false);
+      }
+
+      if (status === 'AUTORIZADA') {
+        botao(form, 'custpage_fp_cancelar', 'Cancelar', scriptContext, id, 'cancelar',
+          false, 'Justificativa do cancelamento (15 a 255 caracteres):');
+        botao(form, 'custpage_fp_carta', 'Carta de correção', scriptContext, id, 'carta',
+          false, 'Texto da correção (15 a 1000). Não pode alterar valor, imposto nem as partes:');
       }
 
       linkDoXml(form, scriptContext, id);
@@ -132,15 +158,17 @@ define(['N/ui/serverWidget', 'N/url', 'N/runtime', 'N/log', './fp_fields'],
     }
 
     /**
-     * `consome` diz ao cliente se ele pergunta antes. Quem sabe disso é aqui, não o cliente: a
-     * diferença entre gastar número e não gastar é do endpoint, não da tela.
+     * `consome` diz ao cliente se ele confirma antes; `pergunta` diz que texto pedir.
+     *
+     * Quem sabe as duas coisas é aqui, não o cliente: o que gasta número e o que exige
+     * justificativa é do endpoint, não da tela.
      */
-    function botao(form, idBotao, rotulo, scriptContext, id, acao, consome) {
+    function botao(form, idBotao, rotulo, scriptContext, id, acao, consome, pergunta) {
       form.addButton({
         id: idBotao,
         label: rotulo,
         functionName: "acionar('" + endereco(scriptContext, id, acao) + "','" + rotulo + "'," +
-          (consome ? 'true' : 'false') + ")"
+          (consome ? 'true' : 'false') + ",'" + (pergunta || '') + "')"
       });
     }
 

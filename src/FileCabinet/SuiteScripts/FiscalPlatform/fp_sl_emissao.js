@@ -40,7 +40,36 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
   './fp_fields', './fp_client', './fp_md_map_simular', './fp_persist'],
   function (record, file, runtime, log, fpFields, fpClient, fpMap, fpPersist) {
 
-    var ACOES = { EMITIR: 'emitir', CONSULTAR: 'consultar', RECONCILIAR: 'reconciliar', XML: 'xml' };
+    var ACOES = {
+      EMITIR: 'emitir',
+      CONSULTAR: 'consultar',
+      RECONCILIAR: 'reconciliar',
+      CANCELAR: 'cancelar',
+      CARTA: 'carta',
+      INUTILIZAR: 'inutilizar',
+      XML: 'xml'
+    };
+
+    /**
+     * O que cada ação faz depois da emissão — caminho, corpo e rótulo.
+     *
+     * ⚠ TODAS ENDEREÇAM PELA **CHAVE DE ACESSO**, não pelo `idExterno`. Medido no
+     * `endereco-do-documento.pipe`: `UQ_transaction_branch_id_externo :: UNIQUE (branch_id,
+     * id_externo)` — o `idExterno` é único POR FILIAL, e como endereço de caminho seria ambíguo
+     * entre filiais. A chave não tem esse problema, porque o CNPJ do emitente está dentro dela.
+     * O `idExterno` é a chave de IDEMPOTÊNCIA do `POST /emitir`: endereça a INTENÇÃO, não o
+     * documento emitido.
+     *
+     * `campo` é o nome que o DTO espera para o texto que o usuário digitou. Nenhuma delas consome
+     * numeração — a inutilização FECHA um número já perdido, não gasta outro.
+     */
+    var EVENTOS = {
+      consultar: { caminho: '/fiscal/emitir/{chave}/consultar', rotulo: 'Consultar desfecho na SEFAZ' },
+      reconciliar: { caminho: '/fiscal/nfe/{chave}/reconciliar', rotulo: 'Reconciliar pela chave' },
+      cancelar: { caminho: '/fiscal/emitir/{chave}/cancelar', campo: 'justificativa', rotulo: 'Cancelamento' },
+      carta: { caminho: '/fiscal/emitir/{chave}/carta-correcao', campo: 'correcao', rotulo: 'Carta de correção' },
+      inutilizar: { caminho: '/fiscal/emitir/{chave}/inutilizar', campo: 'justificativa', rotulo: 'Inutilização do número' }
+    };
 
     function onRequest(contexto) {
       try {
@@ -71,7 +100,7 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
           });
         }
 
-        return json(contexto, executar(p.tipo, p.id, p.acao || ACOES.EMITIR));
+        return json(contexto, executar(p.tipo, p.id, p.acao || ACOES.EMITIR, textoDoCorpo(contexto)));
       } catch (e) {
         log.error('fp_sl_emissao', { name: e.name, message: e.message, stack: e.stack });
         return json(contexto, {
@@ -138,7 +167,7 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
      * para pintar o resultado sem sair da tela. Página montada aqui voltaria como um HTML inteiro
      * de formulário do NetSuite dentro do `responseText`, que não se lê nem se aproveita.
      */
-    function executar(tipo, id, acao) {
+    function executar(tipo, id, acao, texto) {
       var rec = record.load({ type: tipo, id: id });
       var subsidiaria = rec.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') });
       var opcoes = { subsidiaria: subsidiaria, transacao: id, pasta: pastaDoAnexo() };
@@ -147,7 +176,7 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
       // e é o que se confere quando o motor recusa.
       var resposta = acao === ACOES.EMITIR
         ? emitir(rec, id, opcoes)
-        : consultarOuReconciliar(rec, id, acao, opcoes);
+        : evento(rec, acao, texto, opcoes);
 
       if (!resposta.ok) {
         // O TEXTO DO MOTOR VAI INTEIRO. Traduzir ou resumir rejeição da SEFAZ é o jeito mais
@@ -206,16 +235,54 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
       return fpClient.emitir(payload, opcoes);
     }
 
-    /** Endereçado pelo `idExterno`, que é o id da transação — o ERP nunca viu o UUID. */
-    function consultarOuReconciliar(rec, id, acao, opcoes) {
-      if (acao === ACOES.RECONCILIAR) {
-        var chave = valor(rec, fpFields.id('DOC_CHAVE'));
-        if (!chave) {
-          return { ok: false, code: 0, body: { erro: 'sem chave de acesso: nada a reconciliar' } };
-        }
-        return fpClient.postar('/fiscal/nfe/' + chave + '/reconciliar', null, opcoes);
+    /**
+     * Todo evento do documento emitido: consultar, reconciliar, cancelar, carta de correção,
+     * inutilizar. Um só caminho porque a diferença entre eles é o endereço e o campo de texto.
+     *
+     * Sem chave não há documento emitido, e sem documento não há evento. Recusar aqui é melhor
+     * que mandar um caminho com "undefined" e receber 404 da plataforma.
+     */
+    function evento(rec, acao, texto, opcoes) {
+      var cfg = EVENTOS[acao];
+      if (!cfg) {
+        return { ok: false, code: 0, body: { erro: 'ação desconhecida: ' + acao } };
       }
-      return fpClient.postar('/fiscal/emitir/' + id + '/consultar', null, opcoes);
+
+      var chave = valor(rec, fpFields.id('DOC_CHAVE'));
+      if (!chave) {
+        return { ok: false, code: 0, body: { erro: 'transação sem chave de acesso: não há documento para ' + acao } };
+      }
+
+      var corpo = null;
+      if (cfg.campo) {
+        if (!texto) {
+          return { ok: false, code: 0, body: { erro: cfg.rotulo + ' exige o texto, e ele não veio.' } };
+        }
+        corpo = montarCorpo(cfg.campo, texto);
+      }
+
+      log.audit('fp_sl_emissao.evento', acao + ' · chave ' + chave);
+      return fpClient.postar(cfg.caminho.replace('{chave}', chave), corpo, opcoes);
+    }
+
+    /** `{ campo: valor }` sem chave dinâmica no literal. */
+    function montarCorpo(campo, valor) {
+      var c = {};
+      c[campo] = valor;
+      return c;
+    }
+
+    /**
+     * O texto que o usuário digitou — justificativa do cancelamento, correção da CC-e.
+     *
+     * NÃO se valida tamanho aqui. O leiaute exige 15 a 255 (1000 na CC-e), e essa é régua do
+     * motor: duplicá-la no ERP cria dois lugares para divergir na próxima NT. Texto curto volta
+     * recusado com a mensagem dele, que é mais precisa que qualquer aviso que eu escrevesse.
+     */
+    function textoDoCorpo(contexto) {
+      var corpo = contexto.request.body;
+      if (!corpo) return '';
+      return String(JSON.parse(corpo).texto || '');
     }
 
     // ─────────────────────────────────────────────────────────────────────────

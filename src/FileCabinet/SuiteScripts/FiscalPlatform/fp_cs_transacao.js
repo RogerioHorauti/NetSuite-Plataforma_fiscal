@@ -30,22 +30,32 @@ define(['N/https'], function (https) {
   var CAIXA = 'fp_caixa_emissao';
 
   /**
-   * @param {string} url    o Suitelet já com `tipo`, `id` e `acao`
-   * @param {string} rotulo o que dizer enquanto espera
-   * @param {boolean} consome se a ação gasta numeração — só aí se pergunta
+   * @param {string} url      o Suitelet já com `tipo`, `id` e `acao`
+   * @param {string} rotulo   o que dizer enquanto espera
+   * @param {boolean} consome se a ação gasta numeração — só aí se confirma
+   * @param {string} [pergunta] quando a ação exige texto (justificativa, correção)
    */
-  function acionar(url, rotulo, consome) {
+  function acionar(url, rotulo, consome, pergunta) {
     // if (consome && !window.confirm(
     //   'Emitir reserva o número, assina e transmite à SEFAZ na mesma chamada.\n\n' +
     //   'Quando a resposta voltar, o número já foi gasto. Continuar?')) {
     //   return;
     // }
 
+    // Cancelar sem justificativa não existe no leiaute, então texto vazio aborta aqui mesmo. O
+    // TAMANHO quem valida é o motor — 15 a 255, 1000 na CC-e — e repetir isso aqui criaria dois
+    // lugares para divergir na próxima NT.
+    var texto = '';
+    if (pergunta) {
+      texto = window.prompt(pergunta, '') || '';
+      if (!texto.replace(/\s/g, '')) return;
+    }
+
     abrir(rotulo + '…', girando());
 
     https.post.promise({
       url: url,
-      body: '{}',
+      body: JSON.stringify({ texto: texto }),
       headers: { 'Content-Type': 'application/json' }
     })
       .then(function (resposta) {
