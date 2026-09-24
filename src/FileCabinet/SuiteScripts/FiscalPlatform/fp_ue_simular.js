@@ -131,6 +131,7 @@ define([
   function beforeLoad(scriptContext) {
     try {
       fpMsg.pintar(scriptContext);
+      limparNaCopia(scriptContext);
       organizarFormulario(scriptContext);
     } catch (e) {
       log.error('fp_ue_simular.beforeLoad', { name: e.name, message: e.message, stack: e.stack });
@@ -258,6 +259,69 @@ define([
    * A cadeia de âncoras existe porque `memo` não está em todo formulário customizado; caindo para
    * `entity`/`trandate`, os dois campos ainda ficam num lugar previsível em vez de irem para o fim.
    */
+  /**
+   * CÓPIA NÃO HERDA DOCUMENTO FISCAL.
+   *
+   * "Make Copy" duplica todo campo de corpo, inclusive chave de acesso, protocolo e status — e
+   * duas transações passariam a exibir a MESMA nota. Uma delas seria mentira, e nada no NetSuite
+   * acusaria: os campos são texto.
+   *
+   * ⚠ E há um efeito pior que a exibição errada: com `DOC_STATUS` copiado como `AUTORIZADA`, a
+   * guarda 6 do `beforeSubmit` recusaria simular a cópia — ela nasceria sem imposto nenhum, sem
+   * erro, e o usuário só descobriria na hora de emitir.
+   *
+   * O `corrId` também sai: ele endereça a mensagem de tela da transação ORIGINAL.
+   *
+   * Roda no `beforeLoad`, antes de o formulário ser desenhado, que é o único momento em que se
+   * limpa um registro não gravado sem um segundo submit.
+   */
+  function limparNaCopia(scriptContext) {
+    if (scriptContext.type !== scriptContext.UserEventType.COPY) return;
+    if (TIPOS.indexOf(scriptContext.newRecord.type) === -1) return;
+
+    var chaves = ['DOC_CHAVE', 'DOC_NUMERO', 'DOC_SERIE', 'DOC_STATUS', 'DOC_CSTAT',
+      'DOC_XMOTIVO', 'DOC_PROTOCOLO', 'DOC_IDEXTERNO', 'DOC_XML', 'DOC_DANFE', 'CORRID'];
+
+    var limpos = 0;
+    for (var i = 0; i < chaves.length; i++) {
+      var campo = fpFields.id(chaves[i]);
+      if (!campo) continue;
+      scriptContext.newRecord.setValue({ fieldId: campo, value: '' });
+      limpos++;
+    }
+
+    var anexos = removerAnexosDoBundle(scriptContext.newRecord);
+
+    log.audit('fp_ue_simular.limparNaCopia',
+      'cópia de ' + scriptContext.newRecord.type + ': ' + limpos + ' campo(s) fiscal(is) e ' +
+      anexos + ' anexo(s) do bundle removidos. A cópia é um documento novo.');
+  }
+
+  /**
+   * Os anexos do bundle saem; os do usuário ficam.
+   *
+   * O critério é o prefixo `FP-`, que é como este bundle nomeia payload e retorno. A Avalara
+   * precisa listar treze pedaços de nome para fazer isto — nomear tudo com um prefixo só é o que
+   * torna a limpeza uma linha em vez de uma lista para manter.
+   */
+  function removerAnexosDoBundle(novoRegistro) {
+    var total = novoRegistro.getLineCount({ sublistId: 'mediaitem' });
+    if (total <= 0) return 0;
+
+    var removidos = 0;
+    for (var i = total - 1; i >= 0; i--) {
+      var nome = String(novoRegistro.getSublistText({
+        sublistId: 'mediaitem', fieldId: 'mediaitem', line: i
+      }) || '');
+
+      if (nome.indexOf('FP-') === 0) {
+        novoRegistro.removeLine({ sublistId: 'mediaitem', line: i });
+        removidos++;
+      }
+    }
+    return removidos;
+  }
+
   function organizarFormulario(scriptContext) {
     if (runtime.executionContext !== runtime.ContextType.USER_INTERFACE) return;
     if (TIPOS.indexOf(scriptContext.newRecord.type) === -1) return;
