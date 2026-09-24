@@ -58,8 +58,8 @@
  * o setup não ser manual; a decisão fica registrada. Divergência entre sonda e persistido vira
  * AVISO no log, nunca troca automática.
  */
-define(['N/search', 'N/query', 'N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil_oracle_ei'],
-  function (search, query, runtime, log, perfilOriginal, perfilOracleEi) {
+define(['N/search', 'N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil_oracle_ei'],
+  function (search, runtime, log, perfilOriginal, perfilOracleEi) {
 
   /** Os perfis conhecidos, por nome. Acrescentar perfil é acrescentar aqui e no PERFIS_CONHECIDOS. */
   var PERFIS = {
@@ -359,22 +359,22 @@ function perfilConfigurado() {
   /**
    * SONDA: qual SuiteApp fiscal está instalado nesta conta.
    *
-   * Pelo **bundle instalado**, não por assinatura de record type. O record type era sondado
-   * provocando `INVALID_RCRD_TYPE` de propósito — exceção como resposta, dentro de auxiliar, que é
-   * exatamente o que não pode existir aqui. E o bundle é o fato mais direto: é ele que se instala.
+   * Pelo **bundle**, não por assinatura de record type. O record type era sondado provocando
+   * `INVALID_RCRD_TYPE` de propósito — exceção como resposta, dentro de auxiliar, que é exatamente
+   * o que não pode existir aqui. O bundle vem do próprio runtime, sem consulta nenhuma.
    *
    * @returns {string|null}
    */
   function sondar() {
-    var instalados = bundlesInstalados();
-    if (!instalados) return null;
+    var bundles = bundlesDoScript();
+    if (!bundles.length) return null;
 
     for (var i = 0; i < PERFIS_CONHECIDOS.length; i++) {
       var nome = PERFIS_CONHECIDOS[i];
       var ids = (PERFIS[nome].deteccao && PERFIS[nome].deteccao.bundleIds) || [];
       for (var b = 0; b < ids.length; b++) {
-        if (instalados[String(ids[b])]) {
-          log.audit('fp_fields.sondar', 'bundle ' + ids[b] + ' instalado → perfil ' + nome);
+        if (bundles.indexOf(String(ids[b])) !== -1) {
+          log.audit('fp_fields.sondar', 'bundle ' + ids[b] + ' → perfil ' + nome);
           return nome;
         }
       }
@@ -382,18 +382,17 @@ function perfilConfigurado() {
     return null;
   }
 
-  /** `{ '237702': true, ... }` dos bundles instalados na conta. */
-  function bundlesInstalados() {
-    var mapa = {};
-    search.create({
-      type: search.Type.BUNDLE_INSTALLATION,
-      filters: [],
-      columns: ['name']
-    }).run().each(function (linha) {
-      mapa[String(linha.id)] = true;
-      return true;
-    });
-    return mapa;
+  /**
+   * Os bundles do script em execução, por `runtime.getCurrentScript().bundleIds`.
+   *
+   * É o mesmo teste que o AvaTax V3 faz (`bundleArr.indexOf('391744') != -1`), e é de graça: não
+   * consulta, não busca, não lança. Antes daqui passou uma busca em `BUNDLE_INSTALLATION` — tipo
+   * que eu não tinha como verificar daqui e que teria custado mais um form load quebrado.
+   *
+   * @returns {string[]}
+   */
+  function bundlesDoScript() {
+    return runtime.getCurrentScript().bundleIds || [];
   }
 
   return {
