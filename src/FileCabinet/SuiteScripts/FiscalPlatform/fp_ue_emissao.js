@@ -21,8 +21,8 @@
  * Não há `beforeSubmit` nem `afterSubmit` aqui, e não é omissão: emitir é ato explícito, fora do
  * save. Um User Event que emitisse no save queimaria um número por clique em "Salvar".
  */
-define(['N/url', 'N/runtime', 'N/log', './fp_fields'],
-  function (url, runtime, log, fpFields) {
+define(['N/ui/serverWidget', 'N/url', 'N/runtime', 'N/log', './fp_fields'],
+  function (serverWidget, url, runtime, log, fpFields) {
 
     /**
      * Onde EXISTE documento fiscal a emitir.
@@ -32,6 +32,9 @@ define(['N/url', 'N/runtime', 'N/log', './fp_fields'],
      * imposto ANTES de virarem nota.
      */
     var TIPOS = ['invoice', 'vendorbill', 'vendorcredit', 'creditmemo', 'transferorder'];
+
+    /** A subaba que o `fp_ue_simular` monta. Campo sem container cai no topo do formulário. */
+    var SUBABA = 'custtab_fp_fiscal';
 
     function beforeLoad(scriptContext) {
       try {
@@ -77,20 +80,35 @@ define(['N/url', 'N/runtime', 'N/log', './fp_fields'],
         botao(form, 'custpage_fp_consultar', 'Consultar SEFAZ', scriptContext, id, 'consultar', false);
       }
 
-      // Baixar o XML exige chave: é por ela que a plataforma o encontra. E é NAVEGAÇÃO, não a
-      // chamada assíncrona dos outros — download que volta por XHR não chega ao disco.
+      linkDoXml(form, scriptContext, id);
+    }
+
+    /**
+     * LINK, NÃO BOTÃO.
+     *
+     * Botão é para ação; baixar um arquivo é navegação, e um terceiro botão na barra só engorda a
+     * fileira. Como campo URL ele fica na subaba fiscal, ao lado da chave e do protocolo — que é
+     * onde alguém procura o XML.
+     *
+     * Exige chave: é por ela que a plataforma encontra o documento.
+     */
+    function linkDoXml(form, scriptContext, id) {
       var campoChave = fpFields.id('DOC_CHAVE');
       var chave = campoChave
         ? String(scriptContext.newRecord.getValue({ fieldId: campoChave }) || '')
         : '';
+      if (!chave) return;
 
-      if (chave) {
-        form.addButton({
-          id: 'custpage_fp_xml',
-          label: 'Baixar XML',
-          functionName: "baixar('" + endereco(scriptContext, id, 'xml') + "')"
-        });
-      }
+      var campo = form.addField({
+        id: 'custpage_fp_xml',
+        type: serverWidget.FieldType.URL,
+        label: 'XML',
+        container: SUBABA
+      });
+
+      campo.linkText = 'Baixar XML';
+      campo.updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
+      campo.defaultValue = endereco(scriptContext, id, 'xml');
     }
 
     /**
