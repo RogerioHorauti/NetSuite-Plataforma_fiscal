@@ -55,12 +55,20 @@ define(['N/ui/serverWidget', 'N/record', 'N/redirect', 'N/runtime', 'N/log',
           return contexto.response.writePage(telaDeConfirmacao(tipo, id, acao));
         }
 
-        return escrever(contexto, executar(tipo, id, acao));
+        return json(contexto, executar(tipo, id, acao));
       } catch (e) {
         log.error('fp_sl_emissao', { name: e.name, message: e.message, stack: e.stack });
-        return escrever(contexto, pagina('Não deu',
-          '<b>' + escapar(e.name || 'Erro') + '</b><br>' + escapar(e.message || String(e)) +
-          '<p>Nada foi emitido. O erro inteiro está no log de execução do script.</p>'));
+
+        if (contexto.request.method === 'GET') {
+          return escrever(contexto, pagina('Não deu',
+            '<b>' + escapar(e.name || 'Erro') + '</b><br>' + escapar(e.message || String(e))));
+        }
+        return json(contexto, {
+          ok: false,
+          titulo: e.name || 'Erro',
+          mensagem: (e.message || String(e)) +
+            ' · Nada foi emitido. O erro inteiro está no log de execução do script.'
+        });
       }
     }
 
@@ -152,6 +160,13 @@ define(['N/ui/serverWidget', 'N/record', 'N/redirect', 'N/runtime', 'N/log',
     // POST — executa
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * Devolve DADO, não página.
+     *
+     * Quem chama é o botão da transação, por `https.post.promise` — ele quer `{ok, status, ...}`
+     * para pintar o resultado sem sair da tela. Página montada aqui voltaria como um HTML inteiro
+     * de formulário do NetSuite dentro do `responseText`, que não se lê nem se aproveita.
+     */
     function executar(tipo, id, acao) {
       var rec = record.load({ type: tipo, id: id });
       var subsidiaria = rec.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') });
@@ -165,26 +180,31 @@ define(['N/ui/serverWidget', 'N/record', 'N/redirect', 'N/runtime', 'N/log',
         // O TEXTO DO MOTOR VAI INTEIRO. Traduzir ou resumir rejeição da SEFAZ é o jeito mais
         // rápido de esconder o cStat, que é a única coisa que quem opera consegue pesquisar.
         log.error('fp_sl_emissao.recusa', { acao: acao, code: resposta.code, body: resposta.body });
-        return pagina('Recusado',
-          '<b>HTTP ' + resposta.code + '</b><pre style="white-space:pre-wrap">' +
-          escapar(JSON.stringify(resposta.body, null, 2)) + '</pre>');
+        return {
+          ok: false,
+          titulo: 'Recusado (HTTP ' + resposta.code + ')',
+          mensagem: typeof resposta.body === 'string'
+            ? resposta.body
+            : JSON.stringify(resposta.body, null, 2)
+        };
       }
 
       var doc = resposta.body;
       var gravado = fpPersist.aplicar(tipo, id, doc, opcoes);
 
-      return pagina(titulo(acao) + ': ' + (doc.status || 'sem status'),
-        '<table style="border-spacing:0 4px">' +
-        tr('Status', doc.status) +
-        tr('cStat / xMotivo', (doc.cStat || '—') + ' — ' + (doc.xMotivo || '—')) +
-        tr('Chave de acesso', doc.chaveAcesso) +
-        tr('Número / Série', (doc.numero || '—') + ' / ' + (doc.serie || '—')) +
-        tr('Protocolo', doc.nProt) +
-        tr('Ambiente', doc.ambiente) +
-        tr('Arquivos anexados', (gravado && gravado.arquivos.length) ? gravado.arquivos.join(', ') : 'nenhum') +
-        '</table>' +
-        '<p><a href="/app/accounting/transactions/transaction.nl?id=' + escapar(String(id)) +
-        '">Voltar para a transação</a></p>');
+      return {
+        ok: true,
+        titulo: titulo(acao) + ': ' + (doc.status || 'sem status'),
+        status: doc.status || '',
+        cStat: doc.cStat || '',
+        xMotivo: doc.xMotivo || '',
+        chaveAcesso: doc.chaveAcesso || '',
+        numero: doc.numero || '',
+        serie: doc.serie || '',
+        protocolo: doc.nProt || '',
+        ambiente: doc.ambiente || '',
+        arquivos: (gravado && gravado.arquivos) || []
+      };
     }
 
     /**
@@ -244,6 +264,11 @@ define(['N/ui/serverWidget', 'N/record', 'N/redirect', 'N/runtime', 'N/log',
 
     function escrever(contexto, form) {
       contexto.response.writePage(form);
+    }
+
+    function json(contexto, dado) {
+      contexto.response.setHeader({ name: 'Content-Type', value: 'application/json' });
+      contexto.response.write({ output: JSON.stringify(dado) });
     }
 
     function html(form, id, conteudo) {

@@ -287,15 +287,19 @@ define([
       ? String(scriptContext.newRecord.getValue({ fieldId: campoStatus }) || '').toUpperCase()
       : '';
 
-    botao(form, 'custpage_fp_emitir', 'Emitir NF-e', scriptContext, id, 'emitir');
+    botao(form, 'custpage_fp_emitir', 'Emitir NF-e', scriptContext, id, 'emitir', true);
 
     // Consultar só faz sentido depois de transmitida, e é o que resolve nota em PROCESSANDO.
     if (status) {
-      botao(form, 'custpage_fp_consultar', 'Consultar SEFAZ', scriptContext, id, 'consultar');
+      botao(form, 'custpage_fp_consultar', 'Consultar SEFAZ', scriptContext, id, 'consultar', false);
     }
   }
 
-  function botao(form, idBotao, rotulo, scriptContext, id, acao) {
+  /**
+   * `consome` diz ao cliente se ele pergunta antes. Quem sabe disso é aqui, não o cliente: a
+   * diferença entre gastar número e não gastar é do endpoint, não da tela.
+   */
+  function botao(form, idBotao, rotulo, scriptContext, id, acao, consome) {
     var endereco = url.resolveScript({
       scriptId: 'customscript_fp_sl_emissao',
       deploymentId: 'customdeploy_fp_sl_emissao',
@@ -305,7 +309,7 @@ define([
     form.addButton({
       id: idBotao,
       label: rotulo,
-      functionName: "abrirEmissao('" + endereco + "')"
+      functionName: "acionar('" + endereco + "','" + rotulo + "'," + (consome ? 'true' : 'false') + ")"
     });
   }
 
