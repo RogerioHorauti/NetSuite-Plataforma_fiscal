@@ -79,23 +79,17 @@ define(['N/url', 'N/runtime', 'N/log', './fp_fields'],
     }
 
     /**
-     * O NOME CURTO DO DOCUMENTO DECLARADO — "NF-e", "NFC-e", "CT-e".
+     * O CÓDIGO declarado, tal como está na lista — `NFE`, `CTE`, `MDFE`.
      *
-     * O rótulo já esteve chumbado em "Emitir NF-e", e o bundle emite cinco tipos: o botão
-     * anunciava NF-e numa transação marcada como CT-e, e quem clicasse estaria emitindo outra
-     * coisa.
-     *
-     * Sai do TEXTO da lista, que é "CÓDIGO - Apelido, descrição (modelo)". Um de-para chumbado
-     * aqui seria mais uma lista a manter — e a que ninguém lembraria de atualizar ao acrescentar
-     * um tipo. Sem tipo declarado o rótulo é genérico, e o Suitelet recusa dizendo o que falta.
+     * É o vocabulário do catálogo da plataforma, e é ele que aparece no botão. Já esteve chumbado
+     * em "Emitir NF-e", e o bundle emite cinco tipos: o botão anunciava NF-e numa transação
+     * marcada como CT-e. Já esteve com a descrição junto no valor da lista, e isso quebrava o
+     * payload — o que sai tem de ser exatamente o que o catálogo conhece.
      */
     function tipoDeclarado(novoRegistro) {
       var campo = fpFields.id('TIPODOC');
       if (!campo) return 'documento fiscal';
-
-      var texto = String(novoRegistro.getText({ fieldId: campo }) || '');
-      var m = /^\s*[A-Z0-9_]+\s*-\s*([^,(]+)/.exec(texto);
-      return m ? m[1].trim() : 'documento fiscal';
+      return String(novoRegistro.getText({ fieldId: campo }) || '').trim() || 'documento fiscal';
     }
 
     /**

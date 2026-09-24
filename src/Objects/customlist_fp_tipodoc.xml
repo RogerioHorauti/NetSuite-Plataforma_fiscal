@@ -1,5 +1,5 @@
 <customlist scriptid="customlist_fp_tipodoc">
-  <description>Codigo do catalogo de tipo de documento do FiscalPlatform. O valor abre com o CODIGO, no mesmo padrao das outras listas do bundle: o codigo e o que vai no payload (tipoDocumento), e a descricao existe para quem escolhe na transacao e para o rotulo do botao de emissao. O catalogo real vive na plataforma -- esta lista e o de-para, e acrescentar tipo la exige acrescentar aqui.</description>
+  <description>Codigo do catalogo de tipo de documento do FiscalPlatform. O valor E o codigo, igual ao de la -- nada de descricao junto: o que sai no payload tem de ser exatamente o que o catalogo conhece. O catalogo real vive na plataforma; esta lista o espelha, e tipo novo la exige uma linha aqui.</description>
   <isinactive>F</isinactive>
   <ismatrixoption>F</ismatrixoption>
   <isordered>T</isordered>
@@ -8,27 +8,27 @@
     <customvalue scriptid="val_fp_tipodoc_nfe">
       <abbreviation>NFE</abbreviation>
       <isinactive>F</isinactive>
-      <value>NFE - NF-e, Nota Fiscal Eletronica (modelo 55)</value>
+      <value>NFE</value>
     </customvalue>
     <customvalue scriptid="val_fp_tipodoc_nfce">
       <abbreviation>NFCE</abbreviation>
       <isinactive>F</isinactive>
-      <value>NFCE - NFC-e, Nota Fiscal de Consumidor Eletronica (modelo 65)</value>
+      <value>NFCE</value>
     </customvalue>
     <customvalue scriptid="val_fp_tipodoc_nfse">
       <abbreviation>NFSE</abbreviation>
       <isinactive>F</isinactive>
-      <value>NFSE - NFS-e, Nota Fiscal de Servico Eletronica (municipal)</value>
+      <value>NFSE</value>
     </customvalue>
     <customvalue scriptid="val_fp_tipodoc_cte">
       <abbreviation>CTE</abbreviation>
       <isinactive>F</isinactive>
-      <value>CTE - CT-e, Conhecimento de Transporte Eletronico (modelo 57)</value>
+      <value>CTE</value>
     </customvalue>
     <customvalue scriptid="val_fp_tipodoc_mdfe">
       <abbreviation>MDFE</abbreviation>
       <isinactive>F</isinactive>
-      <value>MDFE - MDF-e, Manifesto Eletronico de Documentos Fiscais (modelo 58)</value>
+      <value>MDFE</value>
     </customvalue>
   </customvalues>
 </customlist>
