@@ -9,8 +9,8 @@
  *
  * ── A ORDEM É A REGRA, e ela não é estética ────────────────────────────────────────────────────
  *
- * `aplicar` grava em quatro etapas, nesta sequência: campos da transação, linha do
- * `customrecord_fp_doc`, **payload e retorno**, XML. É a invariante do projeto — *persistir cada
+ * `aplicar` grava em três etapas, nesta sequência: campos da transação, linha do
+ * `customrecord_fp_doc`, payload e retorno. É a invariante do projeto — *persistir cada
  * avanço antes de prosseguir*. Quando a emissão volta, o número JÁ FOI GASTO e a nota JÁ ESTÁ na
  * SEFAZ; autorização não pode se perder porque a gravação seguinte falhou.
  *
@@ -18,9 +18,10 @@
  * gravou fica gravado. Logo a ordem é por DEPENDÊNCIA: o que não depende de nada vem primeiro, e
  * o que depende da rede vem por último.
  *
- * ⚠ Baixar o XML é o ÚNICO passo daqui que chama a plataforma. Ele já esteve na frente do rastro,
- * e o efeito foi medido: plataforma fora do ar derrubava `aplicar` inteiro, e o payload — que já
- * estava em memória — nunca era gravado. Perdia-se a prova por causa do passo mais frágil.
+ * ⚠ NADA AQUI CHAMA A REDE, e é de propósito. O XML mora na plataforma e é baixado sob demanda,
+ * pelo botão, direto para a máquina de quem pediu — não passa pelo File Cabinet. Enquanto o
+ * download morava aqui, plataforma fora do ar derrubava `aplicar` inteiro e o payload, que já
+ * estava em memória, nunca era gravado: perdia-se a prova por causa do passo mais frágil.
  *
  * ── SEM `try/catch` AQUI ───────────────────────────────────────────────────────────────────────
  *
@@ -34,8 +35,8 @@
  * documento nos outros endpoints. Guardar o UUID seria carregar um id que o ERP não gerou, não
  * valida e não sabe reconstruir.
  */
-define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields', './fp_client'],
-  function (record, search, file, log, fpFields, fpClient) {
+define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields'],
+  function (record, search, file, log, fpFields) {
 
     /**
      * Reflete o documento emitido na transação.
@@ -53,12 +54,7 @@ define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields', './fp_client']
       gravarNaTransacao(tipo, id, doc);
       var linha = gravarDoc(tipo, id, doc);
 
-      // O RASTRO ANTES DO XML, e a ordem é medida, não gosto: baixar o XML é uma chamada HTTP à
-      // plataforma, e é o único passo daqui que depende da rede. Com ele na frente, plataforma
-      // fora do ar derrubava `aplicar` e o payload — que já estava em memória e não precisa de
-      // rede nenhuma — nunca chegava a ser gravado. Perdia-se justamente a prova.
       var arquivos = anexarRastro(tipo, id, doc, opcoes);
-      arquivos = arquivos.concat(anexarArquivos(tipo, id, doc, opcoes));
 
       log.audit('fp_persist.aplicar',
         'documento ' + (doc.status || '?') + ' · chave ' + (doc.chaveAcesso || '(sem chave)') +
@@ -146,10 +142,9 @@ define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields', './fp_client']
       def(rec, C.XMOTIVO, doc.xMotivo);
       def(rec, C.PROTOCOLO, doc.nProt);
 
-      // As URLs, não o conteúdo: o XML vira anexo na transação, que é onde alguém procura. Guardar
-      // o endereço serve para rebaixar o arquivo sem ter de reconsultar o documento.
-      def(rec, C.XML, doc.xmlUrl);
-      def(rec, C.DANFE, doc.danfeUrl);
+      // ⚠ XML e DANFE são campos DOCUMENT e ficam VAZIOS: eles esperam o internal id de um
+      // arquivo do File Cabinet, e gravar a URL neles devolve INVALID_FLD_VALUE (medido). O XML
+      // mora na plataforma e é baixado sob demanda, direto para a máquina de quem pediu.
 
       if (!existente) def(rec, C.TENTATIVA, 1);
 
@@ -172,54 +167,8 @@ define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields', './fp_client']
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 3. arquivos — por último porque é o mais barato de refazer
+    // 3. rastro — payload e retorno
     // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * XML autorizado no File Cabinet, anexado à transação.
-     *
-     * Nome fixo pela chave: mesmo nome na mesma pasta faz o File Cabinet SUBSTITUIR, então
-     * consultar o documento de novo não deixa um rastro de cópias. É o mesmo desenho do payload.
-     *
-     * ⚠ O DANFE NÃO É BAIXADO AQUI, e é omissão declarada, não esquecimento: ele é PDF, e
-     * `https.get` devolve corpo como string. Gravar PDF exige `file.create` com conteúdo em base64,
-     * e eu não tenho como medir se o corpo volta aproveitável enquanto a plataforma não estiver no
-     * ar — chutar isso grava um arquivo corrompido que só aparece quando alguém tenta abrir. A URL
-     * fica guardada no `customrecord_fp_doc`, e o download entra quando der para medir.
-     */
-    function anexarArquivos(tipo, id, doc, opcoes) {
-      var feitos = [];
-      if (!doc.xmlUrl) return feitos;
-
-      if (!opcoes.pasta) {
-        log.audit('fp_persist.anexarArquivos',
-          'pasta do File Cabinet não informada — o XML autorizado NÃO foi anexado. A chave e o ' +
-          'protocolo já estão na transação, e a URL no customrecord_fp_doc.');
-        return feitos;
-      }
-
-      var r = fpClient.baixar(doc.xmlUrl, { subsidiaria: opcoes.subsidiaria });
-      if (!r.ok || !r.corpo) {
-        log.error('fp_persist.anexarArquivos',
-          'GET ' + doc.xmlUrl + ' devolveu ' + r.code + ' — XML não anexado.');
-        return feitos;
-      }
-
-      var nome = 'NFe-' + (texto(doc.chaveAcesso) || String(id)) + '.xml';
-      var arquivo = file.create({
-        name: nome,
-        fileType: file.Type.XMLDOC,
-        contents: r.corpo,
-        folder: opcoes.pasta,
-        isOnline: false
-      });
-      var idArquivo = arquivo.save();
-
-      // Substituindo o arquivo, o id é o mesmo e ele já está anexado.
-      anexar(idArquivo, tipo, id);
-      feitos.push(nome);
-      return feitos;
-    }
 
     /**
      * O PAYLOAD ENVIADO, junto do retorno. É a invariante do projeto, e o motivo é prático: sem o
@@ -280,8 +229,6 @@ define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields', './fp_client']
         CSTAT: fpFields.idDoc('CSTAT'),
         XMOTIVO: fpFields.idDoc('XMOTIVO'),
         PROTOCOLO: fpFields.idDoc('PROTOCOLO'),
-        XML: fpFields.idDoc('XML'),
-        DANFE: fpFields.idDoc('DANFE'),
         TENTATIVA: fpFields.idDoc('TENTATIVA')
       };
     }
@@ -314,7 +261,6 @@ define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields', './fp_client']
       aplicar: aplicar,
       gravarNaTransacao: gravarNaTransacao,
       gravarDoc: gravarDoc,
-      anexarArquivos: anexarArquivos,
       anexarRastro: anexarRastro
     };
   });

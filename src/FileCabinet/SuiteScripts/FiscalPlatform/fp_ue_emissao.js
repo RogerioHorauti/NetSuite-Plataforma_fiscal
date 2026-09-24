@@ -76,6 +76,21 @@ define(['N/url', 'N/runtime', 'N/log', './fp_fields'],
       if (status) {
         botao(form, 'custpage_fp_consultar', 'Consultar SEFAZ', scriptContext, id, 'consultar', false);
       }
+
+      // Baixar o XML exige chave: é por ela que a plataforma o encontra. E é NAVEGAÇÃO, não a
+      // chamada assíncrona dos outros — download que volta por XHR não chega ao disco.
+      var campoChave = fpFields.id('DOC_CHAVE');
+      var chave = campoChave
+        ? String(scriptContext.newRecord.getValue({ fieldId: campoChave }) || '')
+        : '';
+
+      if (chave) {
+        form.addButton({
+          id: 'custpage_fp_xml',
+          label: 'Baixar XML',
+          functionName: "baixar('" + endereco(scriptContext, id, 'xml') + "')"
+        });
+      }
     }
 
     /**
@@ -97,16 +112,19 @@ define(['N/url', 'N/runtime', 'N/log', './fp_fields'],
      * diferença entre gastar número e não gastar é do endpoint, não da tela.
      */
     function botao(form, idBotao, rotulo, scriptContext, id, acao, consome) {
-      var endereco = url.resolveScript({
-        scriptId: 'customscript_fp_sl_emissao',
-        deploymentId: 'customdeploy_fp_sl_emissao',
-        params: { tipo: scriptContext.newRecord.type, id: id, acao: acao }
-      });
-
       form.addButton({
         id: idBotao,
         label: rotulo,
-        functionName: "acionar('" + endereco + "','" + rotulo + "'," + (consome ? 'true' : 'false') + ")"
+        functionName: "acionar('" + endereco(scriptContext, id, acao) + "','" + rotulo + "'," +
+          (consome ? 'true' : 'false') + ")"
+      });
+    }
+
+    function endereco(scriptContext, id, acao) {
+      return url.resolveScript({
+        scriptId: 'customscript_fp_sl_emissao',
+        deploymentId: 'customdeploy_fp_sl_emissao',
+        params: { tipo: scriptContext.newRecord.type, id: id, acao: acao }
       });
     }
 

@@ -36,18 +36,25 @@
  * e o botão o pinta na transação — aqui não há banner para pintar, e quem está olhando é a tela
  * de onde o usuário clicou.
  */
-define(['N/record', 'N/runtime', 'N/log',
+define(['N/record', 'N/file', 'N/runtime', 'N/log',
   './fp_fields', './fp_client', './fp_md_map_simular', './fp_persist'],
-  function (record, runtime, log, fpFields, fpClient, fpMap, fpPersist) {
+  function (record, file, runtime, log, fpFields, fpClient, fpMap, fpPersist) {
 
-    var ACOES = { EMITIR: 'emitir', CONSULTAR: 'consultar', RECONCILIAR: 'reconciliar' };
+    var ACOES = { EMITIR: 'emitir', CONSULTAR: 'consultar', RECONCILIAR: 'reconciliar', XML: 'xml' };
 
     function onRequest(contexto) {
       try {
         var p = contexto.request.parameters;
 
-        // SÓ POST. Emitir por GET não existe de propósito: link revisitado, botão "voltar" do
-        // navegador e pré-carregador são todos GET, e qualquer um deles gastaria número.
+        // BAIXAR O XML É GET, e tem de ser: download é navegação do navegador, não XHR. Ele não
+        // emite, não grava e não consome nada — só repassa o arquivo que está na plataforma.
+        if (p.acao === ACOES.XML) {
+          return baixarXml(contexto, p.tipo, p.id);
+        }
+
+        // O RESTO É SÓ POST. Emitir por GET não existe de propósito: link revisitado, botão
+        // "voltar" do navegador e pré-carregador são todos GET, e qualquer um deles gastaria
+        // número.
         if (contexto.request.method !== 'POST') {
           return json(contexto, {
             ok: false,
@@ -74,6 +81,50 @@ define(['N/record', 'N/runtime', 'N/log',
             ' · Nada foi emitido. O erro inteiro está no log de execução do script.'
         });
       }
+    }
+
+    /**
+     * O XML AUTORIZADO, DIRETO PARA A MÁQUINA DE QUEM PEDIU.
+     *
+     * Ele mora na plataforma. O Suitelet busca por HTTPS e repassa como download — não grava no
+     * File Cabinet, e por isso não precisa de pasta, não deixa cópia e não some quando alguém
+     * reorganiza o cabinet.
+     *
+     * `file.create` SEM `save()`: o objeto existe só em memória para o `writeFile`. Salvar criaria
+     * o arquivo no cabinet, que é exatamente o que este caminho evita.
+     */
+    function baixarXml(contexto, tipo, id) {
+      var rec = record.load({ type: tipo, id: id });
+      var chave = valor(rec, fpFields.id('DOC_CHAVE'));
+
+      if (!chave) {
+        return json(contexto, {
+          ok: false,
+          titulo: 'Sem documento',
+          mensagem: 'Esta transação não tem chave de acesso — não há XML para baixar.'
+        });
+      }
+
+      var subsidiaria = rec.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') });
+      var r = fpClient.baixar('/fiscal/nfe/' + chave + '/xml', { subsidiaria: subsidiaria });
+
+      if (!r.ok || !r.corpo) {
+        log.error('fp_sl_emissao.baixarXml', 'chave ' + chave + ' devolveu ' + r.code);
+        return json(contexto, {
+          ok: false,
+          titulo: 'XML não veio (HTTP ' + r.code + ')',
+          mensagem: 'A plataforma não devolveu o XML da chave ' + chave + '.'
+        });
+      }
+
+      contexto.response.writeFile({
+        file: file.create({
+          name: 'NFe-' + chave + '.xml',
+          fileType: file.Type.XMLDOC,
+          contents: r.corpo
+        }),
+        isInline: false
+      });
     }
 
     // ─────────────────────────────────────────────────────────────────────────

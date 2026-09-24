@@ -161,8 +161,18 @@ define(['N/https'], function (https) {
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  /**
+   * Download é NAVEGAÇÃO, não XHR: `https.post.promise` traria o XML para dentro do JavaScript e
+   * o arquivo nunca chegaria ao disco. `window.open` deixa o navegador receber o
+   * `Content-Disposition` e salvar.
+   */
+  function baixar(url) {
+    window.open(url, '_blank');
+  }
+
   return {
     pageInit: function () {},
-    acionar: acionar
+    acionar: acionar,
+    baixar: baixar
   };
 });
