@@ -107,7 +107,13 @@ quando a UF é brasileira e, para o exterior, o `mapa-divergencia.ts` dela regis
 tabela do BACEN. Traduzir é trabalho do bundle.
 
 Importar por **Setup > Import/Export > Import CSV Records**, tipo *Custom Records > FP - Pais*,
-delimitador `;`, encoding UTF-8. Colunas: `Name` (nome do país), `ISO`, `cPais`.
+encoding UTF-8. Colunas: `Name` (nome do país), `ISO`, `cPais`.
+
+⚠ **Vírgula como delimitador, com todo campo entre aspas.** O importador do NetSuite ignora o
+`;` e quebra na vírgula: com ponto e vírgula, 66 países cujo nome tem vírgula ("Aland, Ilhas",
+"Albânia, República da Albânia") são recusados com *"Different number of columns than in the
+header row"* — medido em 24/09/2026, e os 66 erros batiam exatamente com as 66 linhas que têm
+vírgula. Arquivo regravado com `,` e `"`, que é o que ele espera.
 
 **⚠ O cPais não se deriva do código Siscomex de 3 dígitos.** A regra do dígito verificador
 (mod 11, pesos 4-3-2) foi conferida linha a linha em 24/09/2026 contra a tabela publicada e
