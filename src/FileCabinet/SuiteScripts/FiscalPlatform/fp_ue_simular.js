@@ -120,12 +120,21 @@ define([
     return 'fp_rastro_' + corrId;
   }
 
+  /**
+   * PINTAR A MENSAGEM VEM PRIMEIRO, e a ordem é a defesa: é o `beforeLoad` que mostra o que o
+   * `beforeSubmit` deixou na sessão. Se `organizarFormulario` estourasse antes, o save anterior
+   * teria falhado e o usuário abriria o formulário sem enxergar o motivo.
+   *
+   * Erro aqui não pode impedir abrir a transação: montar subaba e ordenar campo é conveniência,
+   * e trocá-la por "não abre" é o pior negócio do bundle. Vai para o log inteiro.
+   */
   function beforeLoad(scriptContext) {
-    organizarFormulario(scriptContext);
-  
-
-    fpMsg.pintar(scriptContext);
-  
+    try {
+      fpMsg.pintar(scriptContext);
+      organizarFormulario(scriptContext);
+    } catch (e) {
+      log.error('fp_ue_simular.beforeLoad', { name: e.name, message: e.message, stack: e.stack });
+    }
   }
 
   /**
@@ -367,26 +376,37 @@ define([
     return [JSON.stringify(corpo)];
   }
 
+  /**
+   * UM `try` só, e ele termina no BANNER, não num diálogo do NetSuite.
+   *
+   * A transação já está gravada quando isto roda: o que der errado aqui não desfaz nada, e o
+   * usuário precisa LER o motivo, não receber a tela vermelha de erro de script.
+   *
+   * O rastro é anexado ANTES do idExterno de propósito. São independentes, e com um `catch` só o
+   * primeiro que falhar interrompe o outro — então vem primeiro o que é PROVA: sem o payload
+   * gravado, "o motor errou" e "eu mandei errado" ficam indistinguíveis.
+   */
   function afterSubmit(scriptContext) {
-    var id = scriptContext.newRecord.id;
-    var campoIdExterno = fpFields.id('DOC_IDEXTERNO');
-    log.debug('campoIdExterno', campoIdExterno)
+    var corrId;
+
     try {
+      // Primeiro o corrId, porque sem ele a mensagem vai para uma chave que o `beforeLoad` não lê
+      // e o usuário não vê erro nenhum. Só LEITURA: o registro já foi gravado, e o valor que vale
+      // é o que o `beforeSubmit` escreveu.
+      corrId = scriptContext.newRecord.getValue({ fieldId: fpFields.id('CORRID') });
+
+      var id = scriptContext.newRecord.id;
+      anexarRastro(scriptContext.newRecord, id);
+
       record.submitFields({
         type: scriptContext.newRecord.type,
         id: id,
-        values: montarValores(campoIdExterno, id),
+        values: montarValores(fpFields.id('DOC_IDEXTERNO'), id),
         options: { enableSourcing: false, ignoreMandatoryFields: true }
       });
     } catch (e) {
-      log.error('fp_ue_simular.afterSubmit/idExterno', { name: e.name, message: e.message });
-    }
-
-    try {
-      anexarRastro(scriptContext.newRecord, id);
-    } catch (e) {
-      // Anexo é PROVA, não parte do save. Falhar aqui não pode desfazer nada do que já gravou.
-      log.error('fp_ue_simular.afterSubmit/rastro', { name: e.name, message: e.message });
+      log.error('fp_ue_simular.afterSubmit', { name: e.name, message: e.message, stack: e.stack });
+      if (corrId) fpMsg.excecao(corrId, e);
     }
   }
 
