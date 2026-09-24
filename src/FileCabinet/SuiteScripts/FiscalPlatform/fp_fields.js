@@ -58,8 +58,8 @@
  * o setup não ser manual; a decisão fica registrada. Divergência entre sonda e persistido vira
  * AVISO no log, nunca troca automática.
  */
-define(['N/search', 'N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil_oracle_ei'],
-  function (search, runtime, log, perfilOriginal, perfilOracleEi) {
+define(['N/search', 'N/query', 'N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil_oracle_ei'],
+  function (search, query, runtime, log, perfilOriginal, perfilOracleEi) {
 
   /** Os perfis conhecidos, por nome. Acrescentar perfil é acrescentar aqui e no PERFIS_CONHECIDOS. */
   var PERFIS = {
@@ -373,10 +373,24 @@ function perfilConfigurado() {
     return null;
   }
 
+  /**
+   * O tipo existe nesta conta?
+   *
+   * ⚠ NÃO se pergunta isso com `search.create`: tipo inexistente LANÇA `INVALID_RCRD_TYPE`, e a
+   * sonda passa por todos os perfis conhecidos justamente esperando que a maioria não exista. Usar
+   * a exceção como resposta obrigava um `catch` aqui, e foi o que derrubou o `beforeLoad` quando
+   * os `catch` de auxiliar saíram (medido em 24/09/2026 com `CUSTOMRECORD_PSG_EI_STANDARDS`).
+   *
+   * `customrecordtype` responde a mesma pergunta sem exceção: devolve linha quando existe e vazio
+   * quando não. Ausência vira DADO, que é o que ela sempre foi. Medido na conta em 24/09/2026:
+   * 200 com uma linha para `customrecord_fp_imposto`, 200 com zero linha para o tipo do Oracle EI.
+   */
   function existeRecordType(tipo) {
-    search.create({ type: tipo, filters: [], columns: ['internalid'] }).runPaged({ pageSize: 1 });
-    return true;
-  
+    var r = query.runSuiteQL({
+      query: 'SELECT scriptid FROM customrecordtype WHERE UPPER(scriptid) = ?',
+      params: [String(tipo).toUpperCase()]
+    }).asMappedResults();
+    return r.length > 0;
   }
 
   return {
