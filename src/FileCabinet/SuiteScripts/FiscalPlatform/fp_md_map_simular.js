@@ -256,16 +256,24 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     /**
      * Endereço do DESTINATÁRIO = endereço de FATURAMENTO.
      *
-     * Não é o de entrega, e a distinção é do layout, não de preferência: o grupo `dest` da NF-e
-     * identifica a quem a operação é destinada — o cadastro, o mesmo endereço do CNPJ/IE. Quando
-     * a mercadoria vai para outro lugar, isso é o grupo `entrega` (Local de Entrega), informado
-     * SÓ quando difere do destinatário, e que não existe neste DTO. Mandar o endereço de entrega
-     * como `dest` troca o destinatário da nota.
+     * Não é o de entrega: o grupo `dest` da NF-e identifica a quem a operação é destinada — o
+     * cadastro, o mesmo endereço do CNPJ/IE. Mercadoria indo para outro lugar é o grupo `entrega`,
+     * que nem existe neste DTO.
      *
-     * SUBRECORD, não consulta: no `beforeSubmit` de CRIAÇÃO a transação ainda não está no
-     * banco, e a linha do endereço não existe para ser lida. Medido em 23/09/2026 na invoice
-     * 2232: `shipaddresslist` volta vazio no `beforeSubmit` — `billaddresslist` não foi medido,
-     * e por isso ele entra no log de falha abaixo em vez de virar a fonte.
+     * ── POR QUE DUAS FONTES, e não é indecisão ────────────────────────────────────────────────
+     *
+     * MEDIDO em 23/09/2026, invoice 2232: o subrecord `billingaddress` devolve `addr1`, `addr3` e
+     * `zip` — e devolve VAZIO `city`, `state` e o campo custom do número. O payload saiu com
+     * logradouro, bairro e CEP, sem município nem UF.
+     *
+     * A consulta sozinha também não resolve: no `beforeSubmit` de CRIAÇÃO a transação ainda não
+     * está no banco, então `transactionbillingaddress` não tem linha. O que existe desde sempre é
+     * a entrada do address book do cliente, em `entityaddress`, apontada por `billaddresslist` —
+     * e é de lá que saem os três que o subrecord cala, inclusive o campo custom.
+     *
+     * Então: subrecord para o que ele entrega, SuiteQL para o que ele cala. Quando os dois calam
+     * o município, o log diz o que cada um tinha — é a medição que decide o próximo passo, não
+     * chute.
      */
     function endereco(newRecord) {
       var sub = null;
@@ -275,31 +283,68 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         log.error('fp_md_map_simular.endereco', 'getSubrecord billingaddress: ' + (e.message || e));
       }
 
-      var campoNumero = fpFields.idEndereco('END_NUMERO');
-      var end = sub ? {
+      var end = {
         addr1: ler(sub, 'addr1'),
         addr2: ler(sub, 'addr2'),
         addr3: ler(sub, 'addr3'),
-        numero: campoNumero ? ler(sub, campoNumero) : '',
+        numero: '',
         city: ler(sub, 'city'),
         state: ler(sub, 'state'),
         zip: ler(sub, 'zip')
-      } : null;
+      };
 
-      if (end && (end.addr1 || end.city)) return end;
+      var idCadastro = newRecord.getValue({ fieldId: 'billaddresslist' });
+      var linha = idCadastro ? cadastroDeEndereco(idCadastro) : null;
+      if (linha) {
+        // O cadastro COMPLETA, não sobrepõe: o que o usuário digitou na transação é o que vale.
+        var campoNumero = fpFields.idEndereco('END_NUMERO');
+        if (!end.addr1) end.addr1 = texto(linha.addr1);
+        if (!end.addr2) end.addr2 = texto(linha.addr2);
+        if (!end.addr3) end.addr3 = texto(linha.addr3);
+        if (!end.zip) end.zip = texto(linha.zip);
+        if (!end.city) end.city = texto(linha.city);
+        // `dropdownstate` é a sigla nos países com lista de UF; `state` é o texto livre.
+        if (!end.state) end.state = texto(linha.dropdownstate) || texto(linha.state);
+        if (campoNumero) end.numero = texto(linha[campoNumero]);
+      }
 
-      // NÃO ACHOU. O que cada fonte tinha vai para o log — é a medição que diz qual usar, e sem
-      // ela a próxima tentativa seria chute. Sai daqui assim que o caso estiver fechado.
+      if (end.city && end.state) return end;
+
       log.audit('fp_md_map_simular.endereco',
-        'destinatário sem endereço, e a SEFAZ vai recusar. subrecord=' + (sub ? 'sim' : 'não') +
-        ' addr1="' + (end ? end.addr1 : '') + '" city="' + (end ? end.city : '') +
-        '" billaddresslist=' + newRecord.getValue({ fieldId: 'billaddresslist' }) +
-        ' billaddress="' + newRecord.getValue({ fieldId: 'billaddress' }) + '"');
-      return null;
+        'destinatário sem município ou UF, e a SEFAZ vai recusar. ' +
+        'subrecord: city="' + ler(sub, 'city') + '" state="' + ler(sub, 'state') +
+        '" dropdownstate="' + ler(sub, 'dropdownstate') + '" · ' +
+        'billaddresslist=' + idCadastro + ' linha=' + (linha ? JSON.stringify(linha) : 'nenhuma'));
+
+      // Incompleto ainda é melhor que nada: o motor recusa dizendo qual campo falta, e a recusa
+      // dele é mais precisa que o silêncio daqui.
+      return (end.addr1 || end.city) ? end : null;
+    }
+
+    /**
+     * A entrada do address book do cliente. `entityaddress`, chave `nkey`, e as colunas medidas
+     * em 23/09/2026: `addr1, addr2, addr3, city, state, dropdownstate, zip, country` mais o campo
+     * custom do número. NÃO são `address1/2/3` — esse é o nome no motor de BUSCA, não no SuiteQL.
+     */
+    function cadastroDeEndereco(id) {
+      var campoNumero = fpFields.idEndereco('END_NUMERO');
+      var cols = 'addr1, addr2, addr3, city, state, dropdownstate, zip';
+      if (campoNumero) cols += ', ' + campoNumero;
+      try {
+        var r = query.runSuiteQL({
+          query: 'SELECT ' + cols + ' FROM entityaddress WHERE nkey = ?',
+          params: [id]
+        }).asMappedResults();
+        return r.length ? r[0] : null;
+      } catch (e) {
+        log.error('fp_md_map_simular.cadastroDeEndereco', (e.message || e));
+        return null;
+      }
     }
 
     /** Campo ausente no subrecord não pode derrubar a leitura dos outros. */
     function ler(sub, campo) {
+      if (!sub) return '';
       try {
         var v = sub.getValue({ fieldId: campo });
         return v === null || v === undefined ? '' : String(v);
