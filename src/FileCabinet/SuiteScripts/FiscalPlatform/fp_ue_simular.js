@@ -56,9 +56,6 @@ define([
   './fp_client',
   './fp_md_map_simular'
 ], function (record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular) {
-  /** A subaba que os campos FP declaram no `<subtab>` dos objetos. */
-  var ABA_FISCAL = 'custtab_fp_fiscal';
-
   /** Tipos de transação em que a simulação roda. Fora desta lista, o script não faz nada. */
   var TIPOS = [
     'invoice',
@@ -365,57 +362,16 @@ define([
     log.debug('fp_ue_simular.organizarFormulario',
       'ancora=' + usada + ' campos=[' + declarados.join(', ') + ']');
 
-    seccionarAbaFiscal(scriptContext.form);
-  }
-
-  /**
-   * A SUBABA FISCALPLATFORM DIVIDIDA EM SEÇÕES, e não uma subaba nova por assunto.
-   *
-   * Subaba por grupo do leiaute encheria a transação de abas — Transporte, Pagamento, Adicionais,
-   * e o que a Reforma trouxer. Dentro de UMA subaba, cada assunto é um grupo de campos, que é como
-   * o bundle da Oracle organiza (`brl_ue_purchase_order.js` e outros 55 fazem exatamente isto).
-   *
-   * ⚠ A ÂNCORA NÃO É ENFEITE. `addFieldGroup` cria o grupo, mas campo customizado que já existe no
-   * formulário não muda de container em runtime — ele fica onde o `<subtab>` do objeto o pôs.
-   * Criar um campo novo com `container: <grupo>` ancora o grupo, e daí os campos reais são movidos
-   * para junto dele. Sem a âncora, o grupo aparece vazio e os campos ficam soltos embaixo.
-   *
-   * Grupo cujos campos não existem na conta não é criado: seção vazia é pior que seção ausente.
-   */
-  function seccionarAbaFiscal(form) {
-    var SECOES = [
-      { id: 'custpage_fp_g_doc', rotulo: 'Documento emitido',
-        chaves: ['DOC_CHAVE', 'DOC_NUMERO', 'DOC_SERIE', 'DOC_STATUS', 'DOC_CSTAT', 'DOC_XMOTIVO',
-                 'DOC_PROTOCOLO', 'DOC_IDEXTERNO', 'DOC_XML', 'DOC_DANFE'] },
-      { id: 'custpage_fp_g_transp', rotulo: 'Transporte',
-        chaves: ['FRETE_MODALIDADE', 'TRANSPORTADORA', 'VEICULO_PLACA', 'VEICULO_UF',
-                 'VEICULO_RNTC', 'VAGAO', 'BALSA'] },
-      { id: 'custpage_fp_g_ret', rotulo: 'ICMS retido do frete',
-        chaves: ['RET_VSERV', 'RET_VBCRET', 'RET_PICMSRET', 'RET_VICMSRET', 'RET_CFOP',
-                 'RET_CMUNFG'] },
-      { id: 'custpage_fp_g_adic', rotulo: 'Informações adicionais',
-        chaves: ['INFADIC_FISCO', 'INFADIC_CONTRIB'] }
-    ];
-
-    for (var i = 0; i < SECOES.length; i++) {
-      var secao = SECOES[i];
-      var campos = resolverExistentes(form, secao.chaves);
-      if (!campos.length) continue;
-
-      fpForm.criarGrupo(form, secao.id, secao.rotulo, ABA_FISCAL);
-      var ancora = fpForm.criarAncora(form, secao.id + '_a', secao.id);
-      fpForm.posicionarDepoisDe(form, ancora, campos);
-    }
-  }
-
-  /** Só os que o perfil resolve E o formulário tem. Mover campo inexistente derruba a tela. */
-  function resolverExistentes(form, chaves) {
-    var out = [];
-    for (var i = 0; i < chaves.length; i++) {
-      var id = fpFields.id(chaves[i]);
-      if (id && fpForm.obter(form, id)) out.push(id);
-    }
-    return out;
+    // ⚠ NÃO SE MEXE MAIS NA SUBABA EM RUNTIME. Três tentativas, três telas brancas:
+    //   1. campo `FieldType.URL` com endereço relativo;
+    //   2. campo `INLINEHTML` com `container` apontando para a subaba;
+    //   3. `addFieldGroup` + âncora + `insertField` para dividir a subaba em seções.
+    //
+    // As três estouram na RENDERIZAÇÃO, depois que o `beforeLoad` retorna — por isso não caem no
+    // `try/catch` e não deixam linha no log: o sintoma é "An unexpected error has occurred" e nada
+    // mais. O que funciona nesta conta é o que o OBJETO declara: `<subtab>` no XML do campo.
+    //
+    // Dividir a subaba em seções é cosmético, e cosmético não vale transação que não abre.
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
