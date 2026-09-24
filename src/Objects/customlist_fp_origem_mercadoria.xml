@@ -2,7 +2,7 @@
   <description>Tabela A do CST de ICMS. O CODIGO abre o valor e e o que vai no payload (origemProduto, validado por ORIGENS_TABELA_A no DTO); a descricao esta junto porque quem preenche o cadastro do item precisa escolher certo.</description>
   <isinactive>F</isinactive>
   <isordered>T</isordered>
-  <name>FP - Origem da Mercadoria</name>
+  <name>Origem da Mercadoria</name>
   <customvalues>
     <customvalue scriptid="val_origem_merc_0">
       <isinactive>F</isinactive>

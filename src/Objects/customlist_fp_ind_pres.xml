@@ -2,7 +2,7 @@
   <description>indPres do grupo B da NF-e: presenca do comprador no estabelecimento. O CODIGO abre o valor e e o que vai no payload. Default da plataforma e 1 (presencial); so se declara quando a operacao nao e presencial.</description>
   <isinactive>F</isinactive>
   <isordered>T</isordered>
-  <name>FP - Presenca do Comprador</name>
+  <name>Presenca do Comprador</name>
   <customvalues>
     <customvalue scriptid="val_ind_pres_0"><isinactive>F</isinactive><value>0 - Nao se aplica (complementar ou ajuste)</value></customvalue>
     <customvalue scriptid="val_ind_pres_1"><isinactive>F</isinactive><value>1 - Operacao presencial</value></customvalue>

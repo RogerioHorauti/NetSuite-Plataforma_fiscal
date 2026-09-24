@@ -2,7 +2,7 @@
   <description></description>
   <isinactive>F</isinactive>
   <isordered>T</isordered>
-  <name>FP - Origem da Conta</name>
+  <name>Origem da Conta</name>
   <customvalues>
     <customvalue scriptid="val_origem_conta_1">
       <isinactive>F</isinactive>

@@ -3,7 +3,7 @@
   <isinactive>F</isinactive>
   <ismatrixoption>F</ismatrixoption>
   <isordered>T</isordered>
-  <name>FP - Tipo de Documento Fiscal</name>
+  <name>Tipo de Documento Fiscal</name>
   <customvalues>
     <customvalue scriptid="val_fp_tipodoc_nfe">
       <abbreviation>NFE</abbreviation>

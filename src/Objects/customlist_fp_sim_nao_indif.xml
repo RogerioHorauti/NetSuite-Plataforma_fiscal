@@ -2,7 +2,7 @@
   <description></description>
   <isinactive>F</isinactive>
   <isordered>T</isordered>
-  <name>FP - Sim / Não / Indiferente</name>
+  <name>Sim / Não / Indiferente</name>
   <customvalues>
     <customvalue scriptid="val_sim_nao_indif_1">
       <isinactive>F</isinactive>

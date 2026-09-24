@@ -2,7 +2,7 @@
   <description>Indicador da IE do destinatario (tag indIEDest, grupo E da NF-e). O CODIGO abre o valor e e o que vai no payload: o motor deriva dele o destinatarioContribuinte (1 e 2 sao contribuinte, 9 nao e), e disso depende o DIFAL. Lista fechada porque so existem estes tres valores no leiaute.</description>
   <isinactive>F</isinactive>
   <isordered>T</isordered>
-  <name>FP - Indicador da IE</name>
+  <name>Indicador da IE</name>
   <customvalues>
     <customvalue scriptid="val_ind_ie_dest_1">
       <isinactive>F</isinactive>

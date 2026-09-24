@@ -2,7 +2,7 @@
   <description>modFrete do grupo X da NF-e. O CODIGO abre o valor e e o que vai no payload (transporte.modFrete, validado por IsIn no DTO). ⚠ NAO SE DERIVA DE CAMPO NATIVO: shipmethod, carrier e os demais campos de frete do NetSuite sao logistica internacional e nao dizem de quem e a RESPONSABILIDADE pelo frete, que e o que o modFrete declara.</description>
   <isinactive>F</isinactive>
   <isordered>T</isordered>
-  <name>FP - Modalidade do Frete</name>
+  <name>Modalidade do Frete</name>
   <customvalues>
     <customvalue scriptid="val_mod_frete_0"><isinactive>F</isinactive><value>0 - Por conta do emitente (CIF)</value></customvalue>
     <customvalue scriptid="val_mod_frete_1"><isinactive>F</isinactive><value>1 - Por conta do destinatario (FOB)</value></customvalue>
