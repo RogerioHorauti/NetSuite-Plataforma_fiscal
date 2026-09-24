@@ -50,7 +50,7 @@
       <defaultchecked>F</defaultchecked>
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
-      <description>Vinculo com a transacao. E ele que faz o registro aparecer como SUBLISTA -- isparent=T.</description>
+      <description>Vinculo com a transacao. E ele que faz o registro aparecer como SUBLISTA (isparent=T), e o parentsubtab diz ONDE. ⚠ O parentsubtab so aceita subaba de PRIMEIRO NIVEL: apontar para custtab_fp_transp, que e aninhada, o deploy recusa com "Invalid parentsubtab reference key ... for selectrecordtype -30". Por isso as duas sublistas caem na subaba FiscalPlatform, ao lado do sublist de impostos, e nao dentro da aninhada de Transporte.</description>
       <displaytype>NORMAL</displaytype>
       <encryptatrest>F</encryptatrest>
       <fieldtype>SELECT</fieldtype>
@@ -61,7 +61,7 @@
       <label>Transacao</label>
       <maxlength></maxlength>
       <onparentdelete>SET_NULL</onparentdelete>
-      <parentsubtab>[scriptid=custtab_fp_transp]</parentsubtab>
+      <parentsubtab>[scriptid=custtab_fp_fiscal]</parentsubtab>
       <rolerestrict>F</rolerestrict>
       <searchlevel>2</searchlevel>
       <selectrecordtype>-30</selectrecordtype>
