@@ -27,10 +27,11 @@ define(['N/url', 'N/runtime', 'N/log', './fp_fields'],
     /**
      * Onde EXISTE documento fiscal a emitir.
      *
-     * Lista própria, e menor que a do simulador de propósito: pedido de venda, pedido de compra,
-     * autorização de devolução e crédito de fornecedor simulam tributo mas não emitem documento.
+     * Lista própria, e menor que a do simulador de propósito: pedido de venda, pedido de compra e
+     * autorização de devolução simulam tributo e não emitem documento — existem para prever o
+     * imposto ANTES de virarem nota.
      */
-    var TIPOS = ['invoice', 'vendorbill', 'creditmemo', 'transferorder'];
+    var TIPOS = ['invoice', 'vendorbill', 'vendorcredit', 'creditmemo', 'transferorder'];
 
     function beforeLoad(scriptContext) {
       try {

@@ -36,6 +36,20 @@
       <runasrole>ADMINISTRATOR</runasrole>
       <status>RELEASED</status>
     </scriptdeployment>
+    <scriptdeployment scriptid="customdeploy_fp_ue_emissao_vendorcredit">
+      <allemployees>F</allemployees>
+      <alllocalizationcontexts>T</alllocalizationcontexts>
+      <allpartners>F</allpartners>
+      <allroles>T</allroles>
+      <audslctrole></audslctrole>
+      <eventtype></eventtype>
+      <executioncontext>USERINTERFACE</executioncontext>
+      <isdeployed>T</isdeployed>
+      <loglevel>DEBUG</loglevel>
+      <recordtype>VENDORCREDIT</recordtype>
+      <runasrole>ADMINISTRATOR</runasrole>
+      <status>RELEASED</status>
+    </scriptdeployment>
     <scriptdeployment scriptid="customdeploy_fp_ue_emissao_creditmemo">
       <allemployees>F</allemployees>
       <alllocalizationcontexts>T</alllocalizationcontexts>
