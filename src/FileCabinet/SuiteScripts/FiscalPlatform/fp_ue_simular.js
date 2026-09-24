@@ -287,12 +287,33 @@ define([
       ? String(scriptContext.newRecord.getValue({ fieldId: campoStatus }) || '').toUpperCase()
       : '';
 
-    botao(form, 'custpage_fp_emitir', 'Emitir NF-e', scriptContext, id, 'emitir', true);
+    botao(form, 'custpage_fp_emitir', 'Emitir ' + tipoDeclarado(scriptContext.newRecord),
+      scriptContext, id, 'emitir', true);
 
     // Consultar só faz sentido depois de transmitida, e é o que resolve nota em PROCESSANDO.
     if (status) {
       botao(form, 'custpage_fp_consultar', 'Consultar SEFAZ', scriptContext, id, 'consultar', false);
     }
+  }
+
+  /**
+   * O NOME CURTO DO DOCUMENTO DECLARADO — "NF-e", "NFC-e", "CT-e".
+   *
+   * O rótulo estava chumbado em "Emitir NF-e", e o bundle emite cinco tipos: o botão anunciava
+   * NF-e numa transação marcada como CT-e, e quem clicasse estaria emitindo outra coisa.
+   *
+   * Sai do TEXTO da lista, que é "CÓDIGO - Apelido, descrição (modelo)". Um de-para chumbado aqui
+   * seria a sexta lista a manter — e a que ninguém lembraria de atualizar ao acrescentar um tipo.
+   * Sem tipo declarado, o rótulo é genérico e o Suitelet recusa, dizendo o que falta.
+   */
+  function tipoDeclarado(novoRegistro) {
+    var campo = fpFields.id('TIPODOC');
+    if (!campo) return 'documento fiscal';
+
+    var texto = String(novoRegistro.getText({ fieldId: campo }) || '');
+    // "NFE - NF-e, Nota Fiscal Eletronica (modelo 55)" → "NF-e"
+    var m = /^\s*[A-Z0-9_]+\s*-\s*([^,(]+)/.exec(texto);
+    return m ? m[1].trim() : 'documento fiscal';
   }
 
   /**

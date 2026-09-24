@@ -122,7 +122,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       if (!payload) return null;
 
       var serie = serieDaFilial(newRecord);
-      var tipoDoc = valorTexto(newRecord, fpFields.id('TIPODOC'));
+      // O texto da lista abre com o CÓDIGO — "NFE - NF-e, Nota Fiscal...". É o código que o
+      // catálogo da plataforma conhece; mandar o texto inteiro seria um tipo que ela não acha.
+      var tipoDoc = codigoDaLista(valorTexto(newRecord, fpFields.id('TIPODOC')));
 
       if (!serie || !tipoDoc) {
         log.error('fp_md_map_simular.montarEmissao',
