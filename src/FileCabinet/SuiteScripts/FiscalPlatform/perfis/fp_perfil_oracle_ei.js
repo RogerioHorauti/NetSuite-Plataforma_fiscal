@@ -36,12 +36,19 @@ define([], function () {
     },
   
     "deteccao": {
-      "bundleIds": ["436209"],
-      "suiteAppIds": ["com.netsuite.electronicinvoicing"],
-      "assinatura": {
-        "tipo": "customrecord",
-        "id": "customrecord_psg_ei_standards"
-      },
+      "_nota_bundles": [
+        "237702 = com.netsuite.suitetaxengine (SuiteTax Engine); 436209 =",
+        "com.netsuite.electronicinvoicing. Decisao do Rogerio em 24/09/2026: achando 237702 nos",
+        "bundles instalados, o perfil e este. Os zips dos dois estao em ~/Documents/GitHubGLO/",
+        "suitesuccess.",
+        "",
+        "A assinatura por customrecord_psg_ei_standards SAIU: ela era sondada provocando",
+        "INVALID_RCRD_TYPE de proposito, e excecao como resposta nao pode existir em auxiliar.",
+        "Bundle instalado e o fato mais direto -- e ele que se instala."
+      ],
+      "bundleIds": ["237702", "436209"],
+      "suiteAppIds": ["com.netsuite.suitetaxengine", "com.netsuite.electronicinvoicing"],
+      "assinatura": null,
       "_nota_assinatura": [
         "A assinatura é um CUSTOM RECORD TYPE e não um campo: record type é o que o SuiteApp cria e",
         "mantém entre versões, campo entra e sai de release.",

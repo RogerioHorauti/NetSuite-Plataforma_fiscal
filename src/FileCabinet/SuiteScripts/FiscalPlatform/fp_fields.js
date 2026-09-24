@@ -70,11 +70,14 @@ define(['N/search', 'N/query', 'N/runtime', 'N/log', './perfis/fp_perfil_origina
 
 
   /**
-   * Ordem de sondagem. A primeira assinatura encontrada ganha, então perfil MAIS ESPECÍFICO vem
-   * antes: uma conta pode ter Electronic Invoicing e Brazil Localization ao mesmo tempo, e o de
-   * cima é o que manda no de-para.
+   * Os perfis que a sonda percorre, DERIVADOS dos módulos carregados — nunca uma lista à parte.
+   *
+   * ⚠ Havia aqui `['oracle_ei', 'oracle_brl', 'avalara']`, e dois desses nomes não existem em
+   * `PERFIS`: a sonda chegava em `oracle_brl` e `carregarModulo` lançava "perfil desconhecido".
+   * Lista escrita à mão ao lado de um mapa é sempre duas verdades esperando divergir.
    */
-  var PERFIS_CONHECIDOS = ['oracle_ei', 'oracle_brl', 'avalara'];
+  var PERFIS_CONHECIDOS = Object.keys(PERFIS).filter(function (n) { return n !== PERFIL_ORIGINAL; });
+
 
   /**
    * CAMPOS NATIVOS DO NETSUITE.
@@ -313,7 +316,14 @@ define(['N/search', 'N/query', 'N/runtime', 'N/log', './perfis/fp_perfil_origina
    */
   function carregarModulo(nome) {
     var p = PERFIS[nome];
-    if (!p) throw new Error('fp_fields: perfil desconhecido: ' + nome);
+    if (!p) {
+      // Quem digitou isso foi uma pessoa, no campo da subsidiária. A mensagem tem de dizer onde
+      // corrigir e o que vale — erro que só nomeia o problema faz o usuário abrir chamado.
+      throw new Error(
+        'fp_fields: perfil "' + nome + '" não existe. Corrija o campo "Perfil de Compatibilidade" ' +
+        'na Subsidiária: use ' + Object.keys(PERFIS).join(', ') + ', ou deixe VAZIO para o bundle ' +
+        'detectar sozinho pelo SuiteApp instalado.');
+    }
     return JSON.parse(JSON.stringify(p));
   }
 
@@ -347,50 +357,43 @@ function perfilConfigurado() {
   }
 
   /**
-   * SONDA: procura a assinatura de cada perfil conhecido, na ordem de `PERFIS_CONHECIDOS`.
+   * SONDA: qual SuiteApp fiscal está instalado nesta conta.
    *
-   * A assinatura é um CUSTOM RECORD TYPE, não um campo: record type é o que o SuiteApp cria e
-   * mantém entre versões, enquanto campo entra e sai de release. `search.create` com type
-   * inexistente lança, e é justamente esse lance que responde "não está instalado".
+   * Pelo **bundle instalado**, não por assinatura de record type. O record type era sondado
+   * provocando `INVALID_RCRD_TYPE` de propósito — exceção como resposta, dentro de auxiliar, que é
+   * exatamente o que não pode existir aqui. E o bundle é o fato mais direto: é ele que se instala.
    *
    * @returns {string|null}
    */
   function sondar() {
+    var instalados = bundlesInstalados();
+    if (!instalados) return null;
+
     for (var i = 0; i < PERFIS_CONHECIDOS.length; i++) {
       var nome = PERFIS_CONHECIDOS[i];
-      var p;
-      p = carregarModulo(nome);
-    
-
-      var assinatura = p.deteccao && p.deteccao.assinatura;
-      if (!assinatura || !assinatura.id) continue;
-
-      if (existeRecordType(assinatura.id)) {
-        log.audit('fp_fields.sondar', 'assinatura ' + assinatura.id + ' encontrada → perfil ' + nome);
-        return nome;
+      var ids = (PERFIS[nome].deteccao && PERFIS[nome].deteccao.bundleIds) || [];
+      for (var b = 0; b < ids.length; b++) {
+        if (instalados[String(ids[b])]) {
+          log.audit('fp_fields.sondar', 'bundle ' + ids[b] + ' instalado → perfil ' + nome);
+          return nome;
+        }
       }
     }
     return null;
   }
 
-  /**
-   * O tipo existe nesta conta?
-   *
-   * ⚠ NÃO se pergunta isso com `search.create`: tipo inexistente LANÇA `INVALID_RCRD_TYPE`, e a
-   * sonda passa por todos os perfis conhecidos justamente esperando que a maioria não exista. Usar
-   * a exceção como resposta obrigava um `catch` aqui, e foi o que derrubou o `beforeLoad` quando
-   * os `catch` de auxiliar saíram (medido em 24/09/2026 com `CUSTOMRECORD_PSG_EI_STANDARDS`).
-   *
-   * `customrecordtype` responde a mesma pergunta sem exceção: devolve linha quando existe e vazio
-   * quando não. Ausência vira DADO, que é o que ela sempre foi. Medido na conta em 24/09/2026:
-   * 200 com uma linha para `customrecord_fp_imposto`, 200 com zero linha para o tipo do Oracle EI.
-   */
-  function existeRecordType(tipo) {
-    var r = query.runSuiteQL({
-      query: 'SELECT scriptid FROM customrecordtype WHERE UPPER(scriptid) = ?',
-      params: [String(tipo).toUpperCase()]
-    }).asMappedResults();
-    return r.length > 0;
+  /** `{ '237702': true, ... }` dos bundles instalados na conta. */
+  function bundlesInstalados() {
+    var mapa = {};
+    search.create({
+      type: search.Type.BUNDLE_INSTALLATION,
+      filters: [],
+      columns: ['name']
+    }).run().each(function (linha) {
+      mapa[String(linha.id)] = true;
+      return true;
+    });
+    return mapa;
   }
 
   return {
