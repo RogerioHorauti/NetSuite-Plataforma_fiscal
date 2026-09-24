@@ -616,6 +616,39 @@ define([
   // interno
   // ─────────────────────────────────────────────────────────────────────────────
 
+  /**
+   * GET que devolve o corpo CRU, sem `JSON.parse`.
+   *
+   * XML e DANFE não são JSON: `interpretar` estouraria neles. Mesmo token e mesmo log da chamada
+   * normal — o que muda é só não interpretar o corpo.
+   *
+   * @returns {{ok: boolean, code: number, corpo: string, tipo: string, durationMs: number}}
+   */
+  function baixar(caminho, opcoes) {
+    opcoes = opcoes || {};
+    var cfg = configuracao(opcoes.subsidiaria);
+    var url = cfg.baseUrl + caminho;
+
+    var inicio = new Date().getTime();
+    var resposta = https.get({
+      url: url,
+      headers: { Accept: '*/*', Authorization: 'Bearer ' + token(cfg) }
+    });
+    var duracao = new Date().getTime() - inicio;
+
+    // O corpo NÃO vai para o log: XML de nota grande enche o registro e não se lê dali — ele vira
+    // anexo na transação, que é onde alguém procura.
+    registrar('GET', url, null, resposta.code, '(binário/texto omitido)', duracao, opcoes);
+
+    return {
+      ok: resposta.code == 200,
+      code: resposta.code,
+      corpo: resposta.body,
+      tipo: (resposta.headers && (resposta.headers['Content-Type'] || resposta.headers['content-type'])) || '',
+      durationMs: duracao
+    };
+  }
+
   function chamar(metodo, caminho, payload, opcoes) {
     opcoes = opcoes || {};
     var cfg = configuracao(opcoes.subsidiaria);
@@ -861,6 +894,7 @@ define([
     emitir: emitir,
     reclassificar: reclassificar,
     obter: obter,
+    baixar: baixar,
     postar: postar,
     configuracao: configuracao,
     cnpjDaFilial: cnpjDaFilial,

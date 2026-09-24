@@ -163,6 +163,34 @@ define([], function () {
       "SERIE": "custrecord_fp_serie_filial"
     },
 
+    "doc": {
+      "_nota": [
+        "Campos de customrecord_fp_doc, UMA LINHA POR DOCUMENTO EMITIDO. Nao duplica os campos de",
+        "transacao: la fica o desfecho ATUAL da transacao, aqui fica o historico -- uma nota",
+        "rejeitada, a inutilizacao do numero preso nela e a nota que a substituiu sao tres linhas,",
+        "e a transacao mostra a ultima.",
+        "",
+        "O UUID do documento NAO entra aqui, e nao e esquecimento: o ERP endereca o documento pelo",
+        "IDEXTERNO, que e o internal id da transacao do NetSuite. O proprio controller do",
+        "/fiscal/emitir diz isso -- 'e tambem por ele que voce endereca o documento em outros",
+        "endpoints'. Guardar UUID seria guardar um id que o ERP nao gerou e nao precisa."
+      ],
+      "TRANSACAO": "custrecord_fp_doc_transaction",
+      "IDEXTERNO": "custrecord_fp_doc_idexterno",
+      "TIPO": "custrecord_fp_doc_tipo",
+      "SERIE": "custrecord_fp_doc_serie",
+      "NUMERO": "custrecord_fp_doc_numero",
+      "CHAVE": "custrecord_fp_doc_chave",
+      "STATUS": "custrecord_fp_doc_status",
+      "CSTAT": "custrecord_fp_doc_cstat",
+      "XMOTIVO": "custrecord_fp_doc_xmotivo",
+      "PROTOCOLO": "custrecord_fp_doc_protocolo",
+      "XML": "custrecord_fp_doc_xml",
+      "DANFE": "custrecord_fp_doc_danfe",
+      "TENTATIVA": "custrecord_fp_doc_tentativa",
+      "SUBSTITUIDO": "custrecord_fp_doc_substituido"
+    },
+
     "log": {
       "_nota": "Campos de customrecord_fp_log, a trilha de chamada do transporte.",
       "ENDPOINT": "custrecord_fp_log_endpoint",

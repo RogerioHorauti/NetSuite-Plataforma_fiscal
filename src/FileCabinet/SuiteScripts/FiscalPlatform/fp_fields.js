@@ -187,6 +187,11 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
     return resolver('endereco', chave);
   }
 
+  /** Campo do custom record de documento emitido. */
+  function idDoc(chave) {
+    return resolver('doc', chave);
+  }
+
   /** Campo do custom record de log. */
   function idLog(chave) {
     return resolver('log', chave);
@@ -373,6 +378,7 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
     idCliente: idCliente,
     idPais: idPais,
     idEndereco: idEndereco,
+    idDoc: idDoc,
     idLog: idLog,
     idNatureza: idNatureza,
     valor: valor,
