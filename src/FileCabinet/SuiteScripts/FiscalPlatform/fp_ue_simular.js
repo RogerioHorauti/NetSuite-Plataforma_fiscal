@@ -307,12 +307,22 @@ define([
   }
 
   /**
-   * Os anexos do bundle saem; os do usuário ficam.
+   * NOSSO ARQUIVO, e a FORMA inteira do nome — não só o prefixo.
    *
-   * O critério é o prefixo `FP-`, que é como este bundle nomeia payload e retorno. A Avalara
-   * precisa listar treze pedaços de nome para fazer isto — nomear tudo com um prefixo só é o que
-   * torna a limpeza uma linha em vez de uma lista para manter.
+   * ⚠ `FP-` sozinho é critério perigoso: é curto, é sigla comum, e um anexo do usuário chamado
+   * `FP-relatorio.pdf` ou `FP-2026.xlsx` seria apagado na cópia sem nada acusar. Apagar arquivo
+   * de terceiro é o tipo de erro que só aparece quando alguém procura o documento e ele não está
+   * mais lá.
+   *
+   * O bundle gera exatamente `FP-<tipo>-<id>-<o que é>.json`, e é essa forma que o padrão exige:
+   * tipo em letras, id em dígitos, extensão `.json`. `FP-relatorio.pdf` não casa; nem
+   * `FP-invoice-nota.json`, que não tem id.
+   *
+   * O id no nome é o da transação ORIGINAL — a cópia ainda não tem id no `beforeLoad` —, então o
+   * padrão não pode amarrar no id desta, e não amarra.
    */
+  var NOSSO_ANEXO = /^FP-[a-z]+-\d+-[a-z-]+\.json$/;
+
   function removerAnexosDoBundle(novoRegistro) {
     var total = novoRegistro.getLineCount({ sublistId: 'mediaitem' });
     if (total <= 0) return 0;
@@ -323,7 +333,7 @@ define([
         sublistId: 'mediaitem', fieldId: 'mediaitem', line: i
       }) || '');
 
-      if (nome.indexOf('FP-') === 0) {
+      if (NOSSO_ANEXO.test(nome)) {
         novoRegistro.removeLine({ sublistId: 'mediaitem', line: i });
         removidos++;
       }
