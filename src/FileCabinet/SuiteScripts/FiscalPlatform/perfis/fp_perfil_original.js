@@ -38,7 +38,16 @@ define([], function () {
     },
   
     "transacao": {
-      "_grupo_documento": "identidade do documento fiscal devolvida pelo motor",
+      "_grupo_documento": [
+        "Identidade do documento fiscal DEVOLVIDA PELO MOTOR.",
+        "",
+        "⚠ O PREFIXO `DOC_` E CONTRATO, nao estilo. `fp_ue_simular.limparNaCopia` limpa TODA chave",
+        "desta secao que comece com `DOC_` (mais `CORRID`), sem lista chumbada -- entao campo novo",
+        "de resultado nasce aqui com o prefixo e passa a ser limpo na copia sozinho.",
+        "",
+        "Campo que o ERP DECLARA nao leva o prefixo e NAO e limpo: natureza, tipo de documento e",
+        "frete sao decisao de quem abriu a transacao, e a copia os herda de proposito."
+      ],
       "DOC_CHAVE": "custbody_fp_chave",
       "DOC_NUMERO": "custbody_fp_numero",
       "DOC_SERIE": "custbody_fp_serie",

@@ -279,11 +279,20 @@ define([
     if (scriptContext.type !== scriptContext.UserEventType.COPY) return;
     if (TIPOS.indexOf(scriptContext.newRecord.type) === -1) return;
 
-    var chaves = ['DOC_CHAVE', 'DOC_NUMERO', 'DOC_SERIE', 'DOC_STATUS', 'DOC_CSTAT',
-      'DOC_XMOTIVO', 'DOC_PROTOCOLO', 'DOC_IDEXTERNO', 'DOC_XML', 'DOC_DANFE', 'CORRID'];
+    // ⚠ A LISTA NÃO É CHUMBADA, e a diferença importa: campo novo de resultado nasce no perfil
+    // com o prefixo `DOC_` e passa a ser limpo SEM que ninguém lembre de vir aqui. Lista escrita
+    // à mão envelheceria no primeiro campo que a Reforma trouxer, e o sintoma seria a cópia
+    // exibindo o documento da original — em silêncio.
+    //
+    // A convenção é o contrato: **todo campo que o MOTOR devolve chama-se `DOC_*` no perfil**.
+    // O que o ERP DECLARA — natureza, tipo de documento, frete — não leva o prefixo, e fica: é
+    // decisão de quem abriu a transação, não resultado do documento.
+    var chaves = fpFields.chaves('transacao');
 
     var limpos = 0;
     for (var i = 0; i < chaves.length; i++) {
+      if (chaves[i].indexOf('DOC_') !== 0 && chaves[i] !== 'CORRID') continue;
+
       var campo = fpFields.id(chaves[i]);
       if (!campo) continue;
       scriptContext.newRecord.setValue({ fieldId: campo, value: '' });

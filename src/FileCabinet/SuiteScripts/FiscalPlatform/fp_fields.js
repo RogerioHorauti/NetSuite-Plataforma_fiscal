@@ -172,6 +172,25 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
     return resolver('location', chave);
   }
 
+  /**
+   * Os NOMES LÓGICOS de uma seção do perfil ativo — `['DOC_CHAVE', 'DOC_NUMERO', ...]`.
+   *
+   * Existe para quem precisa agir sobre um CONJUNTO de campos em vez de um campo conhecido, e o
+   * caso é a limpeza da cópia: ela tem de esquecer todo campo de resultado do documento, inclusive
+   * os que ainda não foram criados. Lista chumbada em código envelheceria no primeiro campo novo.
+   *
+   * As chaves que começam com `_` são nota de documentação do perfil, não campo.
+   */
+  function chaves(secao) {
+    var p = perfilAtivo();
+    var fonte = p[secao] || (p._original && p._original[secao]) || {};
+    var out = [];
+    for (var k in fonte) {
+      if (Object.prototype.hasOwnProperty.call(fonte, k) && k.charAt(0) !== '_') out.push(k);
+    }
+    return out;
+  }
+
   /** Campo FP na entity (customer/vendor). */
   function idCliente(chave) {
     return resolver('cliente', chave);
@@ -375,6 +394,7 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
     idClassificador: idClassificador,
     idSubsidiaria: idSubsidiaria,
     idLocation: idLocation,
+    chaves: chaves,
     idCliente: idCliente,
     idPais: idPais,
     idEndereco: idEndereco,
