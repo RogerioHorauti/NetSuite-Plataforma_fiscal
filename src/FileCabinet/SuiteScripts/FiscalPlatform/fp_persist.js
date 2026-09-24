@@ -9,14 +9,18 @@
  *
  * ── A ORDEM É A REGRA, e ela não é estética ────────────────────────────────────────────────────
  *
- * `aplicar` grava em três etapas e nesta sequência: campos da transação, linha do
- * `customrecord_fp_doc`, arquivos. Não é arbitrário — é a invariante do projeto: *persistir cada
+ * `aplicar` grava em quatro etapas, nesta sequência: campos da transação, linha do
+ * `customrecord_fp_doc`, **payload e retorno**, XML. É a invariante do projeto — *persistir cada
  * avanço antes de prosseguir*. Quando a emissão volta, o número JÁ FOI GASTO e a nota JÁ ESTÁ na
- * SEFAZ. Autorização não pode se perder porque a gravação seguinte falhou, então o que identifica
- * o documento vai primeiro e o que é conveniência vai por último.
+ * SEFAZ; autorização não pode se perder porque a gravação seguinte falhou.
  *
  * Etapa que falha interrompe as seguintes — é um `try` só, no Suitelet que chamou — mas o que já
- * gravou fica gravado. Por isso o mais barato de refazer é o que vem por último.
+ * gravou fica gravado. Logo a ordem é por DEPENDÊNCIA: o que não depende de nada vem primeiro, e
+ * o que depende da rede vem por último.
+ *
+ * ⚠ Baixar o XML é o ÚNICO passo daqui que chama a plataforma. Ele já esteve na frente do rastro,
+ * e o efeito foi medido: plataforma fora do ar derrubava `aplicar` inteiro, e o payload — que já
+ * estava em memória — nunca era gravado. Perdia-se a prova por causa do passo mais frágil.
  *
  * ── SEM `try/catch` AQUI ───────────────────────────────────────────────────────────────────────
  *
@@ -48,8 +52,13 @@ define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields', './fp_client']
 
       gravarNaTransacao(tipo, id, doc);
       var linha = gravarDoc(tipo, id, doc);
-      var arquivos = anexarArquivos(tipo, id, doc, opcoes);
-      arquivos = arquivos.concat(anexarRastro(tipo, id, doc, opcoes));
+
+      // O RASTRO ANTES DO XML, e a ordem é medida, não gosto: baixar o XML é uma chamada HTTP à
+      // plataforma, e é o único passo daqui que depende da rede. Com ele na frente, plataforma
+      // fora do ar derrubava `aplicar` e o payload — que já estava em memória e não precisa de
+      // rede nenhuma — nunca chegava a ser gravado. Perdia-se justamente a prova.
+      var arquivos = anexarRastro(tipo, id, doc, opcoes);
+      arquivos = arquivos.concat(anexarArquivos(tipo, id, doc, opcoes));
 
       log.audit('fp_persist.aplicar',
         'documento ' + (doc.status || '?') + ' · chave ' + (doc.chaveAcesso || '(sem chave)') +
@@ -221,7 +230,14 @@ define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields', './fp_client']
      * acumular, e o que interessa é o último par.
      */
     function anexarRastro(tipo, id, doc, opcoes) {
-      if (!opcoes.pasta || !opcoes.payload) return [];
+      if (!opcoes.pasta || !opcoes.payload) {
+        log.audit('fp_persist.anexarRastro',
+          'payload e retorno NÃO foram anexados — ' +
+          (!opcoes.pasta
+            ? 'o parâmetro "Pasta do XML" não está preenchido nas Preferências da Empresa.'
+            : 'quem chamou não passou o payload em opcoes.payload.'));
+        return [];
+      }
 
       var base = 'FP-' + tipo + '-' + id + '-emissao-';
       return [
