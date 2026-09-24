@@ -296,15 +296,18 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * A pasta do rastro, igual ao `fp_ue_simular`: parâmetro INTEGER de empresa.
+     * A pasta do rastro. UMA SÓ NO BUNDLE INTEIRO: `custscript_fp_pasta_payload`, o mesmo nome
+     * que o `fp_ue_simular` usa.
      *
-     * ⚠ São DOIS parâmetros para a mesma pasta, e não é descuido: id de parâmetro de script é
-     * global no NetSuite, então o Suitelet não pode reusar o `custscript_fp_pasta_payload` do
-     * User Event. Os dois precisam ser preenchidos em Preferências da Empresa, com o mesmo id de
-     * pasta. Em branco, o rastro NÃO é anexado e o log diz isso.
+     * É preferência de EMPRESA, e é por isso que este Suitelet não declara parâmetro nenhum: uma
+     * pasta a preencher no bundle inteiro. Cancelamento, carta de correção e o que vier depois
+     * usam esta. Uma pasta por operação faria o usuário preencher cinco campos com o mesmo valor,
+     * e um deles ficaria diferente.
+     *
+     * Em branco, o rastro NÃO é anexado e o log diz isso.
      */
     function pastaDoAnexo() {
-      return runtime.getCurrentScript().getParameter({ name: 'custscript_fp_pasta_doc' });
+      return runtime.getCurrentScript().getParameter({ name: 'custscript_fp_pasta_payload' });
     }
 
     function titulo(acao) {
