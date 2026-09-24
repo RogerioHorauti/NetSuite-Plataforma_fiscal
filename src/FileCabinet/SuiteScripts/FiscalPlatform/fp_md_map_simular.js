@@ -341,7 +341,55 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       if (cnpj && digitos(cad[cnpj])) t.cnpjCpf = digitos(cad[cnpj]);
       if (ie && digitos(cad[ie])) t.ie = digitos(cad[ie]);
 
-      return Object.keys(t).length ? t : null;
+      // O ENDEREÇO TAMBÉM É DO CADASTRO. `xEnder`, `xMun` e `UF` são três campos do `transporta`,
+      // e sem eles o grupo vai pela metade.
+      var end = enderecoDoFornecedor(id);
+      if (end) {
+        if (end.endereco) t.endereco = end.endereco;
+        if (end.municipio) t.municipio = end.municipio;
+        if (end.uf) t.uf = end.uf;
+      }
+
+      return temAlgo(t) ? t : null;
+    }
+
+    /**
+     * Endereço de cobrança padrão do fornecedor, por SuiteQL.
+     *
+     * `vendor.defaultbillingaddress` guarda o próprio `nkey` de `entityaddress` — medido na conta
+     * em 24/09/2026 —, então uma consulta só resolve, sem passar pelo address book.
+     *
+     * `xEnder` é UM campo no leiaute, não três: logradouro, número e complemento vão juntos. Por
+     * isso o que sai daqui é uma linha montada, e não o `addr1` cru.
+     */
+    function enderecoDoFornecedor(id) {
+      var campoNumero = fpFields.idEndereco('END_NUMERO');
+      var cols = 'a.addr1, a.addr2, a.city, a.state, a.dropdownstate';
+      if (campoNumero) cols += ', a.' + campoNumero;
+
+      var r = query.runSuiteQL({
+        query: 'SELECT ' + cols + ' FROM entityaddress a ' +
+               'JOIN vendor v ON a.nkey = v.defaultbillingaddress WHERE v.id = ?',
+        params: [id]
+      }).asMappedResults();
+
+      if (!r.length) {
+        log.audit('fp_md_map_simular.enderecoDoFornecedor',
+          'transportador ' + id + ' sem endereco de cobranca padrao — o grupo transporta sai sem ' +
+          'xEnder, xMun e UF.');
+        return null;
+      }
+
+      var e = r[0];
+      var partes = [texto(e.addr1)];
+      if (campoNumero && texto(e[campoNumero])) partes.push(texto(e[campoNumero]));
+      if (texto(e.addr2)) partes.push(texto(e.addr2));
+
+      return {
+        endereco: partes.filter(function (x) { return !!x; }).join(', '),
+        municipio: texto(e.city),
+        uf: (texto(e.dropdownstate) || texto(e.state)).toUpperCase().substring(0, 2)
+      };
     }
 
     /**
