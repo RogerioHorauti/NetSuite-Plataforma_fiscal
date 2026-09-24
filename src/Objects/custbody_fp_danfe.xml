@@ -26,13 +26,13 @@
   <defaultchecked>F</defaultchecked>
   <defaultselection></defaultselection>
   <defaultvalue></defaultvalue>
-  <description></description>
+  <description>Link para baixar o DANFE em PDF. Mesmo caminho do XML: o Suitelet busca na plataforma e entrega ao navegador, sem passar pelo File Cabinet.</description>
   <displayheight></displayheight>
   <displaytype>NORMAL</displaytype>
   <displaywidth></displaywidth>
   <dynamicdefault></dynamicdefault>
   <encryptatrest>F</encryptatrest>
-  <fieldtype>DOCUMENT</fieldtype>
+  <fieldtype>URL</fieldtype>
   <fldsizelabel></fldsizelabel>
   <globalsearch>F</globalsearch>
   <help></help>
@@ -40,7 +40,7 @@
   <ismandatory>F</ismandatory>
   <isparent>F</isparent>
   <label>DANFE (PDF)</label>
-  <linktext></linktext>
+  <linktext>Baixar DANFE</linktext>
   <maxlength></maxlength>
   <maxvalue></maxvalue>
   <minvalue></minvalue>

@@ -35,8 +35,8 @@
  * documento nos outros endpoints. Guardar o UUID seria carregar um id que o ERP não gerou, não
  * valida e não sabe reconstruir.
  */
-define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields'],
-  function (record, search, file, log, fpFields) {
+define(['N/record', 'N/search', 'N/file', 'N/url', 'N/log', './fp_fields'],
+  function (record, search, file, url, log, fpFields) {
 
     /**
      * Reflete o documento emitido na transação.
@@ -84,6 +84,16 @@ define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields'],
       por(valores, 'DOC_XMOTIVO', doc.xMotivo);
       por(valores, 'DOC_PROTOCOLO', doc.nProt);
 
+      // OS LINKS, não os arquivos. Os campos eram DOCUMENT — que espera o internal id de um
+      // arquivo do File Cabinet — e agora são URL. Apontam para o Suitelet, que busca na
+      // plataforma por HTTPS e entrega ao navegador: nada fica no File Cabinet.
+      //
+      // O link é montado com a CHAVE, que é como todo endpoint de documento emitido endereça.
+      if (doc.chaveAcesso) {
+        por(valores, 'DOC_XML', linkDeDocumento(tipo, id, 'xml'));
+        por(valores, 'DOC_DANFE', linkDeDocumento(tipo, id, 'danfe'));
+      }
+
       if (!temChave(valores)) {
         log.audit('fp_persist.gravarNaTransacao',
           'nenhum campo de documento resolve no perfil ativo — o retorno não foi refletido na ' +
@@ -97,6 +107,22 @@ define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields'],
         values: valores,
         options: { enableSourcing: false, ignoreMandatoryFields: true }
       });
+    }
+
+    /**
+     * URL ABSOLUTA, e não a relativa do `resolveScript`.
+     *
+     * Campo URL guarda o que for gravado e o NetSuite o serve como link. Com endereço relativo o
+     * comportamento depende de onde a página é aberta — e-mail, portal, aba externa — então o
+     * domínio da conta entra explícito.
+     */
+    function linkDeDocumento(tipo, id, acao) {
+      return 'https://' + url.resolveDomain({ hostType: url.HostType.APPLICATION }) +
+        url.resolveScript({
+          scriptId: 'customscript_fp_sl_emissao',
+          deploymentId: 'customdeploy_fp_sl_emissao',
+          params: { tipo: tipo, id: id, acao: acao }
+        });
     }
 
     // ─────────────────────────────────────────────────────────────────────────

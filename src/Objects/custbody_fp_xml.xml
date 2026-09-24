@@ -26,13 +26,13 @@
   <defaultchecked>F</defaultchecked>
   <defaultselection></defaultselection>
   <defaultvalue></defaultvalue>
-  <description></description>
+  <description>Link para baixar o XML autorizado. Aponta para o Suitelet de emissao, que busca o arquivo na plataforma por HTTPS e o entrega ao navegador -- o arquivo NAO fica no File Cabinet. Era DOCUMENT e nao servia: campo DOCUMENT espera o internal id de um arquivo, e gravar URL nele devolve INVALID_FLD_VALUE.</description>
   <displayheight></displayheight>
   <displaytype>NORMAL</displaytype>
   <displaywidth></displaywidth>
   <dynamicdefault></dynamicdefault>
   <encryptatrest>F</encryptatrest>
-  <fieldtype>DOCUMENT</fieldtype>
+  <fieldtype>URL</fieldtype>
   <fldsizelabel></fldsizelabel>
   <globalsearch>F</globalsearch>
   <help></help>
@@ -40,7 +40,7 @@
   <ismandatory>F</ismandatory>
   <isparent>F</isparent>
   <label>XML Autorizado</label>
-  <linktext></linktext>
+  <linktext>Baixar XML</linktext>
   <maxlength></maxlength>
   <maxvalue></maxvalue>
   <minvalue></minvalue>

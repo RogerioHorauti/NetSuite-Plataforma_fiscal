@@ -21,8 +21,8 @@
  * Não há `beforeSubmit` nem `afterSubmit` aqui, e não é omissão: emitir é ato explícito, fora do
  * save. Um User Event que emitisse no save queimaria um número por clique em "Salvar".
  */
-define(['N/ui/serverWidget', 'N/url', 'N/runtime', 'N/log', './fp_fields'],
-  function (serverWidget, url, runtime, log, fpFields) {
+define(['N/url', 'N/runtime', 'N/log', './fp_fields'],
+  function (url, runtime, log, fpFields) {
 
     /**
      * Onde EXISTE documento fiscal a emitir.
@@ -105,42 +105,6 @@ define(['N/ui/serverWidget', 'N/url', 'N/runtime', 'N/log', './fp_fields'],
           false, 'Texto da correção (15 a 1000). Não pode alterar valor, imposto nem as partes:');
       }
 
-      linkDoXml(form, scriptContext, id);
-    }
-
-    /**
-     * LINK, NÃO BOTÃO.
-     *
-     * Botão é para ação; baixar um arquivo é navegação, e um terceiro botão na barra só engorda a
-     * fileira. Aqui ele fica na subaba fiscal, ao lado da chave e do protocolo — que é onde
-     * alguém procura o XML.
-     *
-     * Exige chave: é por ela que a plataforma encontra o documento.
-     */
-    function linkDoXml(form, scriptContext, id) {
-      var campoChave = fpFields.id('DOC_CHAVE');
-      var chave = campoChave
-        ? String(scriptContext.newRecord.getValue({ fieldId: campoChave }) || '')
-        : '';
-      if (!chave) return;
-
-      var destino = endereco(scriptContext, id, 'xml');
-      if (!destino) return;
-
-      // ⚠ NADA DE `container`, e as duas variantes foram medidas na conta, nesta ordem:
-      //
-      //   1. `FieldType.URL` com o endereço RELATIVO do `resolveScript` derruba a renderização.
-      //   2. `INLINEHTML` com `container` apontando para a subaba derruba igual.
-      //
-      // Nos dois casos o erro estoura DIRETO NA TELA, sem uma linha no log: o `try/catch` do
-      // `beforeLoad` não o alcança porque o formulário só é desenhado DEPOIS que ele retorna.
-      //
-      // Campo sem container aparece no corpo principal. É menos bonito e é o que renderiza.
-      form.addField({
-        id: 'custpage_fp_xml',
-        type: serverWidget.FieldType.INLINEHTML,
-        label: 'XML'
-      }).defaultValue = '<a href="' + destino + '">Baixar XML</a>';
     }
 
     /**

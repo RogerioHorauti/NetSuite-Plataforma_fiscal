@@ -47,7 +47,8 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
       CANCELAR: 'cancelar',
       CARTA: 'carta',
       INUTILIZAR: 'inutilizar',
-      XML: 'xml'
+      XML: 'xml',
+      DANFE: 'danfe'
     };
 
     /**
@@ -77,8 +78,8 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
 
         // BAIXAR O XML É GET, e tem de ser: download é navegação do navegador, não XHR. Ele não
         // emite, não grava e não consome nada — só repassa o arquivo que está na plataforma.
-        if (p.acao === ACOES.XML) {
-          return baixarXml(contexto, p.tipo, p.id);
+        if (p.acao === ACOES.XML || p.acao === ACOES.DANFE) {
+          return baixarArquivo(contexto, p.tipo, p.id, p.acao);
         }
 
         // O RESTO É SÓ POST. Emitir por GET não existe de propósito: link revisitado, botão
@@ -113,7 +114,7 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
     }
 
     /**
-     * O XML AUTORIZADO, DIRETO PARA A MÁQUINA DE QUEM PEDIU.
+     * O DOCUMENTO, DIRETO PARA A MÁQUINA DE QUEM PEDIU.
      *
      * Ele mora na plataforma. O Suitelet busca por HTTPS e repassa como download — não grava no
      * File Cabinet, e por isso não precisa de pasta, não deixa cópia e não some quando alguém
@@ -121,8 +122,13 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
      *
      * `file.create` SEM `save()`: o objeto existe só em memória para o `writeFile`. Salvar criaria
      * o arquivo no cabinet, que é exatamente o que este caminho evita.
+     *
+     * ⚠ O PDF DO DANFE NÃO FOI MEDIDO. `https.get` devolve o corpo como STRING, e PDF é binário:
+     * pode chegar íntegro ou corrompido, e isso só se sabe com a plataforma no ar. O XML é texto e
+     * não tem esse risco. Quando der para medir, ou confirma, ou o caminho do PDF passa a usar
+     * base64 — o que não se faz agora é chutar e gravar arquivo que só falha ao abrir.
      */
-    function baixarXml(contexto, tipo, id) {
+    function baixarArquivo(contexto, tipo, id, acao) {
       var rec = record.load({ type: tipo, id: id });
       var chave = valor(rec, fpFields.id('DOC_CHAVE'));
 
@@ -130,26 +136,28 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
         return json(contexto, {
           ok: false,
           titulo: 'Sem documento',
-          mensagem: 'Esta transação não tem chave de acesso — não há XML para baixar.'
+          mensagem: 'Esta transação não tem chave de acesso — não há arquivo para baixar.'
         });
       }
 
+      var pdf = acao === ACOES.DANFE;
       var subsidiaria = rec.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') });
-      var r = fpClient.baixar('/fiscal/nfe/' + chave + '/xml', { subsidiaria: subsidiaria });
+      var r = fpClient.baixar('/fiscal/nfe/' + chave + '/' + (pdf ? 'danfe' : 'xml'),
+        { subsidiaria: subsidiaria });
 
       if (!r.ok || !r.corpo) {
-        log.error('fp_sl_emissao.baixarXml', 'chave ' + chave + ' devolveu ' + r.code);
+        log.error('fp_sl_emissao.baixarArquivo', acao + ' chave ' + chave + ' devolveu ' + r.code);
         return json(contexto, {
           ok: false,
-          titulo: 'XML não veio (HTTP ' + r.code + ')',
-          mensagem: 'A plataforma não devolveu o XML da chave ' + chave + '.'
+          titulo: 'Arquivo não veio (HTTP ' + r.code + ')',
+          mensagem: 'A plataforma não devolveu o ' + acao + ' da chave ' + chave + '.'
         });
       }
 
       contexto.response.writeFile({
         file: file.create({
-          name: 'NFe-' + chave + '.xml',
-          fileType: file.Type.XMLDOC,
+          name: (pdf ? 'DANFE-' : 'NFe-') + chave + (pdf ? '.pdf' : '.xml'),
+          fileType: pdf ? file.Type.PDF : file.Type.XMLDOC,
           contents: r.corpo
         }),
         isInline: false
@@ -287,7 +295,14 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    /** Mesma pasta do rastro de payload — parâmetro de empresa, não de deployment. */
+    /**
+     * A pasta do rastro, igual ao `fp_ue_simular`: parâmetro INTEGER de empresa.
+     *
+     * ⚠ São DOIS parâmetros para a mesma pasta, e não é descuido: id de parâmetro de script é
+     * global no NetSuite, então o Suitelet não pode reusar o `custscript_fp_pasta_payload` do
+     * User Event. Os dois precisam ser preenchidos em Preferências da Empresa, com o mesmo id de
+     * pasta. Em branco, o rastro NÃO é anexado e o log diz isso.
+     */
     function pastaDoAnexo() {
       return runtime.getCurrentScript().getParameter({ name: 'custscript_fp_pasta_doc' });
     }

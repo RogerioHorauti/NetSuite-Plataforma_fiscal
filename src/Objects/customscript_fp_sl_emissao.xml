@@ -15,7 +15,7 @@
       <defaultchecked>F</defaultchecked>
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
-      <description>Internal id da pasta do File Cabinet onde o XML autorizado e gravado antes de ser anexado a transacao. Numero, nao lista. EM BRANCO NAO ANEXA, e o log avisa: a chave e o protocolo ja estao na transacao e a URL no customrecord_fp_doc, entao a falta do anexo nao perde a autorizacao.</description>
+      <description>Internal id da pasta do File Cabinet onde o payload e o retorno sao gravados antes de serem anexados a transacao. Numero, nao lista: file.create espera o id da pasta, e o tipo de registro de pasta nao e o mesmo espaco de numeracao dos ids de pasta. EM BRANCO NAO ANEXA, e o log avisa — espalhar arquivo em pasta que ninguem escolheu e pior que nao anexar.</description>
       <displayheight></displayheight>
       <displaytype>NORMAL</displaytype>
       <displaywidth></displaywidth>
@@ -24,7 +24,7 @@
       <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
-      <label>Pasta do XML</label>
+      <label>Pasta do Payload</label>
       <linktext></linktext>
       <maxvalue></maxvalue>
       <minvalue></minvalue>
