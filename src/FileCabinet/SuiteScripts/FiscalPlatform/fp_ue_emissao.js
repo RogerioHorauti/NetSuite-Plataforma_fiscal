@@ -87,8 +87,8 @@ define(['N/ui/serverWidget', 'N/url', 'N/runtime', 'N/log', './fp_fields'],
      * LINK, NÃO BOTÃO.
      *
      * Botão é para ação; baixar um arquivo é navegação, e um terceiro botão na barra só engorda a
-     * fileira. Como campo URL ele fica na subaba fiscal, ao lado da chave e do protocolo — que é
-     * onde alguém procura o XML.
+     * fileira. Aqui ele fica na subaba fiscal, ao lado da chave e do protocolo — que é onde
+     * alguém procura o XML.
      *
      * Exige chave: é por ela que a plataforma encontra o documento.
      */
@@ -99,16 +99,19 @@ define(['N/ui/serverWidget', 'N/url', 'N/runtime', 'N/log', './fp_fields'],
         : '';
       if (!chave) return;
 
-      var campo = form.addField({
+      var destino = endereco(scriptContext, id, 'xml');
+      if (!destino) return;
+
+      // ⚠ `FieldType.URL` NÃO, e a troca é medida: com o endereço RELATIVO que o `resolveScript`
+      // devolve, o campo URL derrubava a renderização da transação inteira com "An unexpected
+      // error has occurred". `INLINEHTML` é uma âncora e pronto — sem regra de formatação de URL
+      // do NetSuite no meio.
+      form.addField({
         id: 'custpage_fp_xml',
-        type: serverWidget.FieldType.URL,
+        type: serverWidget.FieldType.INLINEHTML,
         label: 'XML',
         container: SUBABA
-      });
-
-      campo.linkText = 'Baixar XML';
-      campo.updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
-      campo.defaultValue = endereco(scriptContext, id, 'xml');
+      }).defaultValue = '<a href="' + destino + '">Baixar XML</a>';
     }
 
     /**
