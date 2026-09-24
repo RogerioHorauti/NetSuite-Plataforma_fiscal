@@ -196,6 +196,11 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
     return resolver('reboque', chave);
   }
 
+  /** Campo da sublista de pagamentos. */
+  function idPagamento(chave) {
+    return resolver('pagamento', chave);
+  }
+
   /** Campo da sublista de volumes. */
   function idVolume(chave) {
     return resolver('volume', chave);
@@ -396,6 +401,7 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
     idLocation: idLocation,
     chaves: chaves,
     idReboque: idReboque,
+    idPagamento: idPagamento,
     idVolume: idVolume,
     idCliente: idCliente,
     idPais: idPais,

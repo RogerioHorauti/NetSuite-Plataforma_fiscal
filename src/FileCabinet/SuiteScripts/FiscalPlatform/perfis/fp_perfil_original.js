@@ -146,6 +146,27 @@ define([], function () {
       "CPAIS": "custrecord_fp_pais_cpais"
     },
 
+    "pagamento": {
+      "_nota": [
+        "Sublista customrecord_fp_pagamento (grupo YA, detPag repetivel). Cartao e dinheiro na",
+        "MESMA nota sao duas linhas -- e por isso que nao cabe em campo de corpo.",
+        "",
+        "FORMA e VALOR sao obrigatorios no leiaute. DESCRICAO vira obrigatoria quando a forma e",
+        "99 (Outros): sem ela a rejeicao e a 441. TPINTEGRA e obrigatorio quando a forma e cartao",
+        "de credito (03) ou debito (04)."
+      ],
+      "SUBLIST": "recmachcustrecord_fp_pag_transacao",
+      "TRANSACAO": "custrecord_fp_pag_transacao",
+      "FORMA": "custrecord_fp_pag_forma",
+      "VALOR": "custrecord_fp_pag_valor",
+      "DESCRICAO": "custrecord_fp_pag_descricao",
+      "IND_PAG": "custrecord_fp_pag_indpag",
+      "TP_INTEGRA": "custrecord_fp_pag_tpintegra",
+      "CNPJ_CREDENCIADORA": "custrecord_fp_pag_cnpj_cred",
+      "TBAND": "custrecord_fp_pag_tband",
+      "CAUT": "custrecord_fp_pag_caut"
+    },
+
     "reboque": {
       "_nota": "Sublista customrecord_fp_reboque, na subaba Transporte. Ate 5, omitidos em interestadual.",
       "SUBLIST": "recmachcustrecord_fp_reb_transacao",
@@ -241,6 +262,7 @@ define([], function () {
       "NATUREZA_OPERACAO": "customrecord_fp_natureza_operacao",
       "REBOQUE": "customrecord_fp_reboque",
       "VOLUME": "customrecord_fp_volume",
+      "PAGAMENTO": "customrecord_fp_pagamento",
       "PAIS": "customrecord_fp_pais"
     },
   

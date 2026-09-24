@@ -1,0 +1,10 @@
+<customlist scriptid="customlist_fp_ind_pag">
+  <description>indPag do grupo YA: a vista ou a prazo. Opcional no leiaute.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Indicador de Pagamento</name>
+  <customvalues>
+    <customvalue scriptid="val_indpag_0"><isinactive>F</isinactive><value>0 - A vista</value></customvalue>
+    <customvalue scriptid="val_indpag_1"><isinactive>F</isinactive><value>1 - A prazo</value></customvalue>
+  </customvalues>
+</customlist>

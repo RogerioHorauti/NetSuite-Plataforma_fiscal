@@ -1,0 +1,10 @@
+<customlist scriptid="customlist_fp_tp_integra">
+  <description>tpIntegra do grupo card. OBRIGATORIO quando a forma e cartao de credito (03) ou debito (04).</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Integracao do Cartao</name>
+  <customvalues>
+    <customvalue scriptid="val_tpintegra_1"><isinactive>F</isinactive><value>1 - Integrado, TEF ou POS</value></customvalue>
+    <customvalue scriptid="val_tpintegra_2"><isinactive>F</isinactive><value>2 - Nao integrado</value></customvalue>
+  </customvalues>
+</customlist>

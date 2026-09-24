@@ -153,6 +153,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var transporte = montarTransporte(newRecord);
       if (transporte) payload.transporte = transporte;
 
+      var pagamento = montarPagamentos(newRecord);
+      if (pagamento.length) payload.pagamento = pagamento;
+
       var fisco = valorTexto(newRecord, fpFields.id('INFADIC_FISCO'));
       if (fisco) payload.infAdicFisco = fisco;
 
@@ -276,6 +279,90 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       }
 
       return Object.keys(dest).length ? dest : null;
+    }
+
+    /**
+     * O GRUPO YA — formas de pagamento.
+     *
+     * Repetível de propósito: cartão e dinheiro na mesma nota são duas linhas. `forma` e `valor`
+     * são obrigatórios no leiaute, então linha sem os dois não vira `detPag` — mandá-la seria
+     * trocar uma linha em branco na tela por uma rejeição depois do número reservado.
+     *
+     * O grupo `card` — integração, credenciadora, bandeira, autorização — só vai quando a forma é
+     * cartão. Em dinheiro ele não tem sentido, e o leiaute o recusa.
+     *
+     * ⚠ A SOMA NÃO É CONFERIDA AQUI. O total das formas tem de fechar com o total da nota, e quem
+     * confere é a SEFAZ. Somar no ERP seria recalcular para "conferir" — e se divergir, o certo é
+     * o motor, por definição de fronteira.
+     */
+    function montarPagamentos(newRecord) {
+      var sublist = fpFields.idPagamento('SUBLIST');
+      if (!sublist) return [];
+
+      var out = [];
+      var total = contarSublist(newRecord, sublist);
+
+      for (var i = 0; i < total; i++) {
+        var forma = codigoDaLista(textoDeSublist(newRecord, sublist, fpFields.idPagamento('FORMA'), i));
+        var valor = numero(valorDeSublist(newRecord, sublist, fpFields.idPagamento('VALOR'), i));
+
+        if (!forma) continue;
+
+        var pag = { forma: forma, valor: valor };
+
+        var descricao = texto(valorDeSublist(newRecord, sublist, fpFields.idPagamento('DESCRICAO'), i));
+        if (descricao) pag.descricao = descricao;
+
+        // A descrição é OBRIGATÓRIA em "99 - Outros": sem ela a SEFAZ rejeita com o motivo 441, e
+        // a rejeição chega depois do número reservado. Avisar aqui custa um log.
+        if (forma === '99' && !descricao) {
+          log.audit('fp_md_map_simular.montarPagamentos',
+            'forma 99 (Outros) na linha ' + (i + 1) + ' SEM descricao. A SEFAZ rejeita com o ' +
+            'motivo 441 -- o "99" existe para o que a tabela nao nomeia, e o nome vai na descricao.');
+        }
+
+        var indPag = codigoDaLista(textoDeSublist(newRecord, sublist, fpFields.idPagamento('IND_PAG'), i));
+        if (indPag) pag.indPag = indPag;
+
+        if (forma === '03' || forma === '04') acrescentarCartao(newRecord, sublist, i, pag);
+
+        out.push(pag);
+      }
+      return out;
+    }
+
+    /** Grupo `card`: só existe em cartão de crédito (03) e débito (04). */
+    function acrescentarCartao(newRecord, sublist, i, pag) {
+      var tpIntegra = codigoDaLista(textoDeSublist(newRecord, sublist, fpFields.idPagamento('TP_INTEGRA'), i));
+      if (tpIntegra) {
+        pag.tpIntegra = tpIntegra;
+      } else {
+        log.audit('fp_md_map_simular.montarPagamentos',
+          'pagamento em cartao na linha ' + (i + 1) + ' sem a integracao (tpIntegra), que o ' +
+          'leiaute exige para as formas 03 e 04.');
+      }
+
+      var cnpj = digitos(valorDeSublist(newRecord, sublist, fpFields.idPagamento('CNPJ_CREDENCIADORA'), i));
+      if (cnpj) pag.cnpjCredenciadora = cnpj;
+
+      var tBand = texto(valorDeSublist(newRecord, sublist, fpFields.idPagamento('TBAND'), i));
+      if (tBand) pag.tBand = tBand;
+
+      var cAut = texto(valorDeSublist(newRecord, sublist, fpFields.idPagamento('CAUT'), i));
+      if (cAut) pag.cAut = cAut;
+    }
+
+    /**
+     * O TEXTO de um campo List/Record do sublist, que é de onde o código sai.
+     *
+     * `getSublistValue` num SELECT devolve o internal id do valor da lista, não o código — e é o
+     * código que o motor conhece. `getSublistText` é o par certo aqui; o motivo de ele estar
+     * proibido no resto do módulo é o sublist `item`, em que ele devolve `undefined` sem erro.
+     * Em sublist de custom record ele responde.
+     */
+    function textoDeSublist(newRecord, sublist, campo, linha) {
+      if (!campo) return '';
+      return newRecord.getSublistText({ sublistId: sublist, fieldId: campo, line: linha }) || '';
     }
 
     /**

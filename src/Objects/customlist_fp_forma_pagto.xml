@@ -1,0 +1,24 @@
+<customlist scriptid="customlist_fp_forma_pagto">
+  <description>tPag do grupo YA da NF-e, Tabela do MOC. O CODIGO abre o valor e e o que vai no payload -- o DTO valida com IsIn, entao valor fora da tabela e recusa. 99 existe para o que a tabela nao nomeia, e nele a descricao passa a ser OBRIGATORIA (rejeicao 441 sem ela).</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Forma de Pagamento</name>
+  <customvalues>
+    <customvalue scriptid="val_tpag_01"><isinactive>F</isinactive><value>01 - Dinheiro</value></customvalue>
+    <customvalue scriptid="val_tpag_02"><isinactive>F</isinactive><value>02 - Cheque</value></customvalue>
+    <customvalue scriptid="val_tpag_03"><isinactive>F</isinactive><value>03 - Cartao de credito</value></customvalue>
+    <customvalue scriptid="val_tpag_04"><isinactive>F</isinactive><value>04 - Cartao de debito</value></customvalue>
+    <customvalue scriptid="val_tpag_05"><isinactive>F</isinactive><value>05 - Credito da loja</value></customvalue>
+    <customvalue scriptid="val_tpag_10"><isinactive>F</isinactive><value>10 - Vale alimentacao</value></customvalue>
+    <customvalue scriptid="val_tpag_11"><isinactive>F</isinactive><value>11 - Vale refeicao</value></customvalue>
+    <customvalue scriptid="val_tpag_12"><isinactive>F</isinactive><value>12 - Vale presente</value></customvalue>
+    <customvalue scriptid="val_tpag_13"><isinactive>F</isinactive><value>13 - Vale combustivel</value></customvalue>
+    <customvalue scriptid="val_tpag_15"><isinactive>F</isinactive><value>15 - Boleto bancario</value></customvalue>
+    <customvalue scriptid="val_tpag_16"><isinactive>F</isinactive><value>16 - Deposito bancario</value></customvalue>
+    <customvalue scriptid="val_tpag_17"><isinactive>F</isinactive><value>17 - PIX dinamico</value></customvalue>
+    <customvalue scriptid="val_tpag_18"><isinactive>F</isinactive><value>18 - Transferencia bancaria, PIX estatico ou TED</value></customvalue>
+    <customvalue scriptid="val_tpag_19"><isinactive>F</isinactive><value>19 - Carteira digital</value></customvalue>
+    <customvalue scriptid="val_tpag_90"><isinactive>F</isinactive><value>90 - Sem pagamento</value></customvalue>
+    <customvalue scriptid="val_tpag_99"><isinactive>F</isinactive><value>99 - Outros</value></customvalue>
+  </customvalues>
+</customlist>
