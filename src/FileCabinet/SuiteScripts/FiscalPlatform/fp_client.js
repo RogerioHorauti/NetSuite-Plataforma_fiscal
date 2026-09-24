@@ -875,37 +875,20 @@ define([
   }
 
   /**
-   * Grava a chamada no `customrecord_fp_log`.
+   * A CHAMADA VAI PARA O LOG DE EXECUÇÃO, não para um custom record.
    *
-   * **O PAYLOAD ENVIADO VAI JUNTO DO RETORNO, SEMPRE.** Sem ele, "o motor errou" e "eu mandei
-   * errado" são indistinguíveis — e a segunda é a hipótese mais frequente.
+   * Havia um `customrecord_fp_log` com oito campos gravando endpoint, método, duração, HTTP,
+   * payload e resposta de CADA chamada. Ele foi removido: era uma tabela que cresce sem limite
+   * para guardar o que o log de execução do NetSuite já guarda, e o payload de verdade — o que
+   * interessa conferir — está anexado à própria transação.
    *
-   * **OS HEADERS NÃO ENTRAM.** Nem o `Authorization`, nem "só o começo dele". Log de payload não
-   * carrega credencial, e um Bearer em log é um Bearer vazado.
-   *
-   * Falha ao gravar log **não derruba a chamada**: perder o rastro é ruim, perder a emissão é pior.
+   * Aqui fica só a linha de auditoria. Payload e resposta NÃO entram nela: nota de centenas de
+   * linhas encheria o log e o dado útil está no anexo.
    */
   function registrar(metodo, url, corpo, code, resposta, duracao, opcoes) {
-    var tipo = fpFields.registro('LOG');
-    if (!tipo) return;
-
-    var r = record.create({ type: tipo, isDynamic: false });
-    r.setValue({ fieldId: fpFields.idLog('ENDPOINT'), value: String(url).substring(0, 300) });
-    r.setValue({ fieldId: fpFields.idLog('METODO'), value: metodo });
-    r.setValue({ fieldId: fpFields.idLog('DURACAO'), value: duracao });
-    if (code !== null && code !== undefined) {
-      r.setValue({ fieldId: fpFields.idLog('HTTP'), value: code });
-    }
-    if (corpo) r.setValue({ fieldId: fpFields.idLog('PAYLOAD'), value: corpo });
-    if (resposta) r.setValue({ fieldId: fpFields.idLog('RESPOSTA'), value: String(resposta) });
-    if (opcoes && opcoes.corrId) {
-      r.setValue({ fieldId: fpFields.idLog('CORRID'), value: opcoes.corrId });
-    }
-    if (opcoes && opcoes.transacao) {
-      r.setValue({ fieldId: fpFields.idLog('TRANSACAO'), value: opcoes.transacao });
-    }
-    r.save({ ignoreMandatoryFields: true });
-  
+    log.audit('fp_client', metodo + ' ' + url + ' → ' + code + ' em ' + duracao + 'ms' +
+      (opcoes && opcoes.corrId ? ' · corrId ' + opcoes.corrId : '') +
+      (opcoes && opcoes.transacao ? ' · transação ' + opcoes.transacao : ''));
   }
 
   return {

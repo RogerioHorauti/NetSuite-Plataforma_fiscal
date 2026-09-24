@@ -9,14 +9,19 @@
  *
  * ── A ORDEM É A REGRA, e ela não é estética ────────────────────────────────────────────────────
  *
- * `aplicar` grava em três etapas, nesta sequência: campos da transação, linha do
- * `customrecord_fp_doc`, payload e retorno. É a invariante do projeto — *persistir cada
- * avanço antes de prosseguir*. Quando a emissão volta, o número JÁ FOI GASTO e a nota JÁ ESTÁ na
- * SEFAZ; autorização não pode se perder porque a gravação seguinte falhou.
+ * `aplicar` grava em duas etapas, nesta ordem: campos da transação, depois payload e retorno. É a
+ * invariante do projeto — *persistir cada avanço antes de prosseguir*. Quando a emissão volta, o
+ * número JÁ FOI GASTO e a nota JÁ ESTÁ na SEFAZ; autorização não pode se perder porque a gravação
+ * seguinte falhou.
  *
- * Etapa que falha interrompe as seguintes — é um `try` só, no Suitelet que chamou — mas o que já
- * gravou fica gravado. Logo a ordem é por DEPENDÊNCIA: o que não depende de nada vem primeiro, e
- * o que depende da rede vem por último.
+ * Etapa que falha interrompe a seguinte — é um `try` só, no Suitelet que chamou — mas o que já
+ * gravou fica gravado. Por isso o que identifica o documento vem primeiro.
+ *
+ * ── NÃO HÁ REGISTRO DE HISTÓRICO ───────────────────────────────────────────────────────────────
+ *
+ * Havia um `customrecord_fp_doc` com quatorze campos, e eles repetiam o que a transação já mostra.
+ * Foi removido: o desfecho atual está nos campos da transação, e a série inteira — o que se mandou
+ * e o que voltou, em cada tentativa — está nos anexos, que é onde a prova é útil.
  *
  * ⚠ NADA AQUI CHAMA A REDE, e é de propósito. O XML mora na plataforma e é baixado sob demanda,
  * pelo botão, direto para a máquina de quem pediu — não passa pelo File Cabinet. Enquanto o
@@ -35,8 +40,8 @@
  * documento nos outros endpoints. Guardar o UUID seria carregar um id que o ERP não gerou, não
  * valida e não sabe reconstruir.
  */
-define(['N/record', 'N/search', 'N/file', 'N/url', 'N/log', './fp_fields'],
-  function (record, search, file, url, log, fpFields) {
+define(['N/record', 'N/file', 'N/url', 'N/log', './fp_fields'],
+  function (record, file, url, log, fpFields) {
 
     /**
      * Reflete o documento emitido na transação.
@@ -52,13 +57,12 @@ define(['N/record', 'N/search', 'N/file', 'N/url', 'N/log', './fp_fields'],
       if (!doc) return null;
 
       gravarNaTransacao(tipo, id, doc);
-      var linha = gravarDoc(tipo, id, doc);
 
       var arquivos = anexarRastro(tipo, id, doc, opcoes);
 
       log.audit('fp_persist.aplicar',
         'documento ' + (doc.status || '?') + ' · chave ' + (doc.chaveAcesso || '(sem chave)') +
-        ' · doc ' + linha + ' · ' + arquivos.length + ' arquivo(s)');
+        ' · ' + arquivos.length + ' arquivo(s)');
 
       return { chave: texto(doc.chaveAcesso), status: texto(doc.status), arquivos: arquivos };
     }
@@ -97,7 +101,7 @@ define(['N/record', 'N/search', 'N/file', 'N/url', 'N/log', './fp_fields'],
       if (!temChave(valores)) {
         log.audit('fp_persist.gravarNaTransacao',
           'nenhum campo de documento resolve no perfil ativo — o retorno não foi refletido na ' +
-          'transação. A linha do customrecord_fp_doc ainda guarda tudo.');
+          'transação — confira o perfil ativo. O payload e o retorno ainda vão para o anexo.');
         return;
       }
 
@@ -126,74 +130,7 @@ define(['N/record', 'N/search', 'N/file', 'N/url', 'N/log', './fp_fields'],
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 2. customrecord_fp_doc — o histórico
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * UMA LINHA POR DOCUMENTO, não por tentativa de clique.
-     *
-     * A transação mostra o desfecho ATUAL; aqui fica a série inteira — a nota rejeitada, a
-     * inutilização do número preso nela, a nota que a substituiu. Por isso o reenvio do mesmo
-     * `idExterno`, que a plataforma responde com o documento anterior, ATUALIZA a linha em vez de
-     * criar outra: seria a mesma nota duas vezes.
-     *
-     * A busca é pela CHAVE quando ela existe, e pelo `idExterno` enquanto não existe — nota
-     * rejeitada não tem chave, e é justamente ela que a próxima tentativa precisa reencontrar.
-     */
-    function gravarDoc(tipo, idTransacao, doc) {
-      var C = camposDoc();
-      var registro = fpFields.registro('DOC');
-      if (!registro || !C.IDEXTERNO) {
-        log.audit('fp_persist.gravarDoc',
-          'customrecord_fp_doc não resolve no perfil ativo — o histórico do documento não foi ' +
-          'gravado. Os campos da transação já têm o desfecho.');
-        return null;
-      }
-
-      var idExterno = String(idTransacao);
-      var existente = acharDoc(registro, C, idExterno, texto(doc.chaveAcesso));
-
-      var rec = existente
-        ? record.load({ type: registro, id: existente })
-        : record.create({ type: registro });
-
-      def(rec, C.TRANSACAO, idTransacao);
-      def(rec, C.IDEXTERNO, idExterno);
-      def(rec, C.TIPO, doc.tipoDocumento || doc.modelo);
-      def(rec, C.SERIE, doc.serie);
-      def(rec, C.NUMERO, doc.numero);
-      def(rec, C.CHAVE, doc.chaveAcesso);
-      def(rec, C.STATUS, doc.status);
-      def(rec, C.CSTAT, doc.cStat);
-      def(rec, C.XMOTIVO, doc.xMotivo);
-      def(rec, C.PROTOCOLO, doc.nProt);
-
-      // ⚠ XML e DANFE são campos DOCUMENT e ficam VAZIOS: eles esperam o internal id de um
-      // arquivo do File Cabinet, e gravar a URL neles devolve INVALID_FLD_VALUE (medido). O XML
-      // mora na plataforma e é baixado sob demanda, direto para a máquina de quem pediu.
-
-      if (!existente) def(rec, C.TENTATIVA, 1);
-
-      return rec.save({ enableSourcing: false, ignoreMandatoryFields: true });
-    }
-
-    function acharDoc(registro, C, idExterno, chave) {
-      var filtro = chave && C.CHAVE
-        ? [[C.CHAVE, 'is', chave]]
-        : [[C.IDEXTERNO, 'is', idExterno]];
-
-      var achado = null;
-      search.create({ type: registro, filters: filtro, columns: ['internalid'] })
-        .run()
-        .each(function (linha) {
-          achado = linha.id;
-          return false;
-        });
-      return achado;
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // 3. rastro — payload e retorno
+    // 2. rastro — payload e retorno
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
@@ -243,33 +180,12 @@ define(['N/record', 'N/search', 'N/file', 'N/url', 'N/log', './fp_fields'],
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    function camposDoc() {
-      return {
-        TRANSACAO: fpFields.idDoc('TRANSACAO'),
-        IDEXTERNO: fpFields.idDoc('IDEXTERNO'),
-        TIPO: fpFields.idDoc('TIPO'),
-        SERIE: fpFields.idDoc('SERIE'),
-        NUMERO: fpFields.idDoc('NUMERO'),
-        CHAVE: fpFields.idDoc('CHAVE'),
-        STATUS: fpFields.idDoc('STATUS'),
-        CSTAT: fpFields.idDoc('CSTAT'),
-        XMOTIVO: fpFields.idDoc('XMOTIVO'),
-        PROTOCOLO: fpFields.idDoc('PROTOCOLO'),
-        TENTATIVA: fpFields.idDoc('TENTATIVA')
-      };
-    }
-
     /** Campo que o perfil não mapeia não entra no `submitFields` — mandar `undefined` limparia. */
     function por(valores, chave, valor) {
       var campo = fpFields.id(chave);
       if (campo && valor !== null && valor !== undefined && valor !== '') {
         valores[campo] = String(valor);
       }
-    }
-
-    function def(rec, campo, valor) {
-      if (!campo || valor === null || valor === undefined || valor === '') return;
-      rec.setValue({ fieldId: campo, value: valor });
     }
 
     function temChave(valores) {
@@ -286,7 +202,6 @@ define(['N/record', 'N/search', 'N/file', 'N/url', 'N/log', './fp_fields'],
     return {
       aplicar: aplicar,
       gravarNaTransacao: gravarNaTransacao,
-      gravarDoc: gravarDoc,
       anexarRastro: anexarRastro
     };
   });
