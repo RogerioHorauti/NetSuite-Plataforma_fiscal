@@ -14,11 +14,14 @@
  *
  * O `/simular` é o contrário: roda no `beforeSubmit` porque é de graça e não consome nada.
  *
- * ── AS DUAS PASSADAS ───────────────────────────────────────────────────────────────────────────
+ * ── ENDPOINT, NÃO TELA ─────────────────────────────────────────────────────────────────────────
  *
- * `GET` monta a tela de confirmação, e ela mostra o que vai ser emitido. `POST` emite. Não existe
- * caminho que emita em `GET`: link visitado de novo, botão "voltar" do navegador e pré-carregador
- * de navegador são todos `GET`, e qualquer um deles gastaria número.
+ * Responde **JSON**, e só a `POST`. Quem desenha é o botão da transação, que chama por
+ * `https.post.promise` e pinta o resultado sem sair do registro — página montada aqui voltaria
+ * como um HTML inteiro de formulário do NetSuite dentro do `responseText`.
+ *
+ * `GET` não emite, e não é descuido: link revisitado, botão "voltar" do navegador e pré-carregador
+ * são todos `GET`, e qualquer um deles gastaria número.
  *
  * ── IDEMPOTÊNCIA, E POR QUE REENVIAR É SEGURO ──────────────────────────────────────────────────
  *
@@ -29,40 +32,41 @@
  *
  * ── SEM `try/catch` NAS AUXILIARES ─────────────────────────────────────────────────────────────
  *
- * Um `try` só, no `onRequest`, que é o ponto de entrada. O erro vira texto na própria tela — aqui
- * não há banner de transação para pintar, e a tela do Suitelet é o lugar onde o usuário está
- * olhando.
+ * Um `try` só, no `onRequest`, que é o ponto de entrada. O erro volta como `{ok:false, mensagem}`
+ * e o botão o pinta na transação — aqui não há banner para pintar, e quem está olhando é a tela
+ * de onde o usuário clicou.
  */
-define(['N/ui/serverWidget', 'N/record', 'N/redirect', 'N/runtime', 'N/log',
+define(['N/record', 'N/runtime', 'N/log',
   './fp_fields', './fp_client', './fp_md_map_simular', './fp_persist'],
-  function (serverWidget, record, redirect, runtime, log, fpFields, fpClient, fpMap, fpPersist) {
+  function (record, runtime, log, fpFields, fpClient, fpMap, fpPersist) {
 
     var ACOES = { EMITIR: 'emitir', CONSULTAR: 'consultar', RECONCILIAR: 'reconciliar' };
 
     function onRequest(contexto) {
       try {
         var p = contexto.request.parameters;
-        var tipo = p.tipo;
-        var id = p.id;
-        var acao = p.acao || ACOES.EMITIR;
 
-        if (!tipo || !id) {
-          return escrever(contexto, pagina('Faltou parâmetro',
-            'A tela precisa de <b>tipo</b> e <b>id</b> da transação. Abra pelo botão da transação.'));
+        // SÓ POST. Emitir por GET não existe de propósito: link revisitado, botão "voltar" do
+        // navegador e pré-carregador são todos GET, e qualquer um deles gastaria número.
+        if (contexto.request.method !== 'POST') {
+          return json(contexto, {
+            ok: false,
+            titulo: 'Use o botão da transação',
+            mensagem: 'Esta tela só responde a POST.'
+          });
         }
 
-        if (contexto.request.method === 'GET') {
-          return contexto.response.writePage(telaDeConfirmacao(tipo, id, acao));
+        if (!p.tipo || !p.id) {
+          return json(contexto, {
+            ok: false,
+            titulo: 'Faltou parâmetro',
+            mensagem: 'A chamada precisa de "tipo" e "id" da transação.'
+          });
         }
 
-        return json(contexto, executar(tipo, id, acao));
+        return json(contexto, executar(p.tipo, p.id, p.acao || ACOES.EMITIR));
       } catch (e) {
         log.error('fp_sl_emissao', { name: e.name, message: e.message, stack: e.stack });
-
-        if (contexto.request.method === 'GET') {
-          return escrever(contexto, pagina('Não deu',
-            '<b>' + escapar(e.name || 'Erro') + '</b><br>' + escapar(e.message || String(e))));
-        }
         return json(contexto, {
           ok: false,
           titulo: e.name || 'Erro',
@@ -70,90 +74,6 @@ define(['N/ui/serverWidget', 'N/record', 'N/redirect', 'N/runtime', 'N/log',
             ' · Nada foi emitido. O erro inteiro está no log de execução do script.'
         });
       }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // GET — confirmação
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * A tela mostra o que o motor vai receber, não um resumo bonito.
-     *
-     * Quem confirma precisa ver o CNPJ da filial, a série e o destinatário — é aí que erro de
-     * cadastro aparece ANTES de gastar número, que é o único momento em que sai barato.
-     */
-    function telaDeConfirmacao(tipo, id, acao) {
-      var form = serverWidget.createForm({ title: titulo(acao) });
-
-      var rec = record.load({ type: tipo, id: id });
-      var chave = valor(rec, fpFields.id('DOC_CHAVE'));
-
-      esconder(form, [
-        { id: 'custpage_tipo', valor: tipo },
-        { id: 'custpage_id', valor: String(id) },
-        { id: 'custpage_acao', valor: acao }
-      ]);
-
-      if (acao === ACOES.EMITIR) {
-        var payload = fpMap.montarEmissao(rec);
-
-        if (!payload) {
-          html(form, 'custpage_aviso',
-            '<b>Esta transação ainda não pode ser emitida.</b><p>Falta série na Location, tipo de ' +
-            'documento na transação, ou dado de identidade do destinatário. O motivo exato está no ' +
-            'log de execução do <i>fp_md_map_simular</i>.</p>');
-          return form;
-        }
-
-        if (chave) {
-          html(form, 'custpage_jaemitida',
-            '<b>Esta transação já tem chave de acesso.</b><p><code>' + escapar(chave) + '</code></p>' +
-            '<p>Emitir de novo NÃO gera número novo: o <code>idExterno</code> é o id desta ' +
-            'transação, e a plataforma devolve o documento que já existe. Use <i>Consultar</i> se ' +
-            'o que você quer é o desfecho atualizado.</p>');
-        }
-
-        html(form, 'custpage_resumo', resumo(payload));
-        form.addSubmitButton({ label: chave ? 'Reenviar mesmo assim' : 'Emitir agora' });
-      } else {
-        html(form, 'custpage_resumo',
-          '<b>' + escapar(titulo(acao)) + '</b><p>Documento: <code>' +
-          escapar(chave || ('idExterno ' + id)) + '</code></p>' +
-          '<p>Esta ação <b>não</b> consome numeração.</p>');
-        form.addSubmitButton({ label: 'Confirmar' });
-      }
-
-      form.addButton({ id: 'custpage_voltar', label: 'Voltar', functionName: 'history.back()' });
-      return form;
-    }
-
-    /**
-     * O resumo é derivado do PAYLOAD, não relido da transação.
-     *
-     * Ler a transação de novo para a tela mostraria uma coisa e mandaria outra quando o mapeador
-     * descartasse um campo — e é justamente o descarte silencioso que a tela existe para expor.
-     */
-    function resumo(payload) {
-      var d = payload.destinatario || {};
-      var linhas = payload.linhas || [];
-      var total = 0;
-      for (var i = 0; i < linhas.length; i++) total += Number(linhas[i].valorTotal || 0);
-
-      return '<table style="border-spacing:0 4px">' +
-        tr('Filial (CNPJ)', payload.cnpjEmpresa) +
-        tr('Série', payload.serie) +
-        tr('Tipo de documento', payload.tipoDocumento) +
-        tr('idExterno', payload.idExterno) +
-        tr('Natureza declarada', payload.naturezaOperacaoId || '(o motor resolve pelo CFOP)') +
-        tr('Destinatário', d.nome) +
-        tr('CNPJ/CPF', d.cnpjCpf) +
-        tr('IE / indIeDest', (d.ie || '—') + ' / ' + (d.indIeDest || '—')) +
-        tr('Município / UF', (d.municipio || '—') + ' / ' + (d.uf || '—')) +
-        tr('Linhas', String(linhas.length)) +
-        tr('Total dos produtos', total.toFixed(2)) +
-        '</table>' +
-        '<p style="margin-top:12px"><b>Emitir reserva o número, assina e transmite à SEFAZ na ' +
-        'mesma chamada.</b> Quando a resposta voltar, o número já foi gasto.</p>';
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -172,6 +92,8 @@ define(['N/ui/serverWidget', 'N/record', 'N/redirect', 'N/runtime', 'N/log',
       var subsidiaria = rec.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') });
       var opcoes = { subsidiaria: subsidiaria, transacao: id, pasta: pastaDoAnexo() };
 
+      // O payload viaja em `opcoes` para chegar à persistência: ele é gravado JUNTO do retorno,
+      // e é o que se confere quando o motor recusa.
       var resposta = acao === ACOES.EMITIR
         ? emitir(rec, id, opcoes)
         : consultarOuReconciliar(rec, id, acao, opcoes);
@@ -224,6 +146,8 @@ define(['N/ui/serverWidget', 'N/record', 'N/redirect', 'N/runtime', 'N/log',
       // nasce — nunca de tentativa, nunca de timestamp, ou a idempotência deixa de existir.
       if (!payload.idExterno) payload.idExterno = String(id);
 
+      opcoes.payload = payload;
+
       log.audit('fp_sl_emissao.emitir',
         'EMITINDO idExterno=' + payload.idExterno + ' série=' + payload.serie +
         ' tipo=' + payload.tipoDocumento + ' — consome numeração');
@@ -255,50 +179,12 @@ define(['N/ui/serverWidget', 'N/record', 'N/redirect', 'N/runtime', 'N/log',
       if (acao === ACOES.RECONCILIAR) return 'Reconciliar pela chave';
       return 'Emitir documento fiscal';
     }
-
-    function pagina(titulo, corpo) {
-      var form = serverWidget.createForm({ title: titulo });
-      html(form, 'custpage_corpo', corpo);
-      return form;
-    }
-
-    function escrever(contexto, form) {
-      contexto.response.writePage(form);
-    }
-
     function json(contexto, dado) {
       contexto.response.setHeader({ name: 'Content-Type', value: 'application/json' });
       contexto.response.write({ output: JSON.stringify(dado) });
     }
-
-    function html(form, id, conteudo) {
-      form.addField({ id: id, type: serverWidget.FieldType.INLINEHTML, label: ' ' })
-        .defaultValue = conteudo;
-    }
-
-    function esconder(form, campos) {
-      for (var i = 0; i < campos.length; i++) {
-        var c = form.addField({
-          id: campos[i].id, type: serverWidget.FieldType.TEXT, label: campos[i].id
-        });
-        c.updateDisplayType({ displayType: serverWidget.FieldDisplayType.HIDDEN });
-        c.defaultValue = campos[i].valor;
-      }
-    }
-
     function valor(rec, campo) {
       return campo ? (rec.getValue({ fieldId: campo }) || '') : '';
-    }
-
-    function tr(rotulo, v) {
-      return '<tr><td style="padding-right:16px;color:#666">' + escapar(rotulo) +
-        '</td><td><b>' + escapar(v === null || v === undefined || v === '' ? '—' : String(v)) +
-        '</b></td></tr>';
-    }
-
-    function escapar(s) {
-      return String(s === null || s === undefined ? '' : s)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     return { onRequest: onRequest };

@@ -35,11 +35,11 @@ define(['N/https'], function (https) {
    * @param {boolean} consome se a ação gasta numeração — só aí se pergunta
    */
   function acionar(url, rotulo, consome) {
-    if (consome && !window.confirm(
-      'Emitir reserva o número, assina e transmite à SEFAZ na mesma chamada.\n\n' +
-      'Quando a resposta voltar, o número já foi gasto. Continuar?')) {
-      return;
-    }
+    // if (consome && !window.confirm(
+    //   'Emitir reserva o número, assina e transmite à SEFAZ na mesma chamada.\n\n' +
+    //   'Quando a resposta voltar, o número já foi gasto. Continuar?')) {
+    //   return;
+    // }
 
     abrir(rotulo + '…', girando());
 

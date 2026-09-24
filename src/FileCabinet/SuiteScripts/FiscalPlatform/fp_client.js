@@ -85,10 +85,18 @@ define([
    * @param {Object} [opcoes] `{ subsidiaria, corrId, transacao }`
    * @returns {{ok: boolean, code: number, body: Object|string, durationMs: number}}
    */
-  function simularNota(payload, opcoes) {
-    // return chamar('POST', '/fiscal/simular-nota', payload, opcoes);
-    var inicio = new Date().getTime();
-    let corpoResposta = {
+  /**
+   * ⚠ RESPOSTA CHUMBADA, enquanto a plataforma não está no ar.
+   *
+   * É um retorno REAL de emissão autorizada, capturado da conta em 08/09/2026 — com `linhas[]`,
+   * `impostos[]`, perna, `geraLancamento`, chave, protocolo e `cStat 100`. Serve para exercitar a
+   * cadeia inteira sem rede: sublist de impostos, plug-in de GL, persistência e anexo.
+   *
+   * As duas chamadas de verdade estão logo abaixo, comentadas, e é só descomentar quando houver
+   * host HTTPS alcançável no `custrecord_fp_api_baseurl`.
+   */
+  function chumbado() {
+    return {
         "id": "ff8cfdfb-8f59-45c5-bf12-2f8b67105a43",
         "branchId": "e85db115-100c-48e6-88fd-b8543a702259",
         "companyId": "73b71ab1-39fc-40e0-90f3-526a8b430df1",
@@ -581,9 +589,12 @@ define([
         "pagamentos": [],
         "danfeUrl": "/api/v1/fiscal/emitir/ff8cfdfb-8f59-45c5-bf12-2f8b67105a43/danfe",
         "xmlUrl": "/api/v1/fiscal/emitir/ff8cfdfb-8f59-45c5-bf12-2f8b67105a43/xml"
-    }
-    var duracao = new Date().getTime() - inicio;
-    return { ok: true, code: 200, body: corpoResposta, durationMs: duracao }
+    };
+  }
+
+  function simularNota(payload, opcoes) {
+    // return chamar('POST', '/fiscal/simular-nota', payload, opcoes);
+    return { ok: true, code: 200, body: chumbado(), durationMs: 0 };
   }
 
   /**
@@ -594,7 +605,15 @@ define([
    * inclusive rejeitada. Timeout sem resposta se resolve por `reconciliar`, não reemitindo.
    */
   function emitir(payload, opcoes) {
-    return chamar('POST', '/fiscal/emitir', payload, opcoes);
+    // return chamar('POST', '/fiscal/emitir', payload, opcoes);
+    //
+    // CHUMBADO, mesma resposta do simular: ela veio de uma emissão autorizada de verdade, então
+    // traz chave, número, série, protocolo e cStat 100 — é o que a persistência e o botão
+    // precisam para serem exercitados. O payload ENVIADO continua sendo montado e gravado: é ele
+    // que se confere hoje, não a resposta.
+    log.audit('fp_client.emitir', 'RESPOSTA CHUMBADA — nada foi transmitido à SEFAZ. ' +
+      'idExterno=' + (payload && payload.idExterno));
+    return { ok: true, code: 200, body: chumbado(), durationMs: 0 };
   }
 
   /** `POST /transacoes/reclassificar`. Endereça o documento pela chave de acesso. */

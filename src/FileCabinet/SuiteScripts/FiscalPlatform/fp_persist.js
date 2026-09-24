@@ -49,6 +49,7 @@ define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields', './fp_client']
       gravarNaTransacao(tipo, id, doc);
       var linha = gravarDoc(tipo, id, doc);
       var arquivos = anexarArquivos(tipo, id, doc, opcoes);
+      arquivos = arquivos.concat(anexarRastro(tipo, id, doc, opcoes));
 
       log.audit('fp_persist.aplicar',
         'documento ' + (doc.status || '?') + ' · chave ' + (doc.chaveAcesso || '(sem chave)') +
@@ -211,6 +212,37 @@ define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields', './fp_client']
       return feitos;
     }
 
+    /**
+     * O PAYLOAD ENVIADO, junto do retorno. É a invariante do projeto, e o motivo é prático: sem o
+     * que foi mandado, "o motor errou" e "eu mandei errado" são indistinguíveis — e a segunda é a
+     * hipótese mais frequente. Guardar só a resposta deixa metade da prova.
+     *
+     * Nome fixo por transação, como o rastro da simulação: emitir de novo substitui em vez de
+     * acumular, e o que interessa é o último par.
+     */
+    function anexarRastro(tipo, id, doc, opcoes) {
+      if (!opcoes.pasta || !opcoes.payload) return [];
+
+      var base = 'FP-' + tipo + '-' + id + '-emissao-';
+      return [
+        gravarJson(base + 'payload.json', opcoes.payload, tipo, id, opcoes.pasta),
+        gravarJson(base + 'retorno.json', doc, tipo, id, opcoes.pasta)
+      ];
+    }
+
+    function gravarJson(nome, conteudo, tipo, id, pasta) {
+      var idArquivo = file.create({
+        name: nome,
+        fileType: file.Type.JSON,
+        contents: JSON.stringify(conteudo, null, 1),
+        folder: pasta,
+        isOnline: false
+      }).save();
+
+      anexar(idArquivo, tipo, id);
+      return nome;
+    }
+
     function anexar(idArquivo, tipo, id) {
       record.attach({
         record: { type: 'file', id: idArquivo },
@@ -266,6 +298,7 @@ define(['N/record', 'N/search', 'N/file', 'N/log', './fp_fields', './fp_client']
       aplicar: aplicar,
       gravarNaTransacao: gravarNaTransacao,
       gravarDoc: gravarDoc,
-      anexarArquivos: anexarArquivos
+      anexarArquivos: anexarArquivos,
+      anexarRastro: anexarRastro
     };
   });
