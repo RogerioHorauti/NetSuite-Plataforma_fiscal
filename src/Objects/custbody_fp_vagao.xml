@@ -56,5 +56,5 @@
   <sourcefrom></sourcefrom>
   <sourcelist></sourcelist>
   <storevalue>T</storevalue>
-  <subtab>[scriptid=custtab_fp_fiscal]</subtab>
+  <subtab>[scriptid=custtab_fp_transp]</subtab>
 </transactionbodycustomfield>

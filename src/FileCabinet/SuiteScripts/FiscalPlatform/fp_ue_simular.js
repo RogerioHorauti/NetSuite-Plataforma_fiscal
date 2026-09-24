@@ -362,16 +362,21 @@ define([
     log.debug('fp_ue_simular.organizarFormulario',
       'ancora=' + usada + ' campos=[' + declarados.join(', ') + ']');
 
-    // ⚠ NÃO SE MEXE MAIS NA SUBABA EM RUNTIME. Três tentativas, três telas brancas:
-    //   1. campo `FieldType.URL` com endereço relativo;
-    //   2. campo `INLINEHTML` com `container` apontando para a subaba;
-    //   3. `addFieldGroup` + âncora + `insertField` para dividir a subaba em seções.
+    // ⚠ ORGANIZAR A SUBABA EM RUNTIME NÃO É POSSÍVEL, e agora está medido em vez de suposto.
     //
-    // As três estouram na RENDERIZAÇÃO, depois que o `beforeLoad` retorna — por isso não caem no
-    // `try/catch` e não deixam linha no log: o sintoma é "An unexpected error has occurred" e nada
-    // mais. O que funciona nesta conta é o que o OBJETO declara: `<subtab>` no XML do campo.
+    // Três tentativas, três telas brancas: campo `FieldType.URL` com endereço relativo, campo
+    // `INLINEHTML` com `container`, e `addFieldGroup` + `insertField` para criar seções. Nenhuma
+    // caiu no `try/catch` — o formulário só é desenhado DEPOIS que o `beforeLoad` retorna, então o
+    // sintoma é "An unexpected error has occurred" sem uma linha no log.
     //
-    // Dividir a subaba em seções é cosmético, e cosmético não vale transação que não abre.
+    // A causa é documentada: **`insertField` só move campo criado pelo PRÓPRIO `beforeLoad`**, e
+    // **mover campo entre abas não é suportado**. Grupo de campos é outro container, então levar
+    // um `custbody_fp_*` — que nasce do objeto SDF — para dentro dele é exatamente a operação
+    // proibida. O `posicionarDepoisDaPrimeiraAncora` acima funciona porque reordena DENTRO da
+    // mesma aba, sem trocar de container.
+    //
+    // A organização vem do OBJETO: subabas ANINHADAS (`<parent>` no XML do subtab) e o `<subtab>`
+    // de cada campo. Quem monta é o NetSuite, e não quebra.
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

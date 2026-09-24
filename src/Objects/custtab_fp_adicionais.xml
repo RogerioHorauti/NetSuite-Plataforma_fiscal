@@ -1,0 +1,5 @@
+<subtab scriptid="custtab_fp_adicionais">
+  <parent>[scriptid=custtab_fp_fiscal]</parent>
+  <tabtype>TRANSACTION</tabtype>
+  <title>Informacoes Adicionais</title>
+</subtab>
