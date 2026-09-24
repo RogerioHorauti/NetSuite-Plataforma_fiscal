@@ -121,18 +121,11 @@ define([
   }
 
   function beforeLoad(scriptContext) {
-    try {
-      organizarFormulario(scriptContext);
-    } catch (e) {
-      log.error('fp_ue_simular.beforeLoad/organizar', { name: e.name, message: e.message });
-    }
+    organizarFormulario(scriptContext);
+  
 
-    try {
-      fpMsg.pintar(scriptContext);
-    } catch (e) {
-      // Falha ao PINTAR não pode impedir o registro de abrir.
-      log.error('fp_ue_simular.beforeLoad/pintar', { name: e.name, message: e.message });
-    }
+    fpMsg.pintar(scriptContext);
+  
   }
 
   /**
@@ -342,27 +335,18 @@ define([
   }
 
   function valor(registro, campo) {
-    try {
-      return registro.getValue({ fieldId: campo });
-    } catch (e) {
-      return null;
-    }
+    return registro.getValue({ fieldId: campo });
+  
   }
 
   function valorLinha(registro, campo, linha) {
-    try {
-      return registro.getSublistValue({ sublistId: 'item', fieldId: campo, line: linha });
-    } catch (e) {
-      return null;
-    }
+    return registro.getSublistValue({ sublistId: 'item', fieldId: campo, line: linha });
+  
   }
 
   function contarLinhas(registro) {
-    try {
-      return registro.getLineCount({ sublistId: 'item' });
-    } catch (e) {
-      return 0;
-    }
+    return registro.getLineCount({ sublistId: 'item' });
+  
   }
 
   /**
@@ -409,14 +393,11 @@ define([
   /** Guarda na sessão. Serializa aqui para o `afterSubmit` só precisar ler e gravar. */
   function guardarRastro(corrId, dados) {
     if (!corrId) return;
-    try {
-      runtime.getCurrentSession().set({
-        name: chaveRastro(corrId),
-        value: JSON.stringify(dados)
-      });
-    } catch (e) {
-      log.error('fp_ue_simular.guardarRastro', e.message || e);
-    }
+    runtime.getCurrentSession().set({
+      name: chaveRastro(corrId),
+      value: JSON.stringify(dados)
+    });
+  
   }
 
   /**
@@ -483,14 +464,11 @@ define([
 
     // Substituindo o arquivo, o id é o mesmo e ele já está anexado. Reanexar não pode derrubar
     // o afterSubmit de um save que já deu certo.
-    try {
-      record.attach({
-        record: { type: 'file', id: idArquivo },
-        to: { type: tipo, id: id }
-      });
-    } catch (e) {
-      log.debug('fp_ue_simular.anexar', nome + ' já anexado: ' + (e.message || e));
-    }
+    record.attach({
+      record: { type: 'file', id: idArquivo },
+      to: { type: tipo, id: id }
+    });
+  
 
     log.audit('fp_ue_simular.anexar', nome + ' (file ' + idArquivo + ')');
   }

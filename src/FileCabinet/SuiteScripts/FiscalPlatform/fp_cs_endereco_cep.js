@@ -77,6 +77,10 @@ define(['N/https', 'N/log'], function (https, log) {
   /**
    * Primeira API que responder com endereço utilizável ganha.
    *
+   * ⚠ ESTE `try` É FLUXO, NÃO ENGOLIMENTO, e é o único auxiliar do bundle que mantém um: ele não
+   * esconde erro, ele passa para a próxima API. Tirá-lo faria uma API fora do ar impedir as duas
+   * seguintes — que é justamente o que a cadeia existe para evitar.
+   *
    * Cada tentativa tem `try` próprio: API fora do ar não pode impedir a próxima, e nenhuma delas
    * pode derrubar o formulário. Sem resposta de ninguém, devolve `null` — e quem chama avisa.
    */
@@ -149,15 +153,9 @@ define(['N/https', 'N/log'], function (https, log) {
   /**
    * `ignoreFieldChange: true` em tudo, e não é detalhe: sem isso, gravar `state` dispara o
    * `fieldChanged` de novo e o formulário entra em cascata de eventos.
-   *
-   * Campo ausente neste formulário de endereço não derruba o preenchimento dos outros.
    */
   function grava(rec, campo, valor) {
-    try {
-      rec.setValue({ fieldId: campo, value: valor, ignoreFieldChange: true });
-    } catch (e) {
-      log.debug('fp_cs_endereco_cep.grava', campo + ': ' + (e.message || e));
-    }
+    rec.setValue({ fieldId: campo, value: valor, ignoreFieldChange: true });
   }
 
   function digitos(v) {

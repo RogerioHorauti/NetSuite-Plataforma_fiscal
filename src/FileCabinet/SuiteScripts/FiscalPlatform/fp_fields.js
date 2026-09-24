@@ -280,16 +280,8 @@ define(['N/search', 'N/runtime', 'N/log', './perfis/fp_perfil_original', './perf
     }
 
     var perfil;
-    try {
-      perfil = carregarModulo(escolhido);
-    } catch (e) {
-      // Perfil configurado que não carrega NÃO derruba nada: cai no original e grita no log.
-      // O contrário — abortar — deixaria a conta inteira sem simulação por um JSON malformado.
-      log.error('fp_fields', 'perfil ' + escolhido + ' não carregou (' + (e.message || e) + '); usando original');
-      original._original = clonarSecoes(original);
-      original.origem = 'padrao_por_falha';
-      return original;
-    }
+    perfil = carregarModulo(escolhido);
+  
 
     perfil._original = clonarSecoes(original);
     perfil.origem = origem;
@@ -331,27 +323,22 @@ function perfilConfigurado() {
     // que decidisse qual perfil usar. É o bootstrap, e por isso não entra em perfil nenhum.
     var CAMPO_PERFIL = 'custrecord_fp_perfil_compat';
 
-    try {
-      // O perfil mora num campo da SUBSIDIÁRIA, registro standard — não há custom record de
-      // configuração. Vale a PRIMEIRA subsidiária que tiver o campo preenchido: bundle instalado
-      // é fato da conta inteira, não de uma subsidiária, então a primeira resposta serve para
-      // todas. Divergência entre subsidiárias seria erro de cadastro, e viraria aviso no log.
-      var r = search
-        .create({
-          type: search.Type.SUBSIDIARY,
-          filters: [[CAMPO_PERFIL, 'isnotempty', '']],
-          columns: [CAMPO_PERFIL]
-        })
-        .run()
-        .getRange({ start: 0, end: 1 });
+    // O perfil mora num campo da SUBSIDIÁRIA, registro standard — não há custom record de
+    // configuração. Vale a PRIMEIRA subsidiária que tiver o campo preenchido: bundle instalado
+    // é fato da conta inteira, não de uma subsidiária, então a primeira resposta serve para
+    // todas. Divergência entre subsidiárias seria erro de cadastro, e viraria aviso no log.
+    var r = search
+      .create({
+        type: search.Type.SUBSIDIARY,
+        filters: [[CAMPO_PERFIL, 'isnotempty', '']],
+        columns: [CAMPO_PERFIL]
+      })
+      .run()
+      .getRange({ start: 0, end: 1 });
 
-      if (!r || !r.length) return null;
-      return r[0].getValue({ name: CAMPO_PERFIL }) || null;
-    } catch (e) {
-      // Campo ainda não existe (antes do primeiro deploy) — não é erro, é instalação nova.
-      log.debug('fp_fields.perfilConfigurado', e.message || e);
-      return null;
-    }
+    if (!r || !r.length) return null;
+    return r[0].getValue({ name: CAMPO_PERFIL }) || null;
+  
   }
 
   /**
@@ -367,11 +354,8 @@ function perfilConfigurado() {
     for (var i = 0; i < PERFIS_CONHECIDOS.length; i++) {
       var nome = PERFIS_CONHECIDOS[i];
       var p;
-      try {
-        p = carregarModulo(nome);
-      } catch (e) {
-        continue;
-      }
+      p = carregarModulo(nome);
+    
 
       var assinatura = p.deteccao && p.deteccao.assinatura;
       if (!assinatura || !assinatura.id) continue;
@@ -385,12 +369,9 @@ function perfilConfigurado() {
   }
 
   function existeRecordType(tipo) {
-    try {
-      search.create({ type: tipo, filters: [], columns: ['internalid'] }).runPaged({ pageSize: 1 });
-      return true;
-    } catch (e) {
-      return false;
-    }
+    search.create({ type: tipo, filters: [], columns: ['internalid'] }).runPaged({ pageSize: 1 });
+    return true;
+  
   }
 
   return {

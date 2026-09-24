@@ -63,15 +63,10 @@ define(['N/ui/serverWidget', 'N/log'], function (serverWidget, log) {
       var campo = obter(form, campos[i]);
       if (!campo) continue;
 
-      try {
-        form.insertField({ field: campo, nextfield: proximo });
-        proximo = campos[i];
-        colocados.unshift(campos[i]);
-      } catch (e) {
-        // `nextfield` inexistente no formulário deste tipo, ou campo não movível. Segue com os
-        // outros: meia organização é melhor que registro que não abre.
-        log.error('fp_form.posicionarDepoisDe', campos[i] + ' antes de ' + proximo + ': ' + (e.message || e));
-      }
+      form.insertField({ field: campo, nextfield: proximo });
+      proximo = campos[i];
+      colocados.unshift(campos[i]);
+    
     }
 
     if (!colocados.length) return;
@@ -80,11 +75,8 @@ define(['N/ui/serverWidget', 'N/log'], function (serverWidget, log) {
     // Sem isto, o bloco fica ANTES da âncora, não depois.
     var campoAncora = obter(form, ancora);
     if (!campoAncora) return;
-    try {
-      form.insertField({ field: campoAncora, nextfield: colocados[0] });
-    } catch (e) {
-      log.error('fp_form.posicionarDepoisDe', 'reinserir ancora ' + ancora + ': ' + (e.message || e));
-    }
+    form.insertField({ field: campoAncora, nextfield: colocados[0] });
+  
   }
 
   /**
@@ -122,11 +114,8 @@ define(['N/ui/serverWidget', 'N/log'], function (serverWidget, log) {
     for (var i = 0; i < campos.length; i++) {
       var c = obter(form, campos[i]);
       if (!c) continue;
-      try {
-        c.updateDisplayType({ displayType: tipo });
-      } catch (e) {
-        log.error('fp_form.exibicaoSeExistir', campos[i] + ': ' + (e.message || e));
-      }
+      c.updateDisplayType({ displayType: tipo });
+    
     }
   }
 
@@ -140,17 +129,13 @@ define(['N/ui/serverWidget', 'N/log'], function (serverWidget, log) {
    * @param {string} [aba] id da aba; omitido = aba principal
    */
   function criarGrupo(form, id, rotulo, aba) {
-    try {
-      var g = form.addFieldGroup({ id: id, label: rotulo, tab: aba });
-      g.isCollapsed = false;
-      g.isCollapsible = false;
-      g.isSingleColumn = false;
-      g.isBorderHidden = false;
-      return g;
-    } catch (e) {
-      log.error('fp_form.criarGrupo', id + ': ' + (e.message || e));
-      return null;
-    }
+    var g = form.addFieldGroup({ id: id, label: rotulo, tab: aba });
+    g.isCollapsed = false;
+    g.isCollapsible = false;
+    g.isSingleColumn = false;
+    g.isBorderHidden = false;
+    return g;
+  
   }
 
   /** Desabilita (ou reabilita) os que existirem. Equivale ao `setFormFieldsDisabled`. */
@@ -171,11 +156,8 @@ define(['N/ui/serverWidget', 'N/log'], function (serverWidget, log) {
    */
   function obter(form, id) {
     if (!form || !id) return null;
-    try {
-      return form.getField({ id: id }) || null;
-    } catch (e) {
-      return null;
-    }
+    return form.getField({ id: id }) || null;
+  
   }
 
   return {

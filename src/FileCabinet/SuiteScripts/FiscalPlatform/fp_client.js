@@ -631,20 +631,11 @@ define([
     var inicio = new Date().getTime();
     var resposta;
 
-    try {
-      resposta =
-        metodo === 'GET'
-          ? https.get({ url: url, headers: cabecalhos })
-          : https.post({ url: url, headers: cabecalhos, body: corpo });
-    } catch (e) {
-      // FALHA DE TRANSPORTE — a única coisa que este módulo lança. Sem resposta HTTP não há
-      // `code` nem `body` para o chamador interpretar, e devolver `{ok:false, code:0}` faria uma
-      // queda de rede parecer recusa do motor. São diagnósticos diferentes.
-      var dur = new Date().getTime() - inicio;
-      registrar(metodo, url, corpo, null, null, dur, opcoes);
-      log.error('fp_client.chamar', metodo + ' ' + caminho + ' falhou em ' + dur + 'ms: ' + (e.message || e));
-      throw e;
-    }
+    resposta =
+      metodo === 'GET'
+        ? https.get({ url: url, headers: cabecalhos })
+        : https.post({ url: url, headers: cabecalhos, body: corpo });
+  
 
     var duracao = new Date().getTime() - inicio;
     var corpoResposta = interpretar(resposta.body);
@@ -750,11 +741,8 @@ define([
   }
 
   function invalidarToken() {
-    try {
-      cache.getCache({ name: NOME_CACHE, scope: cache.Scope.PROTECTED }).clear();
-    } catch (e) {
-      log.error('fp_client.invalidarToken', e.message || e);
-    }
+    cache.getCache({ name: NOME_CACHE, scope: cache.Scope.PROTECTED }).clear();
+  
   }
 
   /**
@@ -817,28 +805,21 @@ define([
    */
   function cnpjDaFilial(location) {
     if (!location) return null;
-    try {
-      var l = search.lookupFields({
-        type: search.Type.LOCATION,
-        id: location,
-        columns: [fpFields.idLocation('CNPJ'), fpFields.idLocation('SERIE')]
-      });
-      var cnpj = String(l[fpFields.idLocation('CNPJ')] || '').replace(/\D/g, '');
-      return cnpj ? { cnpj: cnpj, serie: l[fpFields.idLocation('SERIE')] || '' } : null;
-    } catch (e) {
-      log.error('fp_client.cnpjDaFilial', 'location ' + location + ': ' + (e.message || e));
-      return null;
-    }
+    var l = search.lookupFields({
+      type: search.Type.LOCATION,
+      id: location,
+      columns: [fpFields.idLocation('CNPJ'), fpFields.idLocation('SERIE')]
+    });
+    var cnpj = String(l[fpFields.idLocation('CNPJ')] || '').replace(/\D/g, '');
+    return cnpj ? { cnpj: cnpj, serie: l[fpFields.idLocation('SERIE')] || '' } : null;
+  
   }
 
   /** JSON quando dá; o texto cru quando não. Corpo ilegível é dado de diagnóstico, não erro. */
   function interpretar(corpo) {
     if (!corpo) return null;
-    try {
-      return JSON.parse(corpo);
-    } catch (e) {
-      return corpo;
-    }
+    return JSON.parse(corpo);
+  
   }
 
   /**
@@ -856,26 +837,23 @@ define([
     var tipo = fpFields.registro('LOG');
     if (!tipo) return;
 
-    try {
-      var r = record.create({ type: tipo, isDynamic: false });
-      r.setValue({ fieldId: fpFields.idLog('ENDPOINT'), value: String(url).substring(0, 300) });
-      r.setValue({ fieldId: fpFields.idLog('METODO'), value: metodo });
-      r.setValue({ fieldId: fpFields.idLog('DURACAO'), value: duracao });
-      if (code !== null && code !== undefined) {
-        r.setValue({ fieldId: fpFields.idLog('HTTP'), value: code });
-      }
-      if (corpo) r.setValue({ fieldId: fpFields.idLog('PAYLOAD'), value: corpo });
-      if (resposta) r.setValue({ fieldId: fpFields.idLog('RESPOSTA'), value: String(resposta) });
-      if (opcoes && opcoes.corrId) {
-        r.setValue({ fieldId: fpFields.idLog('CORRID'), value: opcoes.corrId });
-      }
-      if (opcoes && opcoes.transacao) {
-        r.setValue({ fieldId: fpFields.idLog('TRANSACAO'), value: opcoes.transacao });
-      }
-      r.save({ ignoreMandatoryFields: true });
-    } catch (e) {
-      log.error('fp_client.registrar', 'log não gravado: ' + (e.message || e));
+    var r = record.create({ type: tipo, isDynamic: false });
+    r.setValue({ fieldId: fpFields.idLog('ENDPOINT'), value: String(url).substring(0, 300) });
+    r.setValue({ fieldId: fpFields.idLog('METODO'), value: metodo });
+    r.setValue({ fieldId: fpFields.idLog('DURACAO'), value: duracao });
+    if (code !== null && code !== undefined) {
+      r.setValue({ fieldId: fpFields.idLog('HTTP'), value: code });
     }
+    if (corpo) r.setValue({ fieldId: fpFields.idLog('PAYLOAD'), value: corpo });
+    if (resposta) r.setValue({ fieldId: fpFields.idLog('RESPOSTA'), value: String(resposta) });
+    if (opcoes && opcoes.corrId) {
+      r.setValue({ fieldId: fpFields.idLog('CORRID'), value: opcoes.corrId });
+    }
+    if (opcoes && opcoes.transacao) {
+      r.setValue({ fieldId: fpFields.idLog('TRANSACAO'), value: opcoes.transacao });
+    }
+    r.save({ ignoreMandatoryFields: true });
+  
   }
 
   return {

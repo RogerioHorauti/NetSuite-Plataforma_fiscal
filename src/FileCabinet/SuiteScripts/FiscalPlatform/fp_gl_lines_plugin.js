@@ -285,28 +285,23 @@ define(['N/query', 'N/log', './fp_fields'], function (query, log, fpFields) {
   function lerImpostosDoSublist(tx) {
     var C = campos();
     var linhas = [];
-    try {
-      var n = tx.getLineCount({ sublistId: C.SUBLIST });
-      if (!n || n < 0) return [];
+    var n = tx.getLineCount({ sublistId: C.SUBLIST });
+    if (!n || n < 0) return [];
 
-      for (var i = 0; i < n; i++) {
-        linhas.push({
-          imposto: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.TAXCODIGO, line: i })),
-          natureza: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.NATUREZA, line: i })),
-          valor: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.VALOR, line: i })),
-          compoe: booleano(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.COMPOE, line: i })),
-          base: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.BASE, line: i })),
-          aliquota: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.ALIQUOTA, line: i })),
-          perna: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.PERNA, line: i })).toUpperCase(),
-          gera: booleano(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.GERA, line: i }))
+    for (var i = 0; i < n; i++) {
+      linhas.push({
+        imposto: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.TAXCODIGO, line: i })),
+        natureza: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.NATUREZA, line: i })),
+        valor: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.VALOR, line: i })),
+        compoe: booleano(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.COMPOE, line: i })),
+        base: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.BASE, line: i })),
+        aliquota: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.ALIQUOTA, line: i })),
+        perna: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.PERNA, line: i })).toUpperCase(),
+        gera: booleano(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.GERA, line: i }))
 
-        });
-      }
-    } catch (e) {
-      log.debug('fp_gl_lines_plugin.lerImpostosDoSublist',
-        'sublist ' + C.SUBLIST + ' não legível aqui (' + (e.message || e) + ') — caindo na consulta');
-      return [];
+      });
     }
+  
     return linhas;
   }
 
@@ -326,24 +321,20 @@ define(['N/query', 'N/log', './fp_fields'], function (query, log, fpFields) {
       'WHERE ' + C.IMP.TRANSACAO + ' = ? AND isinactive = ' + "'F'";
 
     var linhas = [];
-    try {
-      var r = query.runSuiteQL({ query: sql, params: [idTransacao] }).asMappedResults();
-      for (var i = 0; i < r.length; i++) {
-        linhas.push({
-          imposto: texto(r[i].imposto),
-          natureza: texto(r[i].natureza),
-          valor: numero(r[i].valor),
-          compoe: booleano(r[i].compoe),
-          base: numero(r[i].base),
-          aliquota: numero(r[i].aliquota),
-          perna: texto(r[i].perna).toUpperCase(),
-          gera: booleano(r[i].gera)
-        });
-      }
-    } catch (e) {
-      log.error('fp_gl_lines_plugin.lerImpostosPorConsulta', e.message || e);
-      return [];
+    var r = query.runSuiteQL({ query: sql, params: [idTransacao] }).asMappedResults();
+    for (var i = 0; i < r.length; i++) {
+      linhas.push({
+        imposto: texto(r[i].imposto),
+        natureza: texto(r[i].natureza),
+        valor: numero(r[i].valor),
+        compoe: booleano(r[i].compoe),
+        base: numero(r[i].base),
+        aliquota: numero(r[i].aliquota),
+        perna: texto(r[i].perna).toUpperCase(),
+        gera: booleano(r[i].gera)
+      });
     }
+  
     return linhas;
   }
 
@@ -359,19 +350,16 @@ define(['N/query', 'N/log', './fp_fields'], function (query, log, fpFields) {
     var natureza = numero(tx.getValue({ fieldId: C.NATUREZA_TX }));
     if (!natureza) return null;
 
-    try {
-      var r = query.runSuiteQL({
-        query: 'SELECT ' + fpFields.idNatureza('ENTRADA_SAIDA') + ' AS es FROM ' +
-               fpFields.registro('NATUREZA_OPERACAO') + ' WHERE id = ?',
-        params: [natureza]
-      }).asMappedResults();
-      if (r.length) {
-        var s = normalizarSentido(r[0].es);
-        if (s) return s;
-      }
-    } catch (e) {
-      log.error('fp_gl_lines_plugin.lerSentido', e.message || e);
+    var r = query.runSuiteQL({
+      query: 'SELECT ' + fpFields.idNatureza('ENTRADA_SAIDA') + ' AS es FROM ' +
+             fpFields.registro('NATUREZA_OPERACAO') + ' WHERE id = ?',
+      params: [natureza]
+    }).asMappedResults();
+    if (r.length) {
+      var s = normalizarSentido(r[0].es);
+      if (s) return s;
     }
+  
     return null;
   }
 
@@ -463,12 +451,8 @@ define(['N/query', 'N/log', './fp_fields'], function (query, log, fpFields) {
       'JOIN ' + C.REG.IMPOSTO + ' i ON i.id = c.' + C.CC.IMPOSTO + ' ' +
       "WHERE c.isinactive = 'F'";
 
-    try {
-      return query.runSuiteQL({ query: sql }).asMappedResults();
-    } catch (e) {
-      log.error('fp_gl_lines_plugin.carregarRegua', e.message || e);
-      return [];
-    }
+    return query.runSuiteQL({ query: sql }).asMappedResults();
+  
   }
 
   /**
@@ -655,11 +639,8 @@ function lancar(customLines, grupo, ctx) {
   }
 
   function valorDe(tx, campo) {
-    try {
-      return tx.getValue({ fieldId: campo });
-    } catch (e) {
-      return '';
-    }
+    return tx.getValue({ fieldId: campo });
+  
   }
 
   /** Formato brasileiro: 5143.66 -> "5.143,66". O arquivo da ECD é ISO-8859-1 e aceita os dois. */
@@ -736,22 +717,18 @@ function lancar(customLines, grupo, ctx) {
     var C = campos();
     var sub = numero(valorDe(tx, 'subsidiary'));
     if (!sub) return null;
-    try {
-      var r = query.runSuiteQL({
-        query:
-          'SELECT s.' + C.SUB_NATIVO + ' AS nativa, ' +
-          '       s.' + C.SUB_ESTORNO + ' AS contra, ' +
-          '       a.accttype AS tipo ' +
-          'FROM subsidiary s LEFT JOIN account a ON a.id = s.' + C.SUB_NATIVO + ' ' +
-          'WHERE s.id = ?',
-        params: [sub]
-      }).asMappedResults();
-      if (!r.length) return null;
-      return { nativa: numero(r[0].nativa), contra: numero(r[0].contra), tipoNativa: r[0].tipo };
-    } catch (e) {
-      log.error('fp_gl_lines_plugin.configuracaoDoEstorno', e.message || e);
-      return null;
-    }
+    var r = query.runSuiteQL({
+      query:
+        'SELECT s.' + C.SUB_NATIVO + ' AS nativa, ' +
+        '       s.' + C.SUB_ESTORNO + ' AS contra, ' +
+        '       a.accttype AS tipo ' +
+        'FROM subsidiary s LEFT JOIN account a ON a.id = s.' + C.SUB_NATIVO + ' ' +
+        'WHERE s.id = ?',
+      params: [sub]
+    }).asMappedResults();
+    if (!r.length) return null;
+    return { nativa: numero(r[0].nativa), contra: numero(r[0].contra), tipoNativa: r[0].tipo };
+  
   }
 
 

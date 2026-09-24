@@ -119,15 +119,8 @@ define(['N/runtime', 'N/ui/message', 'N/log', './fp_fields'], function (runtime,
     }
 
     var atual;
-    try {
-      atual = novoRegistro.getValue({ fieldId: campo });
-    } catch (e) {
-      // Campo ausente no formulário deste tipo de transação. Não é motivo para derrubar nada —
-      // devolve um id volátil e a mensagem simplesmente não será pintada. Fica no log, porque a
-      // falha é silenciosa por natureza: nada dá erro, o usuário só não vê mensagem.
-      log.error('fp_msg.garantirCorrId', 'Campo ' + campo + ' inacessível: ' + (e.message || e));
-      return idAleatorio(32);
-    }
+    atual = novoRegistro.getValue({ fieldId: campo });
+  
     if (atual) return atual;
 
     var novo = idAleatorio(32);
@@ -150,11 +143,8 @@ define(['N/runtime', 'N/ui/message', 'N/log', './fp_fields'], function (runtime,
     if (!bruto) return null;
 
     var env;
-    try {
-      env = JSON.parse(bruto);
-    } catch (e) {
-      return null;
-    }
+    env = JSON.parse(bruto);
+  
     // TTL: chave que nunca foi pintada não reaparece num load futuro como se fosse de agora.
     if (!env || !env.t || new Date().getTime() - env.t > TTL_MS) return null;
     return env.html || null;
@@ -266,11 +256,8 @@ define(['N/runtime', 'N/ui/message', 'N/log', './fp_fields'], function (runtime,
     if (!campo) return;
 
     var corrId;
-    try {
-      corrId = scriptContext.newRecord.getValue({ fieldId: campo });
-    } catch (e) {
-      return;
-    }
+    corrId = scriptContext.newRecord.getValue({ fieldId: campo });
+  
     if (!corrId) return;
 
     var lang = idioma();
@@ -314,11 +301,8 @@ define(['N/runtime', 'N/ui/message', 'N/log', './fp_fields'], function (runtime,
   }
 
   function idioma() {
-    try {
-      return runtime.getCurrentUser().getPreference({ name: 'LANGUAGE' });
-    } catch (e) {
-      return 'pt_BR';
-    }
+    return runtime.getCurrentUser().getPreference({ name: 'LANGUAGE' });
+  
   }
 
   return {

@@ -175,11 +175,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     function naturezaDeclarada(newRecord) {
       var campo = fpFields.id('NATUREZA');
       if (!campo) return null;
-      try {
-        return newRecord.getText({ fieldId: campo }) || null;
-      } catch (e) {
-        return null;
-      }
+      return newRecord.getText({ fieldId: campo }) || null;
+    
     }
 
     /**
@@ -254,75 +251,62 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     }
 
     /**
-     * Endereço do DESTINATÁRIO = endereço de FATURAMENTO, lido por SuiteQL.
+     * Endereço do DESTINATÁRIO = endereço de FATURAMENTO.
      *
      * Não é o de entrega: o grupo `dest` da NF-e identifica a quem a operação é destinada — o
      * cadastro, o mesmo endereço do CNPJ/IE. Mercadoria indo para outro lugar é o grupo `entrega`,
      * que nem existe neste DTO.
      *
-     * ⚠ O SUBRECORD NÃO SERVE, e foi medido duas vezes: `getSubrecord({fieldId:'billingaddress'})`
-     * devolve `addr1`, `addr3` e `zip`, e devolve VAZIO `city`, `state` e o campo custom do
-     * número. Um endereço sem município e sem UF não é endereço — a SEFAZ recusa. Mesmo motivo
-     * que já tirou `getSublistText` e `getText` deste módulo: API que cala é pior que API que
-     * falha, porque o payload sai incompleto sem nada acusar.
+     * ── POR QUE DUAS FONTES, e não é indecisão ────────────────────────────────────────────────
      *
-     * A fonte é a entrada do address book do cliente, em `entityaddress`, apontada por
-     * `billaddresslist`. Ela existe no banco desde antes do save — o que `transactionbillingaddress`
-     * não tem como oferecer no `beforeSubmit` de criação, porque a transação ainda não foi gravada.
+     * MEDIDO em 23/09/2026, invoice 2232: o subrecord `billingaddress` devolve `addr1`, `addr3` e
+     * `zip` — e devolve VAZIO `city`, `state` e o campo custom do número. O payload saiu com
+     * logradouro, bairro e CEP, sem município nem UF.
+     *
+     * A consulta sozinha também não resolve: no `beforeSubmit` de CRIAÇÃO a transação ainda não
+     * está no banco, então `transactionbillingaddress` não tem linha. O que existe desde sempre é
+     * a entrada do address book do cliente, em `entityaddress`, apontada por `billaddresslist` —
+     * e é de lá que saem os três que o subrecord cala, inclusive o campo custom.
+     *
+     * Então: subrecord para o que ele entrega, SuiteQL para o que ele cala. Quando os dois calam
+     * o município, o log diz o que cada um tinha — é a medição que decide o próximo passo, não
+     * chute.
      */
     function endereco(newRecord) {
-      var id = newRecord.getValue({ fieldId: 'billaddresslist' });
-      if (!id) {
-        log.audit('fp_md_map_simular.endereco',
-          'transação sem endereço de faturamento escolhido — o destinatário sai sem endereço e ' +
-          'a SEFAZ vai recusar.');
-        return null;
-      }
-
-      // Colunas medidas em 23/09/2026. NÃO são `address1/2/3` — esse é o nome no motor de BUSCA,
-      // não no SuiteQL. A do número entra só se o perfil resolver a chave: coluna inexistente
-      // derruba a consulta inteira, e o endereço sairia vazio por causa de um campo opcional.
-      var campoNumero = fpFields.idEndereco('END_NUMERO');
-      var cols = 'addr1, addr2, addr3, city, state, dropdownstate, zip';
-      if (campoNumero) cols += ', ' + campoNumero;
-
-      var linha;
-      try {
-        var r = query.runSuiteQL({
-          query: 'SELECT ' + cols + ' FROM entityaddress WHERE nkey = ?',
-          params: [id]
-        }).asMappedResults();
-        linha = r.length ? r[0] : null;
-      } catch (e) {
-        log.error('fp_md_map_simular.endereco', 'entityaddress ' + id + ': ' + (e.message || e));
-        return null;
-      }
-
-      if (!linha) {
-        log.audit('fp_md_map_simular.endereco',
-          'endereço ' + id + ' não está em entityaddress — o destinatário sai sem endereço.');
-        return null;
-      }
+      var sub = null;
+      sub = newRecord.getSubrecord({ fieldId: 'billingaddress' });
 
       var end = {
-        addr1: texto(linha.addr1),
-        addr2: texto(linha.addr2),
-        addr3: texto(linha.addr3),
-        numero: campoNumero ? texto(linha[campoNumero]) : '',
-        city: texto(linha.city),
-        // `dropdownstate` é a sigla nos países com lista de UF; `state` é o texto livre.
-        state: texto(linha.dropdownstate) || texto(linha.state),
-        zip: texto(linha.zip)
+        addr1: ler(sub, 'addr1'),
+        addr2: ler(sub, 'addr2'),
+        addr3: ler(sub, 'addr3'),
+        numero: ler(sub, fpFields.idEndereco('END_NUMERO')),
+        city: ler(sub, 'city'),
+        state: ler(sub, 'state'),
+        zip: ler(sub, 'zip')
       };
+      log.debug('end', end)
+      var idCadastro = newRecord.getValue({ fieldId: 'billaddresslist' });
 
-      // Município e UF são o que a SEFAZ confere primeiro. Faltando, o log mostra a linha crua —
-      // é ela que diz se o dado está em outra coluna nesta conta.
-      if (!end.city || !end.state) {
-        log.audit('fp_md_map_simular.endereco',
-          'endereço ' + id + ' sem município ou UF. Linha: ' + JSON.stringify(linha));
-      }
+      if (end.city && end.state) return end;
 
-      return end;
+      log.audit('fp_md_map_simular.endereco',
+        'destinatário sem município ou UF, e a SEFAZ vai recusar. ' +
+        'subrecord: city="' + ler(sub, 'city') + '" state="' + ler(sub, 'state') +
+        '" dropdownstate="' + ler(sub, 'dropdownstate') + '" · ' +
+        'billaddresslist=' + idCadastro);
+
+      // Incompleto ainda é melhor que nada: o motor recusa dizendo qual campo falta, e a recusa
+      // dele é mais precisa que o silêncio daqui.
+      return (end.addr1 || end.city) ? end : null;
+    }
+
+    /** Campo ausente no subrecord não pode derrubar a leitura dos outros. */
+    function ler(sub, campo) {
+      if (!sub) return '';
+      var v = sub.getValue({ fieldId: campo });
+      return v === null || v === undefined ? '' : String(v);
+    
     }
 
 
@@ -425,13 +409,10 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     function marcarNumeroItem(newRecord, linhaSublist, numero) {
       var campo = fpFields.idLinha('LINHA_NUMERO_ITEM');
       if (!campo) return;
-      try {
-        newRecord.setSublistValue({
-          sublistId: 'item', fieldId: campo, value: numero, line: linhaSublist
-        });
-      } catch (e) {
-        log.debug('fp_md_map_simular.marcarNumeroItem', campo + ': ' + (e.message || e));
-      }
+      newRecord.setSublistValue({
+        sublistId: 'item', fieldId: campo, value: numero, line: linhaSublist
+      });
+    
     }
 
     /**
@@ -450,8 +431,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       }
       if (!lista.length) return {};
 
-      var nativas = ['itemid', 'displayname'];
-      var colunas = nativas.slice();
+      var colunas = ['itemid', 'displayname'];
       // Mercadoria leva NCM; serviço leva o subitem da LC 116. O motor recusa a linha que não
       // traga um dos dois, e os campos são excludentes por construção: os de mercadoria não
       // aplicam em item de serviço, e o de serviço não aplica em mercadoria.
@@ -470,21 +450,12 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         colunas.push(col);
       }
 
-var out = buscarItens(lista, colunas, mapa);
-
-      // ⚠ COLUNA INVÁLIDA SÓ ESTOURA NO `.each()`, não no `create()`.
-      // O `search.create()` é preguiçoso: ele aceita qualquer nome de coluna e só valida quando a
-      // busca roda. Por isso o try/catch precisa envolver a EXECUÇÃO — envolver só a criação fazia
-      // o SSS_INVALID_SRCH_COL subir até o beforeSubmit e derrubar o save (medido em produção:
-      // `custitem_fp_servico_lc116` ainda não deployado).
-      if (out === null) {
-        log.audit('fp_md_map_simular.carregarItens',
-          'busca com as colunas fiscais falhou; repetindo só com as nativas. Campo de item ' +
-          'mapeado no perfil e ausente na conta é a causa provável — NCM e serviço não vão no ' +
-          'payload, e o motor vai recusar a linha dizendo isso.');
-        out = buscarItens(lista, nativas, {});
-      }
-      return out || {};
+      // Coluna mapeada no perfil e ausente na conta derruba a consulta, e o save PARA com a
+      // mensagem do NetSuite na tela. Antes havia segunda tentativa só com as colunas nativas:
+      // saía payload sem NCM, o motor recusava a linha por outro motivo, e o campo que faltava
+      // de verdade nunca aparecia. Falhar apontando o campo é mais curto que investigar duas
+      // recusas.
+      return buscarItens(lista, colunas, mapa) || {};
     }
 
 /**
@@ -496,53 +467,50 @@ var out = buscarItens(lista, colunas, mapa);
      * 2026-09-23 contra a `tstdrv1647270`: `SELECT custitem_fp_servico_lc116 FROM item` devolve
      * 200 no SuiteQL, e a mesma coluna derruba o saved search. São dois motores diferentes.
      *
-     * Devolve `null` quando a consulta falha e `{}` quando roda e não acha nada. São coisas
-     * diferentes: a primeira pede a segunda tentativa sem as colunas fiscais, a segunda não.
+     * Consulta que falha LANÇA, e o erro sobe até o `beforeSubmit`, que o mostra ao usuário. Não
+     * se engole aqui: coluna inexistente é defeito de perfil ou de deploy, e mascarar isso com
+     * payload incompleto adia o diagnóstico para a recusa da SEFAZ.
      */
     function buscarItens(ids, colunas, mapa) {
-      try {
-        // Coluna prefixada com `DF:` é List/Record e precisa de `BUILTIN.DF` — sem isso o
-        // SuiteQL devolve o internal id do valor da lista, e o código ficaria perdido.
-        var sel = [];
-        for (var c = 0; c < colunas.length; c++) {
-          var nome = colunas[c];
-          sel.push(nome.indexOf('DF:') === 0
-            ? 'BUILTIN.DF(i.' + nome.substring(3) + ') AS c' + c
-            : 'i.' + nome + ' AS c' + c);
-        }
-
-        var linhas = query.runSuiteQL({
-          query: 'SELECT i.id AS id, ' + sel.join(', ') + ' FROM item i WHERE i.id IN (' +
-                 ids.map(function () { return '?'; }).join(',') + ')',
-          params: ids
-        }).asMappedResults();
-
-        var idx = {};
-        for (var k = 0; k < colunas.length; k++) idx[colunas[k]] = 'c' + k;
-
-        var out = {};
-        for (var n = 0; n < linhas.length; n++) {
-          var r = linhas[n];
-          var reg = {
-            codigo: texto(r[idx.itemid]),
-            descricao: texto(r[idx.displayname])
-          };
-          for (var m in mapa) {
-            if (!Object.prototype.hasOwnProperty.call(mapa, m)) continue;
-            var v = r[idx[mapa[m]]];
-            if (v !== null && v !== undefined && v !== '') reg[m] = String(v);
-          }
-          if (reg.ncm) reg.ncm = digitos(reg.ncm);
-          if (reg.cest) reg.cest = digitos(reg.cest);
-          if (reg.origem) reg.origem = codigoDaOrigem(reg.origem);
-          if (reg.servicoLc116) reg.servicoLc116 = texto(reg.servicoLc116).trim().replace(',', '.');
-          out[String(r.id)] = reg;
-        }
-        return out;
-      } catch (e) {
-        log.debug('fp_md_map_simular.buscarItens', (colunas || []).join(',') + ' → ' + (e.message || e));
-        return null;
+      // Coluna prefixada com `DF:` é List/Record e precisa de `BUILTIN.DF` — sem isso o
+      // SuiteQL devolve o internal id do valor da lista, e o código ficaria perdido.
+      var sel = [];
+      for (var c = 0; c < colunas.length; c++) {
+        var nome = colunas[c];
+        sel.push(nome.indexOf('DF:') === 0
+          ? 'BUILTIN.DF(i.' + nome.substring(3) + ') AS c' + c
+          : 'i.' + nome + ' AS c' + c);
       }
+
+      var linhas = query.runSuiteQL({
+        query: 'SELECT i.id AS id, ' + sel.join(', ') + ' FROM item i WHERE i.id IN (' +
+               ids.map(function () { return '?'; }).join(',') + ')',
+        params: ids
+      }).asMappedResults();
+
+      var idx = {};
+      for (var k = 0; k < colunas.length; k++) idx[colunas[k]] = 'c' + k;
+
+      var out = {};
+      for (var n = 0; n < linhas.length; n++) {
+        var r = linhas[n];
+        var reg = {
+          codigo: texto(r[idx.itemid]),
+          descricao: texto(r[idx.displayname])
+        };
+        for (var m in mapa) {
+          if (!Object.prototype.hasOwnProperty.call(mapa, m)) continue;
+          var v = r[idx[mapa[m]]];
+          if (v !== null && v !== undefined && v !== '') reg[m] = String(v);
+        }
+        if (reg.ncm) reg.ncm = digitos(reg.ncm);
+        if (reg.cest) reg.cest = digitos(reg.cest);
+        if (reg.origem) reg.origem = codigoDaOrigem(reg.origem);
+        if (reg.servicoLc116) reg.servicoLc116 = texto(reg.servicoLc116).trim().replace(',', '.');
+        out[String(r.id)] = reg;
+      }
+      return out;
+    
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -616,41 +584,29 @@ var out = buscarItens(lista, colunas, mapa);
 
     function gravar(newRecord, sublist, linha, campo, valor) {
       if (valor === null || valor === undefined || !campo) return;
-      try {
-        newRecord.setSublistValue({ sublistId: sublist, fieldId: campo, value: valor, line: linha });
-      } catch (e) {
-        log.error('fp_md_map_simular.gravar', campo + ' linha ' + linha + ': ' + (e.message || e));
-      }
+      newRecord.setSublistValue({ sublistId: sublist, fieldId: campo, value: valor, line: linha });
+    
     }
 
     function removeImpostos(newRecord, sublist) {
       if (!sublist) return;
-      try {
-        var n = newRecord.getLineCount({ sublistId: sublist });
-        for (var i = 0; i < n; i++) {
-          newRecord.removeLine({ sublistId: sublist, line: 0 });
-        }
-      } catch (e) {
-        log.error('fp_md_map_simular.removeImpostos', e.message || e);
+      var n = newRecord.getLineCount({ sublistId: sublist });
+      for (var i = 0; i < n; i++) {
+        newRecord.removeLine({ sublistId: sublist, line: 0 });
       }
+    
     }
 
     // ─────────────────────────────────────────────────────────────────────────
 
     function contarLinhas(newRecord) {
-      try {
-        return newRecord.getLineCount({ sublistId: 'item' });
-      } catch (e) {
-        return 0;
-      }
+      return newRecord.getLineCount({ sublistId: 'item' });
+    
     }
 
     function valorLinha(newRecord, campo, linha) {
-      try {
-        return newRecord.getSublistValue({ sublistId: 'item', fieldId: campo, line: linha });
-      } catch (e) {
-        return null;
-      }
+      return newRecord.getSublistValue({ sublistId: 'item', fieldId: campo, line: linha });
+    
     }
 
     function textoLinha(newRecord, campo, linha) {
@@ -680,55 +636,41 @@ var out = buscarItens(lista, colunas, mapa);
      */
     function resolverTextos(ids, sql, colunaId) {
       if (!ids.length) return {};
-      try {
-        // MEDIDO: o SuiteQL NÃO aceita alias no `WHERE`. `unitstypeuom` se filtra por
-        // `internalid`, e `... AS id ... WHERE id IN (2)` devolve 400. A coluna de filtro vem
-        // separada do SELECT por isso.
-        var r = query.runSuiteQL({
-          query: sql + ' WHERE ' + colunaId + ' IN (' +
-                 ids.map(function () { return '?'; }).join(',') + ')',
-          params: ids
-        }).asMappedResults();
+      // MEDIDO: o SuiteQL NÃO aceita alias no `WHERE`. `unitstypeuom` se filtra por
+      // `internalid`, e `... AS id ... WHERE id IN (2)` devolve 400. A coluna de filtro vem
+      // separada do SELECT por isso.
+      var r = query.runSuiteQL({
+        query: sql + ' WHERE ' + colunaId + ' IN (' +
+               ids.map(function () { return '?'; }).join(',') + ')',
+        params: ids
+      }).asMappedResults();
 
-        var out = {};
-        for (var i = 0; i < r.length; i++) out[String(r[i].id)] = texto(r[i].txt);
-        return out;
-      } catch (e) {
-        log.debug('fp_md_map_simular.resolverTextos', sql + ' → ' + (e.message || e));
-        return {};
-      }
+      var out = {};
+      for (var i = 0; i < r.length; i++) out[String(r[i].id)] = texto(r[i].txt);
+      return out;
+    
     }
 
     function valorTexto(newRecord, campo) {
       if (!campo) return null;
-      try {
-        return newRecord.getText({ fieldId: campo }) || newRecord.getValue({ fieldId: campo }) || null;
-      } catch (e) {
-        return null;
-      }
+      return newRecord.getText({ fieldId: campo }) || newRecord.getValue({ fieldId: campo }) || null;
+    
     }
 
     function lookup(tipo, id, colunas) {
-      try {
-        return search.lookupFields({ type: tipo, id: id, columns: colunas });
-      } catch (e) {
-        log.debug('fp_md_map_simular.lookup', tipo + ' ' + id + ': ' + (e.message || e));
-        return null;
-      }
+      return search.lookupFields({ type: tipo, id: id, columns: colunas });
+    
     }
 
     /** `YYYY-MM-DD`. O motor recebe a data como string; a hora do NetSuite não lhe interessa. */
     function dataIso(newRecord, campo) {
-      try {
-        var d = newRecord.getValue({ fieldId: campo });
-        if (!d) return null;
-        if (typeof d === 'string') d = format.parse({ value: d, type: format.Type.DATE });
-        var mes = d.getMonth() + 1;
-        var dia = d.getDate();
-        return d.getFullYear() + '-' + (mes < 10 ? '0' : '') + mes + '-' + (dia < 10 ? '0' : '') + dia;
-      } catch (e) {
-        return null;
-      }
+      var d = newRecord.getValue({ fieldId: campo });
+      if (!d) return null;
+      if (typeof d === 'string') d = format.parse({ value: d, type: format.Type.DATE });
+      var mes = d.getMonth() + 1;
+      var dia = d.getDate();
+      return d.getFullYear() + '-' + (mes < 10 ? '0' : '') + mes + '-' + (dia < 10 ? '0' : '') + dia;
+    
     }
 
     function texto(v) {
