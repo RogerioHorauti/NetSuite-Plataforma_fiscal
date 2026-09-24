@@ -120,6 +120,29 @@ define(['N/ui/serverWidget', 'N/log'], function (serverWidget, log) {
   }
 
   /**
+   * A ÂNCORA DO GRUPO — um campo invisível, e sem ele o grupo não recebe ninguém.
+   *
+   * ⚠ MEDIDO no bundle da Oracle (`brl_ue_purchase_order.js` e outros 55): `addFieldGroup` cria o
+   * grupo, mas campo customizado que já existe no formulário NÃO muda de container em runtime —
+   * ele fica onde o `<subtab>` do objeto o pôs. O que funciona é criar um campo NOVO com
+   * `container: <grupo>`, escondê-lo, e então mover os campos reais para junto dele com
+   * `insertField`. O campo novo é do tipo `HELP` porque é o único que não ocupa espaço nem pede
+   * rótulo.
+   *
+   * @returns {string} o id da âncora, para usar como referência de posição
+   */
+  function criarAncora(form, id, grupo) {
+    var campo = form.addField({
+      id: id,
+      label: ' ',
+      type: serverWidget.FieldType.HELP,
+      container: grupo
+    });
+    campo.updateDisplayType({ displayType: serverWidget.FieldDisplayType.HIDDEN });
+    return id;
+  }
+
+  /**
    * Grupo de campos. Equivale ao `createFieldGroup` da Oracle, **com os mesmos quatro padrões**
    * que ela fixa: não colapsado, não colapsável, não single-column, borda visível.
    *
@@ -167,6 +190,7 @@ define(['N/ui/serverWidget', 'N/log'], function (serverWidget, log) {
     exibicaoSeExistir: exibicaoSeExistir,
     desabilitarSeExistir: desabilitarSeExistir,
     criarGrupo: criarGrupo,
+    criarAncora: criarAncora,
     obter: obter
   };
 });
