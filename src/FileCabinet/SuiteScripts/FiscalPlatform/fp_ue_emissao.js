@@ -65,10 +65,22 @@ define(['N/ui/serverWidget', 'N/url', 'N/runtime', 'N/log', './fp_fields'],
       if (!id) return;
 
       var form = scriptContext.form;
-      form.clientScriptModulePath = './fp_cs_transacao.js';
 
-      botao(form, 'custpage_fp_emitir', 'Emitir ' + tipoDeclarado(scriptContext.newRecord),
-        scriptContext, id, 'emitir', true);
+      // ⚠ RASTRO TEMPORÁRIO. "An unexpected error has occurred" ao abrir a transação não deixa
+      // rastro utilizável: se a exceção fosse do código daqui, o `catch` do `beforeLoad` a teria
+      // registrado. Estes passos existem para separar DUAS hipóteses que o sintoma não separa —
+      // erro neste código, ou erro na RENDERIZAÇÃO do formulário depois que ele retorna. Uma
+      // abertura de transação resolve, e então isto sai.
+      passo('1 inicio', scriptContext.newRecord.type + ' ' + id);
+
+      form.clientScriptModulePath = './fp_cs_transacao.js';
+      passo('2 clientScriptModulePath', 'ok');
+
+      var rotulo = 'Emitir ' + tipoDeclarado(scriptContext.newRecord);
+      passo('3 tipoDeclarado', rotulo);
+
+      botao(form, 'custpage_fp_emitir', rotulo, scriptContext, id, 'emitir', true);
+      passo('4 botao emitir', 'ok');
 
       // Consultar só faz sentido depois de transmitida, e é o que resolve nota em PROCESSANDO.
       var campoStatus = fpFields.id('DOC_STATUS');
@@ -79,8 +91,15 @@ define(['N/ui/serverWidget', 'N/url', 'N/runtime', 'N/log', './fp_fields'],
       if (status) {
         botao(form, 'custpage_fp_consultar', 'Consultar SEFAZ', scriptContext, id, 'consultar', false);
       }
+      passo('5 botao consultar', status || '(sem status)');
 
       linkDoXml(form, scriptContext, id);
+      passo('6 link do xml', 'fim do beforeLoad');
+    }
+
+    /** Sai quando o caso fechar. Ver o bloco acima. */
+    function passo(qual, detalhe) {
+      log.audit('fp_ue_emissao.passo', qual + ' · ' + detalhe);
     }
 
     /**
