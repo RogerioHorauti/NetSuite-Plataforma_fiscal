@@ -41,7 +41,7 @@ define(['N/https'], function (https) {
       return;
     }
 
-    abrir(rotulo + '…', '<p>Isso leva o tempo da SEFAZ. <b>Não feche nem recarregue a página.</b></p>');
+    abrir(rotulo + '…', girando());
 
     https.post.promise({
       url: url,
@@ -95,6 +95,28 @@ define(['N/https'], function (https) {
       '<pre style="white-space:pre-wrap;max-height:40vh;overflow:auto;background:#f6f6f6;' +
       'padding:10px;border-radius:4px">' + escapar(mensagem) + '</pre>' +
       '<p>' + botao('Fechar', 'document.getElementById(\'' + CAIXA + '\').remove()') + '</p>');
+  }
+
+  /**
+   * O círculo girando, em CSS puro.
+   *
+   * Nada de GIF nem de imagem do File Cabinet: arquivo some, pasta muda de id, e uma imagem
+   * quebrada no meio da emissão é pior que espera nenhuma. `@keyframes` precisa de um `<style>`
+   * de verdade — `animation` em atributo `style` inline não roda —, e por isso ele é injetado uma
+   * vez e fica.
+   */
+  function girando() {
+    if (!document.getElementById(CAIXA + '_css')) {
+      var css = document.createElement('style');
+      css.id = CAIXA + '_css';
+      css.textContent =
+        '@keyframes ' + CAIXA + '_giro{to{transform:rotate(360deg)}}' +
+        '#' + CAIXA + ' .fp_giro{width:38px;height:38px;margin:14px auto;border-radius:50%;' +
+        'border:4px solid #e0e0e0;border-top-color:#607d8b;' +
+        'animation:' + CAIXA + '_giro .8s linear infinite}';
+      document.head.appendChild(css);
+    }
+    return '<div class="fp_giro"></div>';
   }
 
   function abrir(titulo, html) {
