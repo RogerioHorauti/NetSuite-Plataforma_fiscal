@@ -96,6 +96,18 @@ define([], function () {
       "REGIME_TRIB": "custentity_fp_regime_trib"
     },
 
+    "pais": {
+      "_nota": [
+        "De-para ISO alpha-2 -> cPais do BACEN, em customrecord_fp_pais. Nao e regua fiscal: o",
+        "BACEN publica os dois codigos e o bundle so traduz o que o NetSuite guarda no endereco",
+        "para o que a NF-e leva na tag cPais. A plataforma NAO converte -- ela deriva 1058 quando",
+        "a UF e brasileira e, para o exterior, o proprio mapa-divergencia.ts registra que exige",
+        "a tabela do BACEN."
+      ],
+      "ISO": "custrecord_fp_pais_iso",
+      "CPAIS": "custrecord_fp_pais_cpais"
+    },
+
     "endereco": {
       "_nota": "Campos no registro de ENDERECO (othercustomfield, rectype -289).",
       "END_NUMERO": "custrecord_fp_end_numero"
@@ -175,6 +187,7 @@ define([], function () {
       "IMPOSTO": "customrecord_fp_imposto",
       "CLASSIFICADOR": "customrecord_fp_classificador_contabil",
       "NATUREZA_OPERACAO": "customrecord_fp_natureza_operacao",
+      "PAIS": "customrecord_fp_pais",
       "DOC": "customrecord_fp_doc",
       "LOG": "customrecord_fp_log"
     },

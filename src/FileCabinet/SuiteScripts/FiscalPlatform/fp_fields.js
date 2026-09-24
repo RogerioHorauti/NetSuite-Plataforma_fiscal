@@ -175,6 +175,11 @@ define(['N/search', 'N/runtime', 'N/log', './perfis/fp_perfil_original', './perf
     return resolver('cliente', chave);
   }
 
+  /** Campo do de-para de país (customrecord_fp_pais). */
+  function idPais(chave) {
+    return resolver('pais', chave);
+  }
+
   /** Campo FP no registro de endereço. */
   function idEndereco(chave) {
     return resolver('endereco', chave);
@@ -385,6 +390,7 @@ function perfilConfigurado() {
     idSubsidiaria: idSubsidiaria,
     idLocation: idLocation,
     idCliente: idCliente,
+    idPais: idPais,
     idEndereco: idEndereco,
     idLog: idLog,
     idNatureza: idNatureza,

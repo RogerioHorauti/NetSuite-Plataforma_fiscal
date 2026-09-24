@@ -98,3 +98,29 @@ Com a régua de saída carregada, o retorno do PV704 tem de produzir, no **GL Im
 
 E **nada** de CBS (46,29), IBS estadual (5,14) ou IBS municipal (0,00) — os três são `SEM_EFEITO`.
 Se aparecer linha desses, a guarda 2 do plug-in falhou.
+
+## `customrecord_fp_pais.csv` — 257 países
+
+De-para **ISO alpha-2 → cPais do BACEN**. O NetSuite guarda a sigla ISO no `country` do endereço;
+a NF-e leva o código de 4 dígitos na tag `cPais`. A plataforma não converte: ela deriva `1058`
+quando a UF é brasileira e, para o exterior, o `mapa-divergencia.ts` dela registra que exige a
+tabela do BACEN. Traduzir é trabalho do bundle.
+
+Importar por **Setup > Import/Export > Import CSV Records**, tipo *Custom Records > FP - Pais*,
+delimitador `;`, encoding UTF-8. Colunas: `Name` (nome do país), `ISO`, `cPais`.
+
+**⚠ O cPais não se deriva do código Siscomex de 3 dígitos.** A regra do dígito verificador
+(mod 11, pesos 4-3-2) foi conferida linha a linha em 24/09/2026 contra a tabela publicada e
+**falha em 14 países** — Aland, Antártica, Ilha de Man e Montenegro entre eles. Por isso é tabela
+carregada, não conta feita em código.
+
+Procedência dos dados, e as duas verificações que passaram:
+
+- Tabela com Siscomex, BACEN, nome e ISO alpha-2: <https://www.vriconsulting.com.br/pais.php>
+- Cruzada com a tabela oficial do MDIC, por ISO alpha-3:
+  <https://balanca.economia.gov.br/balanca/bd/tabelas/PAIS.csv> — **250 dos 264 países presentes
+  nas duas, com o código Siscomex idêntico em todos**. As cinco divergências aparentes eram
+  colisão de alpha-3 com entradas históricas do MDIC (Alemanha Oriental, Ilha Wake, Território
+  Antártico Britânico); a primeira entrada de cada bate.
+- Sem sigla ISO repetida, todos os cPais com 4 dígitos, e as 7 linhas de código `0000` (país
+  extinto, como Sikkim e Iêmen Democrático) ficaram de fora.

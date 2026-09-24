@@ -245,6 +245,12 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         if (end.city) dest.municipio = texto(end.city);
         if (end.state) dest.uf = texto(end.state).toUpperCase().substring(0, 2);
         if (end.zip) dest.cep = digitos(end.zip);
+
+        // `pais` é o cPais do BACEN, não o ISO. A plataforma deriva 1058 sozinha quando a UF é
+        // brasileira, mas para o exterior ela não converte — o `mapa-divergencia.ts` dela registra
+        // que exige a tabela do BACEN. Traduzir é trabalho do bundle.
+        var cpais = codigoDoPais(end.country);
+        if (cpais) dest.pais = cpais;
       }
 
       return Object.keys(dest).length ? dest : null;
@@ -283,7 +289,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         numero: ler(sub, fpFields.idEndereco('END_NUMERO')),
         city: ler(sub, 'city'),
         state: ler(sub, 'state'),
-        zip: ler(sub, 'zip')
+        zip: ler(sub, 'zip'),
+        country: ler(sub, 'country')
       };
       log.debug('end', end)
       var idCadastro = newRecord.getValue({ fieldId: 'billaddresslist' });
@@ -299,6 +306,40 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       // Incompleto ainda é melhor que nada: o motor recusa dizendo qual campo falta, e a recusa
       // dele é mais precisa que o silêncio daqui.
       return (end.addr1 || end.city) ? end : null;
+    }
+
+    /**
+     * ISO alpha-2 do endereço → cPais de 4 dígitos, por `customrecord_fp_pais`.
+     *
+     * ⚠ O cPais NÃO se deriva do código Siscomex de 3 dígitos. A regra do dígito verificador
+     * (mod 11, pesos 4-3-2) foi conferida contra a tabela publicada em 24/09/2026 e falha em 14
+     * países — Aland, Antártica, Ilha de Man e Montenegro entre eles. Por isso é tabela carregada,
+     * não conta feita em código.
+     *
+     * País não encontrado sai do payload e vai para o log com o valor cru: melhor o motor recusar
+     * dizendo que falta o país do que a nota sair com o país errado.
+     */
+    function codigoDoPais(iso) {
+      var sigla = texto(iso).trim().toUpperCase();
+      if (!sigla) return '';
+
+      var registro = fpFields.registro('PAIS');
+      var colIso = fpFields.idPais('ISO');
+      var colCpais = fpFields.idPais('CPAIS');
+      if (!registro || !colIso || !colCpais) return '';
+
+      var r = query.runSuiteQL({
+        query: 'SELECT ' + colCpais + ' AS cpais FROM ' + registro + ' WHERE UPPER(' + colIso + ') = ?',
+        params: [sigla]
+      }).asMappedResults();
+
+      if (!r.length) {
+        log.audit('fp_md_map_simular.codigoDoPais',
+          'país "' + sigla + '" não está em ' + registro + ' — o destinatário sai sem cPais. ' +
+          'Carga em carga/customrecord_fp_pais.csv.');
+        return '';
+      }
+      return texto(r[0].cpais);
     }
 
     /** Campo ausente no subrecord não pode derrubar a leitura dos outros. */
