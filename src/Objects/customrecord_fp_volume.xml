@@ -60,6 +60,8 @@
       <isparent>T</isparent>
       <label>Transacao</label>
       <maxlength></maxlength>
+      <onparentdelete>SET_NULL</onparentdelete>
+      <parentsubtab>[scriptid=custtab_fp_transp]</parentsubtab>
       <rolerestrict>F</rolerestrict>
       <searchlevel>2</searchlevel>
       <selectrecordtype>-30</selectrecordtype>
