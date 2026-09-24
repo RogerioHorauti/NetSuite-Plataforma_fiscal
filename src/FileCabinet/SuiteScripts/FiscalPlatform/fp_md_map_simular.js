@@ -137,6 +137,30 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var idExterno = valorTexto(newRecord, fpFields.id('DOC_IDEXTERNO'));
       if (idExterno) payload.idExterno = idExterno;
 
+      // ── O QUE SÓ EXISTE NA EMISSÃO ────────────────────────────────────────────────────────
+      //
+      // MEDIDO: `indPres`, `transporte`, `pagamento`, `infAdicFisco` e `infAdicContrib` NÃO
+      // existem no `SimulacaoNotaInputDto`. Mandá-los no `/simular` é descarte silencioso — o
+      // Nest roda `whitelist: true` sem `forbidNonWhitelisted`.
+      //
+      // `indFinal` NÃO é mandado, e é decisão, não omissão: o motor o deriva da natureza, e o
+      // DTO diz que `null` deriva e valor explícito é OVERRIDE. Ele é eixo do DIFAL — mandar 0
+      // por engano sobrepõe a derivação e o erro sai como recolhimento a menor.
+
+      var indPres = codigoDaLista(valorTexto(newRecord, fpFields.id('IND_PRES')));
+      if (indPres) payload.indPres = indPres;
+
+      // `modFrete` é o único campo obrigatório DENTRO de `transporte`: o grupo só existe se ele
+      // existir, senão o DTO recusa o objeto inteiro.
+      var modFrete = codigoDaLista(valorTexto(newRecord, fpFields.id('FRETE_MODALIDADE')));
+      if (modFrete) payload.transporte = { modFrete: modFrete };
+
+      var fisco = valorTexto(newRecord, fpFields.id('INFADIC_FISCO'));
+      if (fisco) payload.infAdicFisco = fisco;
+
+      var contrib = valorTexto(newRecord, fpFields.id('INFADIC_CONTRIB'));
+      if (contrib) payload.infAdicContrib = contrib;
+
       return payload;
     }
 

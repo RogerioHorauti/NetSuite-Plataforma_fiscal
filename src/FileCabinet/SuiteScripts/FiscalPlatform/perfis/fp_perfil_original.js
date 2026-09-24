@@ -66,8 +66,25 @@ define([], function () {
       "_grupo_infra": "mecanismo de mensagem síncrona — ver fp_msg.js",
       "CORRID": "custbody_fp_corrid",
   
-      "_grupo_transporte": "",
-      "FRETE_MODALIDADE": "custbody_fp_frete_modalidade"
+      "_grupo_transporte": [
+        "modFrete NAO se deriva de campo nativo: shipmethod e carrier sao logistica internacional",
+        "e nao dizem de quem e a RESPONSABILIDADE pelo frete, que e o que o grupo X declara."
+      ],
+      "FRETE_MODALIDADE": "custbody_fp_frete_modalidade",
+
+      "_grupo_adicionais": [
+        "Campos do EmitirNotaDto que NAO existem no SimulacaoNotaInputDto -- so vao na emissao.",
+        "Nenhum leva prefixo DOC_ porque sao DECLARACAO do ERP, nao retorno do motor: a copia",
+        "os herda de proposito (ver limparNaCopia).",
+        "",
+        "indFinal FICA DE FORA, e nao e esquecimento: o motor o deriva da natureza",
+        "(consumidorFinal) e o DTO diz que NULL = derivar, valor explicito = override. Mandar 0",
+        "por engano sobrepoe a derivacao e o indFinal e eixo do DIFAL -- o silencio viraria",
+        "recolhimento a menor."
+      ],
+      "IND_PRES": "custbody_fp_ind_pres",
+      "INFADIC_FISCO": "custbody_fp_infadic_fisco",
+      "INFADIC_CONTRIB": "custbody_fp_infadic_contrib"
   
     },
   

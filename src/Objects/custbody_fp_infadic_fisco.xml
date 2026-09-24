@@ -1,4 +1,4 @@
-<transactionbodycustomfield scriptid="custbody_fp_frete_modalidade">
+<transactionbodycustomfield scriptid="custbody_fp_infadic_fisco">
   <accesslevel>2</accesslevel>
   <applyformatting>F</applyformatting>
   <bodycustomerpayment>F</bodycustomerpayment>
@@ -26,22 +26,22 @@
   <defaultchecked>F</defaultchecked>
   <defaultselection></defaultselection>
   <defaultvalue></defaultvalue>
-  <description>De quem e a RESPONSABILIDADE pelo frete (modFrete, grupo X). Lista fechada. ⚠ Nao se deriva de shipmethod nem de carrier: esses sao logistica internacional e nao dizem quem paga o frete. Era campo TEXT e virou lista porque o DTO valida com IsIn -- texto livre so descobria o erro na recusa.</description>
-  <displayheight></displayheight>
+  <description>infAdFisco. Texto que a legislacao MANDA constar -- fundamento de beneficio, regime especial, norma referenciada. Nao e observacao comercial: isso vai no campo do contribuinte.</description>
+  <displayheight>3</displayheight>
   <displaytype>NORMAL</displaytype>
   <displaywidth></displaywidth>
   <dynamicdefault></dynamicdefault>
   <encryptatrest>F</encryptatrest>
-  <fieldtype>SELECT</fieldtype>
+  <fieldtype>TEXTAREA</fieldtype>
   <fldsizelabel></fldsizelabel>
   <globalsearch>F</globalsearch>
   <help></help>
   <isformula>F</isformula>
   <ismandatory>F</ismandatory>
   <isparent>F</isparent>
-  <label>Modalidade do Frete</label>
+  <label>Inf. Adicionais ao Fisco</label>
   <linktext></linktext>
-  <maxlength>1</maxlength>
+  <maxlength></maxlength>
   <maxvalue></maxvalue>
   <minvalue></minvalue>
   <onparentdelete></onparentdelete>
@@ -49,7 +49,7 @@
   <searchcomparefield></searchcomparefield>
   <searchdefault></searchdefault>
   <searchlevel>2</searchlevel>
-  <selectrecordtype>[scriptid=customlist_fp_mod_frete]</selectrecordtype>
+  <selectrecordtype></selectrecordtype>
   <showhierarchy>F</showhierarchy>
   <showinlist>F</showinlist>
   <sourcefilterby></sourcefilterby>
