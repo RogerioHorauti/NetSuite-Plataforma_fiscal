@@ -1,0 +1,119 @@
+/**
+ * @NApiVersion 2.1
+ * @NScriptType UserEventScript
+ * @NModuleScope Public
+ *
+ * O BOTÃO DE EMISSÃO NA TRANSAÇÃO. Só isso: injeta o botão e some.
+ *
+ * ── POR QUE NÃO ESTÁ NO `fp_ue_simular` ────────────────────────────────────────────────────────
+ *
+ * Simular e emitir não cobrem os mesmos documentos. A simulação roda em oito tipos, inclusive
+ * pedido de venda e pedido de compra — documentos que NÃO viram nota fiscal e existem justamente
+ * para prever tributo antes de virarem uma. Emissão roda só onde existe documento a emitir.
+ *
+ * Juntar os dois num User Event só faria o deployment de um arrastar o outro: para o botão
+ * aparecer na Transfer Order, a simulação teria de estar deployada lá; para a simulação rodar no
+ * pedido de venda, o botão de emitir apareceria nele. Dois scripts, duas listas de deployment, e
+ * cada um aparece exatamente onde faz sentido.
+ *
+ * ── SÓ `beforeLoad` ────────────────────────────────────────────────────────────────────────────
+ *
+ * Não há `beforeSubmit` nem `afterSubmit` aqui, e não é omissão: emitir é ato explícito, fora do
+ * save. Um User Event que emitisse no save queimaria um número por clique em "Salvar".
+ */
+define(['N/url', 'N/runtime', 'N/log', './fp_fields'],
+  function (url, runtime, log, fpFields) {
+
+    /**
+     * Onde EXISTE documento fiscal a emitir.
+     *
+     * Lista própria, e menor que a do simulador de propósito: pedido de venda, pedido de compra,
+     * autorização de devolução e crédito de fornecedor simulam tributo mas não emitem documento.
+     */
+    var TIPOS = ['invoice', 'vendorbill', 'creditmemo', 'transferorder'];
+
+    function beforeLoad(scriptContext) {
+      try {
+        injetarBotoes(scriptContext);
+      } catch (e) {
+        // Botão é conveniência. Trocar "sem botão" por "não abre a transação" é o pior negócio
+        // possível — e emitir continua acessível pela URL do Suitelet.
+        log.error('fp_ue_emissao.beforeLoad', { name: e.name, message: e.message, stack: e.stack });
+      }
+    }
+
+    /**
+     * Só em transação JÁ GRAVADA: o `idExterno` é o internal id, e num registro novo ele não
+     * existe. Emitir uma transação que ainda não foi salva não é uma operação que exista.
+     *
+     * Só em VIEW, nunca em EDIT. Em edição o usuário tem alterações não salvas na tela, e o
+     * Suitelet emitiria o que está no BANCO — emitir uma versão que ninguém está vendo é o tipo
+     * de surpresa que custa um número.
+     *
+     * `clientScriptModulePath` e não registro de script: um objeto SDF a menos.
+     */
+    function injetarBotoes(scriptContext) {
+      if (runtime.executionContext !== runtime.ContextType.USER_INTERFACE) return;
+      if (scriptContext.type !== scriptContext.UserEventType.VIEW) return;
+      if (TIPOS.indexOf(scriptContext.newRecord.type) === -1) return;
+
+      var id = scriptContext.newRecord.id;
+      if (!id) return;
+
+      var form = scriptContext.form;
+      form.clientScriptModulePath = './fp_cs_transacao.js';
+
+      botao(form, 'custpage_fp_emitir', 'Emitir ' + tipoDeclarado(scriptContext.newRecord),
+        scriptContext, id, 'emitir', true);
+
+      // Consultar só faz sentido depois de transmitida, e é o que resolve nota em PROCESSANDO.
+      var campoStatus = fpFields.id('DOC_STATUS');
+      var status = campoStatus
+        ? String(scriptContext.newRecord.getValue({ fieldId: campoStatus }) || '')
+        : '';
+
+      if (status) {
+        botao(form, 'custpage_fp_consultar', 'Consultar SEFAZ', scriptContext, id, 'consultar', false);
+      }
+    }
+
+    /**
+     * O NOME CURTO DO DOCUMENTO DECLARADO — "NF-e", "NFC-e", "CT-e".
+     *
+     * O rótulo já esteve chumbado em "Emitir NF-e", e o bundle emite cinco tipos: o botão
+     * anunciava NF-e numa transação marcada como CT-e, e quem clicasse estaria emitindo outra
+     * coisa.
+     *
+     * Sai do TEXTO da lista, que é "CÓDIGO - Apelido, descrição (modelo)". Um de-para chumbado
+     * aqui seria mais uma lista a manter — e a que ninguém lembraria de atualizar ao acrescentar
+     * um tipo. Sem tipo declarado o rótulo é genérico, e o Suitelet recusa dizendo o que falta.
+     */
+    function tipoDeclarado(novoRegistro) {
+      var campo = fpFields.id('TIPODOC');
+      if (!campo) return 'documento fiscal';
+
+      var texto = String(novoRegistro.getText({ fieldId: campo }) || '');
+      var m = /^\s*[A-Z0-9_]+\s*-\s*([^,(]+)/.exec(texto);
+      return m ? m[1].trim() : 'documento fiscal';
+    }
+
+    /**
+     * `consome` diz ao cliente se ele pergunta antes. Quem sabe disso é aqui, não o cliente: a
+     * diferença entre gastar número e não gastar é do endpoint, não da tela.
+     */
+    function botao(form, idBotao, rotulo, scriptContext, id, acao, consome) {
+      var endereco = url.resolveScript({
+        scriptId: 'customscript_fp_sl_emissao',
+        deploymentId: 'customdeploy_fp_sl_emissao',
+        params: { tipo: scriptContext.newRecord.type, id: id, acao: acao }
+      });
+
+      form.addButton({
+        id: idBotao,
+        label: rotulo,
+        functionName: "acionar('" + endereco + "','" + rotulo + "'," + (consome ? 'true' : 'false') + ")"
+      });
+    }
+
+    return { beforeLoad: beforeLoad };
+  });

@@ -48,7 +48,6 @@
 define([
   'N/record',
   'N/file',
-  'N/url',
   'N/runtime',
   'N/log',
   './fp_msg',
@@ -56,7 +55,7 @@ define([
   './fp_form',
   './fp_client',
   './fp_md_map_simular'
-], function (record, file, url, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular) {
+], function (record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular) {
   /** Tipos de transação em que a simulação roda. Fora desta lista, o script não faz nada. */
   var TIPOS = [
     'invoice',
@@ -133,7 +132,6 @@ define([
     try {
       fpMsg.pintar(scriptContext);
       organizarFormulario(scriptContext);
-      injetarBotoes(scriptContext);
     } catch (e) {
       log.error('fp_ue_simular.beforeLoad', { name: e.name, message: e.message, stack: e.stack });
     }
@@ -260,80 +258,6 @@ define([
    * A cadeia de âncoras existe porque `memo` não está em todo formulário customizado; caindo para
    * `entity`/`trandate`, os dois campos ainda ficam num lugar previsível em vez de irem para o fim.
    */
-  /**
-   * O BOTÃO DE EMISSÃO, injetado aqui porque o Suitelet não tem como se anunciar sozinho.
-   *
-   * Só em transação JÁ GRAVADA: o `idExterno` é o internal id, e num registro novo ele não
-   * existe. Emitir uma transação que ainda não foi salva não é uma operação que exista.
-   *
-   * Só em VIEW, nunca em EDIT. Em edição o usuário tem alterações não salvas na tela, e o
-   * Suitelet emitiria o que está no BANCO — emitir uma versão que ninguém está vendo é o tipo de
-   * surpresa que custa um número.
-   *
-   * `clientScriptModulePath` e não registro de script: um objeto SDF a menos.
-   */
-  function injetarBotoes(scriptContext) {
-    if (scriptContext.type !== scriptContext.UserEventType.VIEW) return;
-    if (TIPOS.indexOf(scriptContext.newRecord.type) === -1) return;
-
-    var id = scriptContext.newRecord.id;
-    if (!id) return;
-
-    var form = scriptContext.form;
-    form.clientScriptModulePath = './fp_cs_transacao.js';
-
-    var campoStatus = fpFields.id('DOC_STATUS');
-    var status = campoStatus
-      ? String(scriptContext.newRecord.getValue({ fieldId: campoStatus }) || '').toUpperCase()
-      : '';
-
-    botao(form, 'custpage_fp_emitir', 'Emitir ' + tipoDeclarado(scriptContext.newRecord),
-      scriptContext, id, 'emitir', true);
-
-    // Consultar só faz sentido depois de transmitida, e é o que resolve nota em PROCESSANDO.
-    if (status) {
-      botao(form, 'custpage_fp_consultar', 'Consultar SEFAZ', scriptContext, id, 'consultar', false);
-    }
-  }
-
-  /**
-   * O NOME CURTO DO DOCUMENTO DECLARADO — "NF-e", "NFC-e", "CT-e".
-   *
-   * O rótulo estava chumbado em "Emitir NF-e", e o bundle emite cinco tipos: o botão anunciava
-   * NF-e numa transação marcada como CT-e, e quem clicasse estaria emitindo outra coisa.
-   *
-   * Sai do TEXTO da lista, que é "CÓDIGO - Apelido, descrição (modelo)". Um de-para chumbado aqui
-   * seria a sexta lista a manter — e a que ninguém lembraria de atualizar ao acrescentar um tipo.
-   * Sem tipo declarado, o rótulo é genérico e o Suitelet recusa, dizendo o que falta.
-   */
-  function tipoDeclarado(novoRegistro) {
-    var campo = fpFields.id('TIPODOC');
-    if (!campo) return 'documento fiscal';
-
-    var texto = String(novoRegistro.getText({ fieldId: campo }) || '');
-    // "NFE - NF-e, Nota Fiscal Eletronica (modelo 55)" → "NF-e"
-    var m = /^\s*[A-Z0-9_]+\s*-\s*([^,(]+)/.exec(texto);
-    return m ? m[1].trim() : 'documento fiscal';
-  }
-
-  /**
-   * `consome` diz ao cliente se ele pergunta antes. Quem sabe disso é aqui, não o cliente: a
-   * diferença entre gastar número e não gastar é do endpoint, não da tela.
-   */
-  function botao(form, idBotao, rotulo, scriptContext, id, acao, consome) {
-    var endereco = url.resolveScript({
-      scriptId: 'customscript_fp_sl_emissao',
-      deploymentId: 'customdeploy_fp_sl_emissao',
-      params: { tipo: scriptContext.newRecord.type, id: id, acao: acao }
-    });
-
-    form.addButton({
-      id: idBotao,
-      label: rotulo,
-      functionName: "acionar('" + endereco + "','" + rotulo + "'," + (consome ? 'true' : 'false') + ")"
-    });
-  }
-
   function organizarFormulario(scriptContext) {
     if (runtime.executionContext !== runtime.ContextType.USER_INTERFACE) return;
     if (TIPOS.indexOf(scriptContext.newRecord.type) === -1) return;
