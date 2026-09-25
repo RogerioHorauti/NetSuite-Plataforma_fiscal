@@ -196,6 +196,16 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
     return resolver('reboque', chave);
   }
 
+  /** Campo da sublista de DI. */
+  function idDi(chave) {
+    return resolver('di', chave);
+  }
+
+  /** Campo da sublista de adições da DI. */
+  function idDiAdicao(chave) {
+    return resolver('di_adicao', chave);
+  }
+
   /** Campo da sublista de pagamentos. */
   function idPagamento(chave) {
     return resolver('pagamento', chave);
@@ -401,6 +411,8 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
     idLocation: idLocation,
     chaves: chaves,
     idReboque: idReboque,
+    idDi: idDi,
+    idDiAdicao: idDiAdicao,
     idPagamento: idPagamento,
     idVolume: idVolume,
     idCliente: idCliente,

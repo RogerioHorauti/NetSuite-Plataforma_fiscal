@@ -1,0 +1,10 @@
+<customlist scriptid="customlist_fp_hipotese_st">
+  <description>hipoteseStInterestadual. Os dois unicos valores que o motor aceita (HIPOTESES_ST_INTERESTADUAL). Cada um pede um grupo diferente do leiaute, entao declarar errado nao e detalhe.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Hipotese de ST Interestadual</name>
+  <customvalues>
+    <customvalue scriptid="val_hip_st_partilha"><isinactive>F</isinactive><value>PARTILHA - Partilha do ICMS-ST entre as UFs</value></customvalue>
+    <customvalue scriptid="val_hip_st_repasse"><isinactive>F</isinactive><value>REPASSE - Repasse do ICMS-ST ja retido anteriormente</value></customvalue>
+  </customvalues>
+</customlist>

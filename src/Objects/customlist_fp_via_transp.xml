@@ -1,0 +1,20 @@
+<customlist scriptid="customlist_fp_via_transp">
+  <description>tpViaTransp da DI, Tabela do MOC. A via MARITIMA (1) e a unica que torna o AFRMM obrigatorio.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Via de Transporte da DI</name>
+  <customvalues>
+    <customvalue scriptid="val_via_1"><isinactive>F</isinactive><value>1 - Maritima</value></customvalue>
+    <customvalue scriptid="val_via_2"><isinactive>F</isinactive><value>2 - Fluvial</value></customvalue>
+    <customvalue scriptid="val_via_3"><isinactive>F</isinactive><value>3 - Lacustre</value></customvalue>
+    <customvalue scriptid="val_via_4"><isinactive>F</isinactive><value>4 - Aerea</value></customvalue>
+    <customvalue scriptid="val_via_5"><isinactive>F</isinactive><value>5 - Postal</value></customvalue>
+    <customvalue scriptid="val_via_6"><isinactive>F</isinactive><value>6 - Ferroviaria</value></customvalue>
+    <customvalue scriptid="val_via_7"><isinactive>F</isinactive><value>7 - Rodoviaria</value></customvalue>
+    <customvalue scriptid="val_via_8"><isinactive>F</isinactive><value>8 - Conduto ou rede de transmissao</value></customvalue>
+    <customvalue scriptid="val_via_9"><isinactive>F</isinactive><value>9 - Meios proprios</value></customvalue>
+    <customvalue scriptid="val_via_10"><isinactive>F</isinactive><value>10 - Entrada ou saida ficta</value></customvalue>
+    <customvalue scriptid="val_via_11"><isinactive>F</isinactive><value>11 - Courier</value></customvalue>
+    <customvalue scriptid="val_via_12"><isinactive>F</isinactive><value>12 - Handcarry</value></customvalue>
+  </customvalues>
+</customlist>

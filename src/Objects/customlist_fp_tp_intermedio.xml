@@ -1,0 +1,11 @@
+<customlist scriptid="customlist_fp_tp_intermedio">
+  <description>tpIntermedio. Conta e ordem (2) e encomenda (3) EXIGEM o CNPJ e a UF do terceiro; conta propria (1) nao admite nenhum dos dois.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Tipo de Intermediacao da DI</name>
+  <customvalues>
+    <customvalue scriptid="val_interm_1"><isinactive>F</isinactive><value>1 - Importacao por conta propria</value></customvalue>
+    <customvalue scriptid="val_interm_2"><isinactive>F</isinactive><value>2 - Importacao por conta e ordem</value></customvalue>
+    <customvalue scriptid="val_interm_3"><isinactive>F</isinactive><value>3 - Importacao por encomenda</value></customvalue>
+  </customvalues>
+</customlist>

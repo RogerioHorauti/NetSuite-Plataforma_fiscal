@@ -1,0 +1,42 @@
+<transactioncolumncustomfield scriptid="custcol_fp_desp_base_icms">
+  <accesslevel>2</accesslevel>
+  <applyformatting>F</applyformatting>
+  <colexpense>F</colexpense>
+  <colgrouponinvoices>F</colgrouponinvoices>
+  <colitemfulfillment>T</colitemfulfillment>
+  <colitemreceipt>T</colitemreceipt>
+  <coljournal>F</coljournal>
+  <colkititem>F</colkititem>
+  <colopportunity>F</colopportunity>
+  <colpurchase>T</colpurchase>
+  <colsale>T</colsale>
+  <coltransferorder>T</coltransferorder>
+  <defaultchecked>F</defaultchecked>
+  <defaultselection></defaultselection>
+  <defaultvalue></defaultvalue>
+  <description>despesasBaseIcms -- despesas que compoem a base do ICMS na importacao. Nao e a mesma base do II: a do ICMS inclui o proprio II e as taxas, por isso sao dois campos.</description>
+  <displayheight></displayheight>
+  <displaytype>NORMAL</displaytype>
+  <displaywidth></displaywidth>
+  <dynamicdefault></dynamicdefault>
+  <encryptatrest>F</encryptatrest>
+  <fieldtype>CURRENCY</fieldtype>
+  <help></help>
+  <isformula>F</isformula>
+  <ismandatory>F</ismandatory>
+  <label>Despesas na Base do ICMS</label>
+  <linktext></linktext>
+  <maxlength></maxlength>
+  <maxvalue></maxvalue>
+  <minvalue></minvalue>
+  <onparentdelete></onparentdelete>
+  <searchcomparefield></searchcomparefield>
+  <searchdefault></searchdefault>
+  <searchlevel>2</searchlevel>
+  <selectrecordtype></selectrecordtype>
+  <showhierarchy>F</showhierarchy>
+  <sourcefilterby></sourcefilterby>
+  <sourcefrom></sourcefrom>
+  <sourcelist></sourcelist>
+  <storevalue>T</storevalue>
+</transactioncolumncustomfield>

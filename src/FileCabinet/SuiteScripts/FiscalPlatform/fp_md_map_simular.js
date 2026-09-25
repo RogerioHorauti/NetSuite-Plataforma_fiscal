@@ -59,8 +59,8 @@
  * Isto roda no `beforeSubmit`, no caminho do save. Os itens são lidos em UMA busca para o conjunto
  * inteiro, não um `lookupFields` por linha: nota de 50 itens pagaria 50 idas ao banco por nada.
  */
-define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'],
-  function (search, query, format, log, fpFields, fpClient) {
+define(['N/record', 'N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'],
+  function (record, search, query, format, log, fpFields, fpClient) {
 
     // ─────────────────────────────────────────────────────────────────────────
     // montagem do payload
@@ -753,6 +753,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         'SELECT internalid AS id, abbreviation AS txt FROM unitstypeuom', 'internalid');
 
       var prestacao = montarPrestacao(newRecord);
+      var dis = montarDis(newRecord);
 
       var campoNat = fpFields.idLinha('LINHA_NATUREZA');
       var naturezas = campoNat
@@ -802,6 +803,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         acrescentarDaLinha(newRecord, i, linha);
         if (prestacao) copiarPara(linha, prestacao);
 
+        var di = dis[String(numeroItem)];
+        if (di) linha.di = di;
+
         var cad = item && cadastro[String(item)];
         if (cad) {
           if (cad.codigo) linha.codigoProduto = cad.codigo;
@@ -815,6 +819,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
           if (cad.codigoServicoMunicipal) linha.codigoServicoMunicipal = cad.codigoServicoMunicipal;
           if (cad.desdobramentoTribNac) linha.desdobramentoTribNac = cad.desdobramentoTribNac;
           if (cad.nbs) linha.nbs = cad.nbs;
+          if (cad.nFci) linha.nFci = cad.nFci;
+          if (cad.codigoBarrasTrib) linha.codigoBarrasTrib = cad.codigoBarrasTrib;
           if (!linha.descricao && cad.descricao) linha.descricao = cad.descricao;
 
           // A unidade tributável e o fator andam juntos: sem a unidade não há o que converter, e
@@ -828,6 +834,137 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         linhas.push(linha);
       }
       return linhas;
+    }
+
+    /**
+     * AS DECLARAÇÕES DE IMPORTAÇÃO, indexadas pelo número do item que cada uma cobre.
+     *
+     * ⚠ SUBLISTA DE CUSTOM RECORD PENDURA NA TRANSAÇÃO, NÃO NA LINHA. O NetSuite não tem sublista
+     * dentro de linha, então a DI declara a QUAL item pertence — o mesmo número que o mapeador
+     * grava no campo hidden de sequência. Sem esse número a DI não amarra na mercadoria, e uma
+     * nota com dois importados sairia com a DI errada no item errado.
+     *
+     * As ADIÇÕES são sublista DA DI, não da transação: adição pertence a uma DI, e pendurá-la na
+     * transação exigiria repetir de qual DI ela é.
+     */
+    function montarDis(newRecord) {
+      var sublist = fpFields.idDi('SUBLIST');
+      var campoItem = fpFields.idDi('NUMERO_ITEM');
+      if (!sublist || !campoItem) return {};
+
+      var out = {};
+      var total = contarSublist(newRecord, sublist);
+
+      for (var i = 0; i < total; i++) {
+        var item = numero(valorDeSublist(newRecord, sublist, campoItem, i));
+        var ndi = texto(valorDeSublist(newRecord, sublist, fpFields.idDi('NDI'), i));
+        if (!ndi) continue;
+
+        if (!item) {
+          log.audit('fp_md_map_simular.montarDis',
+            'DI ' + ndi + ' sem o numero do item: ela NAO foi enviada. Sem isso a declaracao nao ' +
+            'amarra na mercadoria importada, e numa nota com dois importados iria no item errado.');
+          continue;
+        }
+
+        var di = { nDI: ndi };
+        textoSeTiver(newRecord, sublist, i, di, 'LOCAL_DESEMBARACO', 'xLocDesemb');
+        di.dDI = dataDeSublist(newRecord, sublist, fpFields.idDi('DDI'), i);
+        di.dDesemb = dataDeSublist(newRecord, sublist, fpFields.idDi('DATA_DESEMBARACO'), i);
+
+        var uf = texto(valorDeSublist(newRecord, sublist, fpFields.idDi('UF_DESEMBARACO'), i));
+        if (uf) di.ufDesemb = uf.toUpperCase().substring(0, 2);
+
+        var via = codigoDaLista(textoDeSublist(newRecord, sublist, fpFields.idDi('VIA_TRANSPORTE'), i));
+        if (via) di.tpViaTransp = via;
+
+        var afrmm = numero(valorDeSublist(newRecord, sublist, fpFields.idDi('AFRMM'), i));
+        if (afrmm) di.vAFRMM = afrmm;
+
+        // A via marítima é a única que torna o AFRMM obrigatório, e ele é FONTE ÚNICA: compõe a
+        // base do ICMS-importação e entra em vOutro. Faltando, o imposto sai a menor.
+        if (via === '1' && !afrmm) {
+          log.audit('fp_md_map_simular.montarDis',
+            'DI ' + ndi + ' e maritima e esta SEM o AFRMM. Ele compoe a base do ICMS-importacao e ' +
+            'entra em vOutro -- sem ele o imposto sai a menor.');
+        }
+
+        var interm = codigoDaLista(textoDeSublist(newRecord, sublist, fpFields.idDi('TP_INTERMEDIO'), i));
+        if (interm) di.tpIntermedio = interm;
+
+        var cnpjTerceiro = digitos(valorDeSublist(newRecord, sublist, fpFields.idDi('CNPJ_TERCEIRO'), i));
+        var ufTerceiro = texto(valorDeSublist(newRecord, sublist, fpFields.idDi('UF_TERCEIRO'), i));
+        if (cnpjTerceiro) di.cnpjTerceiro = cnpjTerceiro;
+        if (ufTerceiro) di.ufTerceiro = ufTerceiro.toUpperCase().substring(0, 2);
+
+        // Conta e ordem (2) e encomenda (3) EXIGEM o terceiro; conta própria (1) não o admite.
+        if ((interm === '2' || interm === '3') && !cnpjTerceiro) {
+          log.audit('fp_md_map_simular.montarDis',
+            'DI ' + ndi + ' e por conta e ordem ou encomenda e NAO tem o CNPJ do terceiro, que o ' +
+            'leiaute exige nessas duas intermediacoes.');
+        }
+
+        textoSeTiver(newRecord, sublist, i, di, 'EXPORTADOR', 'cExportador');
+
+        var adicoes = montarAdicoes(newRecord, sublist, i);
+        if (adicoes.length) di.adicoes = adicoes;
+
+        out[String(item)] = di;
+      }
+      return out;
+    }
+
+    /**
+     * As adições de UMA DI.
+     *
+     * ⚠ MEDIDO como limitação do NetSuite, não escolha: a sublista de adições é filha do REGISTRO
+     * da DI, e o `newRecord` da transação não enxerga sublista de outro registro. Por isso as
+     * adições são lidas com `record.load` da DI — uma carga por DI, e só quando há DI.
+     */
+    function montarAdicoes(newRecord, sublistDi, linhaDi) {
+      var registroDi = fpFields.registro('DI');
+      var sublistAdi = fpFields.idDiAdicao('SUBLIST');
+      if (!registroDi || !sublistAdi) return [];
+
+      var idDi = valorDeSublist(newRecord, sublistDi, 'id', linhaDi);
+      if (!idDi) return [];
+
+      var rec = record.load({ type: registroDi, id: idDi });
+      var total = rec.getLineCount({ sublistId: sublistAdi });
+      if (total <= 0) return [];
+
+      var out = [];
+      for (var i = 0; i < total; i++) {
+        var a = {
+          nAdicao: numero(rec.getSublistValue({
+            sublistId: sublistAdi, fieldId: fpFields.idDiAdicao('NUMERO'), line: i })),
+          nSeqAdic: numero(rec.getSublistValue({
+            sublistId: sublistAdi, fieldId: fpFields.idDiAdicao('SEQUENCIA'), line: i })),
+          cFabricante: texto(rec.getSublistValue({
+            sublistId: sublistAdi, fieldId: fpFields.idDiAdicao('FABRICANTE'), line: i }))
+        };
+        if (!a.nAdicao) continue;
+
+        var desc = numero(rec.getSublistValue({
+          sublistId: sublistAdi, fieldId: fpFields.idDiAdicao('DESCONTO'), line: i }));
+        if (desc) a.vDescDI = desc;
+
+        out.push(a);
+      }
+      return out;
+    }
+
+    function textoSeTiver(newRecord, sublist, i, alvo, chave, destino) {
+      var v = texto(valorDeSublist(newRecord, sublist, fpFields.idDi(chave), i));
+      if (v) alvo[destino] = v;
+    }
+
+    /** `AAAA-MM-DD`, que é o formato do DTO. Campo DATE devolve `Date`. */
+    function dataDeSublist(newRecord, sublist, campo, linha) {
+      var d = campo && valorDeSublist(newRecord, sublist, campo, linha);
+      if (!d) return undefined;
+      if (typeof d === 'string') d = format.parse({ value: d, type: format.Type.DATE });
+      return d.getFullYear() + '-' + dois(d.getMonth() + 1) + '-' + dois(d.getDate());
     }
 
     /**
@@ -862,11 +999,14 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var resultado = valorTexto(newRecord, fpFields.id('PAIS_RESULTADO'));
       if (resultado) p.paisResultadoServico = resultado.toUpperCase();
 
+      // `campoConsumo && ...` devolveria `null` quando o perfil não resolve a chave, e `null` não
+      // é `false`: a comparação abaixo disparava o aviso em TODA nota sem serviço.
       var campoConsumo = fpFields.id('CONSUMO_EXTERIOR');
-      var consumo = campoConsumo && newRecord.getValue({ fieldId: campoConsumo }) === true;
+      var consumo = !!(campoConsumo && newRecord.getValue({ fieldId: campoConsumo }) === true);
       if (consumo) p.consumoNoExterior = true;
 
-      if (consumo !== !!resultado) {
+      // Só avisa quando UM dos dois foi declarado. Nenhum dos dois é a nota de mercadoria comum.
+      if ((consumo || !!resultado) && consumo !== !!resultado) {
         log.audit('fp_md_map_simular.montarPrestacao',
           'exportacao de servico exige os DOIS: pais do resultado e consumo no exterior. So um ' +
           'esta preenchido, e o motor nao tem como caracterizar a exportacao (LC 116/2003, ' +
@@ -916,6 +1056,35 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
 
       var deducao = numero(valorLinha(newRecord, fpFields.idLinha('LINHA_DEDUCAO_MATERIAL'), i));
       if (deducao) linha.deducaoMaterial = deducao;
+
+      // Valores que COMPÕEM ou REDUZEM a base. O desconto aqui é o INCONDICIONAL: o condicional,
+      // que depende de pagamento antecipado, não reduz base e não entra.
+      valorSeTiver(newRecord, i, linha, 'LINHA_VALOR_FRETE', 'valorFrete');
+      valorSeTiver(newRecord, i, linha, 'LINHA_VALOR_SEGURO', 'valorSeguro');
+      valorSeTiver(newRecord, i, linha, 'LINHA_VALOR_DESCONTO', 'valorDesconto');
+      valorSeTiver(newRecord, i, linha, 'LINHA_DESP_BASE_II', 'despesasBaseII');
+      valorSeTiver(newRecord, i, linha, 'LINHA_DESP_BASE_ICMS', 'despesasBaseIcms');
+      valorSeTiver(newRecord, i, linha, 'LINHA_CRED_ICMS_TRANSF', 'creditoIcmsTransferido');
+      valorSeTiver(newRecord, i, linha, 'LINHA_QTD_TRIB', 'quantidadeTributavel');
+      valorSeTiver(newRecord, i, linha, 'LINHA_VUNIT_TRIB', 'valorUnitarioTrib');
+
+      var hipotese = codigoDaLista(textoLinha(newRecord, fpFields.idLinha('LINHA_HIPOTESE_ST'), i));
+      if (hipotese) linha.hipoteseStInterestadual = hipotese;
+
+      // Mesmo desenho do `indDoacao`: o DTO aceita APENAS 1, e a ausência é o "não".
+      var campoUsado = fpFields.idLinha('LINHA_BEM_USADO');
+      if (campoUsado && valorLinha(newRecord, campoUsado, i) === true) linha.indBemMovelUsado = 1;
+
+      // ZFM: o "0" é um valor de verdade — "sem crédito presumido" —, e não a ausência. Por isso
+      // aqui não se testa o número e sim se a lista foi escolhida.
+      var zfm = codigoDaLista(textoLinha(newRecord, fpFields.idLinha('LINHA_CRED_ZFM'), i));
+      if (zfm !== '') linha.tpCredPresIbsZfm = zfm;
+    }
+
+    /** Número que vale a pena mandar. Zero é ausência em todos estes campos. */
+    function valorSeTiver(newRecord, i, linha, chave, destino) {
+      var v = numero(valorLinha(newRecord, fpFields.idLinha(chave), i));
+      if (v) linha[destino] = v;
     }
 
     /**
@@ -959,7 +1128,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
                       exTipi: 'ITEM_EX_TIPI', unidadeTributavel: 'ITEM_UNID_TRIB',
                       fatorConversao: 'ITEM_FATOR_CONV', naturezaReceita: 'ITEM_NAT_RECEITA',
                       codigoServicoMunicipal: 'ITEM_SERVICO_MUNICIPAL',
-                      desdobramentoTribNac: 'ITEM_DESDOBRAMENTO', nbs: 'ITEM_NBS' };
+                      desdobramentoTribNac: 'ITEM_DESDOBRAMENTO', nbs: 'ITEM_NBS',
+                      nFci: 'ITEM_NFCI', codigoBarrasTrib: 'ITEM_EAN_TRIB' };
       var mapa = {};
 
       // `origem` é List/Record; as outras são texto. O prefixo diz ao SuiteQL qual precisa de
@@ -1239,6 +1409,11 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     function codigoDaOrigem(v) {
       var m = /^\s*([0-8])(?:\s|-|$)/.exec(texto(v));
       return m ? m[1] : '';
+    }
+
+    /** Dois dígitos com zero à esquerda, para a data em `AAAA-MM-DD`. */
+    function dois(n) {
+      return (n < 10 ? '0' : '') + n;
     }
 
     function digitos(v) {

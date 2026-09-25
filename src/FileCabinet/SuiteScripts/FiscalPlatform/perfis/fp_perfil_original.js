@@ -133,7 +133,18 @@ define([], function () {
       "LINHA_CHAVE_REF": "custcol_fp_chave_ref",
       "LINHA_ITEM_REF": "custcol_fp_linha_ref",
       "LINHA_DOACAO": "custcol_fp_doacao",
-      "LINHA_DEDUCAO_MATERIAL": "custcol_fp_deducao_material"
+      "LINHA_DEDUCAO_MATERIAL": "custcol_fp_deducao_material",
+      "LINHA_VALOR_FRETE": "custcol_fp_valor_frete",
+      "LINHA_VALOR_SEGURO": "custcol_fp_valor_seguro",
+      "LINHA_VALOR_DESCONTO": "custcol_fp_valor_desconto",
+      "LINHA_DESP_BASE_II": "custcol_fp_desp_base_ii",
+      "LINHA_DESP_BASE_ICMS": "custcol_fp_desp_base_icms",
+      "LINHA_CRED_ICMS_TRANSF": "custcol_fp_cred_icms_transf",
+      "LINHA_QTD_TRIB": "custcol_fp_qtd_trib",
+      "LINHA_VUNIT_TRIB": "custcol_fp_vunit_trib",
+      "LINHA_HIPOTESE_ST": "custcol_fp_hipotese_st",
+      "LINHA_BEM_USADO": "custcol_fp_bem_usado",
+      "LINHA_CRED_ZFM": "custcol_fp_cred_zfm"
     },
   
     "item": {
@@ -149,6 +160,8 @@ define([], function () {
       "ITEM_SERVICO_MUNICIPAL": "custitem_fp_servico_municipal",
       "ITEM_DESDOBRAMENTO": "custitem_fp_desdobramento",
       "ITEM_NBS": "custitem_fp_nbs",
+      "ITEM_NFCI": "custitem_fp_nfci",
+      "ITEM_EAN_TRIB": "custitem_fp_ean_trib",
       "_nota": [
         "NCM e CEST são CADASTRO, não régua: eles descrevem a mercadoria, não decidem tributo.",
         "O motor tem cadastro próprio de item (/api/v1/item); qual das duas pontas é a fonte é",
@@ -203,6 +216,38 @@ define([], function () {
       "CNPJ_CREDENCIADORA": "custrecord_fp_pag_cnpj_cred",
       "TBAND": "custrecord_fp_pag_tband",
       "CAUT": "custrecord_fp_pag_caut"
+    },
+
+    "di": {
+      "_nota": [
+        "Declaracao de Importacao, uma por LINHA. No NetSuite sublista de custom record pendura na",
+        "TRANSACAO e nao na linha, entao NUMERO_ITEM e o que amarra a DI a mercadoria importada --",
+        "e o mesmo numero que o mapeador grava no campo hidden de sequencia do item."
+      ],
+      "SUBLIST": "recmachcustrecord_fp_di_transacao",
+      "TRANSACAO": "custrecord_fp_di_transacao",
+      "NUMERO_ITEM": "custrecord_fp_di_numero_item",
+      "NDI": "custrecord_fp_di_ndi",
+      "DDI": "custrecord_fp_di_ddi",
+      "LOCAL_DESEMBARACO": "custrecord_fp_di_local",
+      "UF_DESEMBARACO": "custrecord_fp_di_uf",
+      "DATA_DESEMBARACO": "custrecord_fp_di_ddesemb",
+      "VIA_TRANSPORTE": "custrecord_fp_di_via",
+      "AFRMM": "custrecord_fp_di_afrmm",
+      "TP_INTERMEDIO": "custrecord_fp_di_intermedio",
+      "CNPJ_TERCEIRO": "custrecord_fp_di_cnpj_terceiro",
+      "UF_TERCEIRO": "custrecord_fp_di_uf_terceiro",
+      "EXPORTADOR": "custrecord_fp_di_exportador"
+    },
+
+    "di_adicao": {
+      "_nota": "Adicoes da DI. Sublista DA DI, nao da transacao: adicao pertence a uma DI.",
+      "SUBLIST": "recmachcustrecord_fp_adi_di",
+      "DI": "custrecord_fp_adi_di",
+      "NUMERO": "custrecord_fp_adi_numero",
+      "SEQUENCIA": "custrecord_fp_adi_sequencia",
+      "FABRICANTE": "custrecord_fp_adi_fabricante",
+      "DESCONTO": "custrecord_fp_adi_desconto"
     },
 
     "reboque": {
@@ -301,6 +346,8 @@ define([], function () {
       "NATUREZA_OPERACAO": "customrecord_fp_natureza_operacao",
       "REBOQUE": "customrecord_fp_reboque",
       "VOLUME": "customrecord_fp_volume",
+      "DI": "customrecord_fp_di",
+      "DI_ADICAO": "customrecord_fp_di_adicao",
       "PAGAMENTO": "customrecord_fp_pagamento",
       "PAIS": "customrecord_fp_pais"
     },

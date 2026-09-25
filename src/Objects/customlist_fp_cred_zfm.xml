@@ -1,0 +1,13 @@
+<customlist scriptid="customlist_fp_cred_zfm">
+  <description>tpCredPresIbsZfm -- tipo de credito presumido de IBS na Zona Franca de Manaus. Valores 0 a 4, medidos em TP_CRED_PRES_IBS_ZFM no nfe-builder.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Credito Presumido IBS - ZFM</name>
+  <customvalues>
+    <customvalue scriptid="val_zfm_0"><isinactive>F</isinactive><value>0 - Sem credito presumido</value></customvalue>
+    <customvalue scriptid="val_zfm_1"><isinactive>F</isinactive><value>1 - Tipo 1</value></customvalue>
+    <customvalue scriptid="val_zfm_2"><isinactive>F</isinactive><value>2 - Tipo 2</value></customvalue>
+    <customvalue scriptid="val_zfm_3"><isinactive>F</isinactive><value>3 - Tipo 3</value></customvalue>
+    <customvalue scriptid="val_zfm_4"><isinactive>F</isinactive><value>4 - Tipo 4</value></customvalue>
+  </customvalues>
+</customlist>
