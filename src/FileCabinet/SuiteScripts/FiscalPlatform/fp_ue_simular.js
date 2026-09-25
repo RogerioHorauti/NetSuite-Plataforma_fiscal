@@ -146,6 +146,17 @@ define([
    * perfil, e pagar isso no load de todo script — inclusive nos saves que a guarda 3 vai descartar
    * — seria custo de governança em troca de nada.
    */
+  /**
+   * O QUE IMPORTA PARA A SIMULAÇÃO = O QUE O MAPEADOR MANDA.
+   *
+   * ⚠ Estas listas já foram escritas à mão, com sete nomes, e envelheceram na primeira leva de
+   * campos novos: habilitar a guarda daquele jeito faria a simulação PULAR depois de alguém trocar
+   * o CFOP ou a modalidade do frete — a tela mostraria o imposto de antes, sem erro nenhum.
+   *
+   * Agora saem do perfil, pela mesma convenção da limpeza da cópia: tudo em `transacao` que NÃO é
+   * `DOC_*` (resultado do motor) nem `CORRID` (infraestrutura) é declaração, e declaração muda
+   * imposto. Campo novo entra na comparação sozinho.
+   */
   function camposRelevantes() {
     var l = [
       fpFields.padrao('ENTITY'),
@@ -156,17 +167,62 @@ define([
       'handlingcost',
       'discounttotal'
     ];
-    var natureza = fpFields.id('NATUREZA');
-    if (natureza) l.push(natureza);
+
+    var chaves = fpFields.chaves('transacao');
+    for (var i = 0; i < chaves.length; i++) {
+      if (chaves[i].indexOf('DOC_') === 0 || chaves[i] === 'CORRID') continue;
+      var id = fpFields.id(chaves[i]);
+      if (id) l.push(id);
+    }
     return l;
   }
 
-  /** Campos de linha cuja mudança justifica simular de novo (guarda 4). */
   function camposLinhaRelevantes() {
-    var l = ['item', 'quantity', 'rate', 'amount', fpFields.padrao('LOCATION')];
-    var natureza = fpFields.idLinha('LINHA_NATUREZA');
-    if (natureza) l.push(natureza);
+    var l = ['item', 'quantity', 'rate', 'amount', 'units', fpFields.padrao('LOCATION')];
+
+    var chaves = fpFields.chaves('linha');
+    for (var i = 0; i < chaves.length; i++) {
+      var id = fpFields.idLinha(chaves[i]);
+      if (id) l.push(id);
+    }
     return l;
+  }
+
+  /**
+   * As sublistas que o payload lê: DI, pagamento, volume e reboque.
+   *
+   * Comparar só a CONTAGEM deixaria passar a edição de uma linha existente — trocar o número da DI
+   * sem acrescentar linha. Por isso a comparação é por VALOR, montando uma assinatura de tudo que
+   * o mapeador leria. É tudo em memória, sem ida ao banco.
+   */
+  function assinaturaDasSublistas(registro) {
+    var GRUPOS = [
+      { secao: 'di', acessor: fpFields.idDi },
+      { secao: 'pagamento', acessor: fpFields.idPagamento },
+      { secao: 'volume', acessor: fpFields.idVolume },
+      { secao: 'reboque', acessor: fpFields.idReboque }
+    ];
+
+    var partes = [];
+    for (var g = 0; g < GRUPOS.length; g++) {
+      var acessor = GRUPOS[g].acessor;
+      var sublist = acessor('SUBLIST');
+      if (!sublist) continue;
+
+      var total = registro.getLineCount({ sublistId: sublist });
+      if (total <= 0) { partes.push(sublist + ':0'); continue; }
+
+      var chaves = fpFields.chaves(GRUPOS[g].secao);
+      for (var i = 0; i < total; i++) {
+        for (var k = 0; k < chaves.length; k++) {
+          if (chaves[k] === 'SUBLIST') continue;
+          var campo = acessor(chaves[k]);
+          if (!campo) continue;
+          partes.push(registro.getSublistValue({ sublistId: sublist, fieldId: campo, line: i }));
+        }
+      }
+    }
+    return partes.join('|');
   }
 
   function beforeSubmit(scriptContext) {
@@ -422,11 +478,21 @@ define([
     // simular de novo.
     if (jaTransmitido(scriptContext.newRecord)) return false;
 
-    // GUARDA 4 — só no EDIT: no CREATE não há `oldRecord` com que comparar.
-    // if (scriptContext.type === scriptContext.UserEventType.EDIT && !mudouAlgoRelevante(scriptContext)) {
-    //   log.debug('fp_ue_simular', 'nada fiscalmente relevante mudou — sem chamada');
-    //   return false;
-    // }
+    // GUARDA 4 — SÓ NO EDIT: no CREATE não há `oldRecord` com que comparar.
+    //
+    // É a economia que mais rende: save que não mexeu em nada fiscal não chama o motor, não gasta
+    // governança e não espera a rede. É o mesmo princípio do `notCalculate` do AvaTax, que lê o
+    // JSON anterior em vez de recalcular — mas comparando os CAMPOS, e não um sinalizador de
+    // cache sobre a tela.
+    //
+    // O que torna isso seguro é a lista vir do perfil: tudo que o mapeador manda é comparado,
+    // inclusive as quatro sublistas. Lista escrita à mão aqui faria a simulação pular uma mudança
+    // de verdade, e o usuário veria o imposto de antes sem erro nenhum.
+    if (scriptContext.type === scriptContext.UserEventType.EDIT &&
+        !mudouAlgoRelevante(scriptContext)) {
+      log.audit('fp_ue_simular', 'nada fiscalmente relevante mudou — sem chamada ao motor.');
+      return false;
+    }
 
     return true;
   }
@@ -455,7 +521,7 @@ define([
       }
     }
 
-    return false;
+    return assinaturaDasSublistas(antigo) !== assinaturaDasSublistas(novo);
   }
 
   /**
