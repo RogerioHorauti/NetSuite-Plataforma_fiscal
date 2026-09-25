@@ -27,6 +27,19 @@
  * `length === 14` depois de limpar, e **nada completa zero à esquerda** — CNPJ com zero suprimido
  * não acha filial nenhuma.
  *
+ * ── CUSTO: CONSTANTE POR NOTA, NUNCA POR LINHA ────────────────────────────────────────────────
+ *
+ * Isto roda no `beforeSubmit`, que tem teto de 1.000 unidades de governança. A regra que vale para
+ * todo mapeamento daqui: **uma ida ao banco por NOTA, jamais uma por linha**. Nota de uma linha e
+ * nota de quinhentas custam o mesmo.
+ *
+ * As idas, todas fora do laço de linhas: cadastro dos itens, unidades, naturezas, cliente,
+ * transportador, endereço do transportador, país e adições das DIs. Oito, fixas.
+ *
+ * ⚠ Já houve um `record.load` POR DI aqui, e carga de registro é o que mais pesa. Nota com dez
+ * importados custava dez cargas — o tipo de conta que estoura em produção e passa no teste, porque
+ * o teste tem uma linha. Virou uma consulta com `IN (...)`.
+ *
  * ── DE ONDE VEM CADA COISA, medido e não suposto ──────────────────────────────────────────────
  *
  * Records Browser (fonte autoritativa de scriptid) e `metadata-catalog` do REST, 2026-09-22/23:
@@ -59,8 +72,8 @@
  * Isto roda no `beforeSubmit`, no caminho do save. Os itens são lidos em UMA busca para o conjunto
  * inteiro, não um `lookupFields` por linha: nota de 50 itens pagaria 50 idas ao banco por nada.
  */
-define(['N/record', 'N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'],
-  function (record, search, query, format, log, fpFields, fpClient) {
+define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'],
+  function (search, query, format, log, fpFields, fpClient) {
 
     // ─────────────────────────────────────────────────────────────────────────
     // montagem do payload
@@ -906,52 +919,80 @@ define(['N/record', 'N/search', 'N/query', 'N/format', 'N/log', './fp_fields', '
 
         textoSeTiver(newRecord, sublist, i, di, 'EXPORTADOR', 'cExportador');
 
-        var adicoes = montarAdicoes(newRecord, sublist, i);
-        if (adicoes.length) di.adicoes = adicoes;
-
+        di._id = valorDeSublist(newRecord, sublist, 'id', i);
         out[String(item)] = di;
       }
+
+      acrescentarAdicoes(out);
       return out;
     }
 
     /**
-     * As adições de UMA DI.
+     * AS ADIÇÕES DE TODAS AS DIs, EM UMA CONSULTA.
      *
-     * ⚠ MEDIDO como limitação do NetSuite, não escolha: a sublista de adições é filha do REGISTRO
-     * da DI, e o `newRecord` da transação não enxerga sublista de outro registro. Por isso as
-     * adições são lidas com `record.load` da DI — uma carga por DI, e só quando há DI.
+     * ⚠ Aqui havia um `record.load` POR DI. Nota de dez itens importados custava dez cargas, e
+     * carga de registro é o que mais pesa na governança — numa simulação que roda dentro do
+     * `beforeSubmit`, com teto de 1.000 unidades, isso é o tipo de conta que estoura em produção e
+     * não no teste, porque o teste tem uma linha.
+     *
+     * É o mesmo princípio que já governa o cadastro de item: UMA consulta para a nota inteira, não
+     * uma por linha. A sublista de adições é filha do registro da DI, mas em SuiteQL ela é só uma
+     * tabela com uma coluna apontando para o pai — e `IN (...)` resolve todas de uma vez.
      */
-    function montarAdicoes(newRecord, sublistDi, linhaDi) {
-      var registroDi = fpFields.registro('DI');
-      var sublistAdi = fpFields.idDiAdicao('SUBLIST');
-      if (!registroDi || !sublistAdi) return [];
+    function acrescentarAdicoes(dis) {
+      var registro = fpFields.registro('DI_ADICAO');
+      var colDi = fpFields.idDiAdicao('DI');
+      if (!registro || !colDi) return;
 
-      var idDi = valorDeSublist(newRecord, sublistDi, 'id', linhaDi);
-      if (!idDi) return [];
-
-      var rec = record.load({ type: registroDi, id: idDi });
-      var total = rec.getLineCount({ sublistId: sublistAdi });
-      if (total <= 0) return [];
-
-      var out = [];
-      for (var i = 0; i < total; i++) {
-        var a = {
-          nAdicao: numero(rec.getSublistValue({
-            sublistId: sublistAdi, fieldId: fpFields.idDiAdicao('NUMERO'), line: i })),
-          nSeqAdic: numero(rec.getSublistValue({
-            sublistId: sublistAdi, fieldId: fpFields.idDiAdicao('SEQUENCIA'), line: i })),
-          cFabricante: texto(rec.getSublistValue({
-            sublistId: sublistAdi, fieldId: fpFields.idDiAdicao('FABRICANTE'), line: i }))
-        };
-        if (!a.nAdicao) continue;
-
-        var desc = numero(rec.getSublistValue({
-          sublistId: sublistAdi, fieldId: fpFields.idDiAdicao('DESCONTO'), line: i }));
-        if (desc) a.vDescDI = desc;
-
-        out.push(a);
+      var ids = [];
+      for (var k in dis) {
+        if (Object.prototype.hasOwnProperty.call(dis, k) && dis[k]._id) ids.push(dis[k]._id);
       }
-      return out;
+      if (!ids.length) return limparIds(dis);
+
+      var cNum = fpFields.idDiAdicao('NUMERO');
+      var cSeq = fpFields.idDiAdicao('SEQUENCIA');
+      var cFab = fpFields.idDiAdicao('FABRICANTE');
+      var cDesc = fpFields.idDiAdicao('DESCONTO');
+
+      var linhas = query.runSuiteQL({
+        query: 'SELECT ' + colDi + ' AS pai, ' + cNum + ' AS num, ' + cSeq + ' AS seq, ' +
+               cFab + ' AS fab, ' + cDesc + ' AS desc FROM ' + registro +
+               ' WHERE ' + colDi + ' IN (' + ids.map(function () { return '?'; }).join(',') + ')' +
+               ' ORDER BY ' + colDi + ', ' + cNum + ', ' + cSeq,
+        params: ids
+      }).asMappedResults();
+
+      var porDi = {};
+      for (var i = 0; i < linhas.length; i++) {
+        var r = linhas[i];
+        if (!numero(r.num)) continue;
+
+        var a = {
+          nAdicao: numero(r.num),
+          nSeqAdic: numero(r.seq),
+          cFabricante: texto(r.fab)
+        };
+        if (numero(r.desc)) a.vDescDI = numero(r.desc);
+
+        var chave = String(r.pai);
+        if (!porDi[chave]) porDi[chave] = [];
+        porDi[chave].push(a);
+      }
+
+      for (var k2 in dis) {
+        if (!Object.prototype.hasOwnProperty.call(dis, k2)) continue;
+        var achadas = porDi[String(dis[k2]._id)];
+        if (achadas && achadas.length) dis[k2].adicoes = achadas;
+      }
+      limparIds(dis);
+    }
+
+    /** O `_id` é andaime para achar as adições; ele não existe no DTO e não pode sair no payload. */
+    function limparIds(dis) {
+      for (var k in dis) {
+        if (Object.prototype.hasOwnProperty.call(dis, k)) delete dis[k]._id;
+      }
     }
 
     function textoSeTiver(newRecord, sublist, i, alvo, chave, destino) {
