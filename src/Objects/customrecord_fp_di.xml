@@ -11,7 +11,7 @@
   <allowquicksearch>F</allowquicksearch>
   <allowuiaccess>T</allowuiaccess>
   <customsegment></customsegment>
-  <description>Declaracao de Importacao (grupo DI do item). Sublista da transacao na subaba FiscalPlatform. O vinculo com a LINHA e o campo "Item da Nota": no NetSuite sublista de custom record pendura na TRANSACAO, nao na linha, entao o numero do item e o que amarra a DI a mercadoria importada.</description>
+  <description>Declaracao de Importacao. Registro MESTRE e avulso, nao sublista da transacao: a DI e documento da Receita e uma mesma DI cobre varias notas. Quem aponta para ela e a LINHA, pelo campo Declaracao de Importacao, e a linha carrega tambem a adicao que lhe corresponde. Mesmo desenho do customrecord_enl_importdeclaration da Avalara.</description>
   <enabledle>T</enabledle>
   <enablekeywords>T</enablekeywords>
   <enablemailmerge>F</enablemailmerge>
@@ -24,7 +24,7 @@
   <iconbuiltin>T</iconbuiltin>
   <iconindex></iconindex>
   <includeinsearchmenu>T</includeinsearchmenu>
-  <includename>F</includename>
+  <includename>T</includename>
   <isinactive>F</isinactive>
   <isordered>F</isordered>
   <numberinginit></numberinginit>
@@ -42,56 +42,6 @@
   <showownerallowchange>F</showownerallowchange>
   <showowneronlist>F</showowneronlist>
     <customrecordcustomfields>
-    <customrecordcustomfield scriptid="custrecord_fp_di_transacao">
-      <accesslevel>2</accesslevel>
-      <allowquickadd>F</allowquickadd>
-      <applyformatting>F</applyformatting>
-      <checkspelling>F</checkspelling>
-      <defaultchecked>F</defaultchecked>
-      <defaultselection></defaultselection>
-      <defaultvalue></defaultvalue>
-      <description>Vinculo com a transacao (isparent=T) e o parentsubtab diz onde. Subaba de PRIMEIRO NIVEL.</description>
-      <displaytype>NORMAL</displaytype>
-      <encryptatrest>F</encryptatrest>
-      <fieldtype>SELECT</fieldtype>
-      <globalsearch>F</globalsearch>
-      <isformula>F</isformula>
-      <ismandatory>F</ismandatory>
-      <isparent>T</isparent>
-      <label>Transacao</label>
-      <maxlength></maxlength>
-      <onparentdelete>SET_NULL</onparentdelete>
-      <parentsubtab>[scriptid=custtab_fp_fiscal]</parentsubtab>
-      <rolerestrict>F</rolerestrict>
-      <searchlevel>2</searchlevel>
-      <selectrecordtype>-30</selectrecordtype>
-      <showinlist>T</showinlist>
-      <storevalue>T</storevalue>
-    </customrecordcustomfield>
-    <customrecordcustomfield scriptid="custrecord_fp_di_numero_item">
-      <accesslevel>2</accesslevel>
-      <allowquickadd>F</allowquickadd>
-      <applyformatting>F</applyformatting>
-      <checkspelling>F</checkspelling>
-      <defaultchecked>F</defaultchecked>
-      <defaultselection></defaultselection>
-      <defaultvalue></defaultvalue>
-      <description>A QUAL linha esta DI pertence -- o mesmo numero do campo hidden de sequencia do item. Sem ele a DI nao amarra na mercadoria importada.</description>
-      <displaytype>NORMAL</displaytype>
-      <encryptatrest>F</encryptatrest>
-      <fieldtype>INTEGER</fieldtype>
-      <globalsearch>F</globalsearch>
-      <isformula>F</isformula>
-      <ismandatory>F</ismandatory>
-      <isparent>F</isparent>
-      <label>Item da Nota</label>
-      <maxlength></maxlength>
-      <rolerestrict>F</rolerestrict>
-      <searchlevel>2</searchlevel>
-      <selectrecordtype></selectrecordtype>
-      <showinlist>T</showinlist>
-      <storevalue>T</storevalue>
-    </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_di_ndi">
       <accesslevel>2</accesslevel>
       <allowquickadd>F</allowquickadd>

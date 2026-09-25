@@ -144,7 +144,22 @@ define([], function () {
       "LINHA_VUNIT_TRIB": "custcol_fp_vunit_trib",
       "LINHA_HIPOTESE_ST": "custcol_fp_hipotese_st",
       "LINHA_BEM_USADO": "custcol_fp_bem_usado",
-      "LINHA_CRED_ZFM": "custcol_fp_cred_zfm"
+      "LINHA_CRED_ZFM": "custcol_fp_cred_zfm",
+      "LINHA_DI": "custcol_fp_di",
+      "LINHA_DI_ADICAO": "custcol_fp_di_adicao",
+      "LINHA_DI_SEQ": "custcol_fp_di_seq",
+      "LINHA_DI_FABRICANTE": "custcol_fp_di_fabricante",
+      "LINHA_DI_DESCONTO": "custcol_fp_di_desconto",
+      "LINHA_DI": "custcol_fp_di",
+      "LINHA_DI_ADICAO": "custcol_fp_di_adicao",
+      "LINHA_DI_SEQ": "custcol_fp_di_seq",
+      "LINHA_DI_FABRICANTE": "custcol_fp_di_fabricante",
+      "LINHA_DI_DESCONTO": "custcol_fp_di_desconto",
+      "LINHA_DI": "custcol_fp_di",
+      "LINHA_DI_ADICAO": "custcol_fp_di_adicao",
+      "LINHA_DI_SEQ": "custcol_fp_di_seq",
+      "LINHA_DI_FABRICANTE": "custcol_fp_di_fabricante",
+      "LINHA_DI_DESCONTO": "custcol_fp_di_desconto"
     },
   
     "item": {
@@ -220,13 +235,18 @@ define([], function () {
 
     "di": {
       "_nota": [
-        "Declaracao de Importacao, uma por LINHA. No NetSuite sublista de custom record pendura na",
-        "TRANSACAO e nao na linha, entao NUMERO_ITEM e o que amarra a DI a mercadoria importada --",
-        "e o mesmo numero que o mapeador grava no campo hidden de sequencia do item."
+        "Declaracao de Importacao: registro MESTRE e avulso, nao sublista da transacao. A DI e",
+        "documento da Receita e a mesma DI cobre varias notas -- e o desenho do",
+        "customrecord_enl_importdeclaration da Avalara.",
+        "",
+        "⚠ QUEM APONTA E A LINHA, por LINHA_DI. Amarrar pelo numero do item quebra com DOIS ITENS",
+        "IGUAIS na mesma nota (nada distingue um do outro) e quebra de novo quando alguem insere",
+        "uma linha no meio e a numeracao anda.",
+        "",
+        "A ADICAO nao e registro: no leiaute cada item da nota corresponde a uma adicao, entao",
+        "nAdicao, nSeqAdic, cFabricante e vDescDI sao COLUNAS DA LINHA."
       ],
-      "SUBLIST": "recmachcustrecord_fp_di_transacao",
-      "TRANSACAO": "custrecord_fp_di_transacao",
-      "NUMERO_ITEM": "custrecord_fp_di_numero_item",
+      "REGISTRO": "customrecord_fp_di",
       "NDI": "custrecord_fp_di_ndi",
       "DDI": "custrecord_fp_di_ddi",
       "LOCAL_DESEMBARACO": "custrecord_fp_di_local",
@@ -238,16 +258,6 @@ define([], function () {
       "CNPJ_TERCEIRO": "custrecord_fp_di_cnpj_terceiro",
       "UF_TERCEIRO": "custrecord_fp_di_uf_terceiro",
       "EXPORTADOR": "custrecord_fp_di_exportador"
-    },
-
-    "di_adicao": {
-      "_nota": "Adicoes da DI. Sublista DA DI, nao da transacao: adicao pertence a uma DI.",
-      "SUBLIST": "recmachcustrecord_fp_adi_di",
-      "DI": "custrecord_fp_adi_di",
-      "NUMERO": "custrecord_fp_adi_numero",
-      "SEQUENCIA": "custrecord_fp_adi_sequencia",
-      "FABRICANTE": "custrecord_fp_adi_fabricante",
-      "DESCONTO": "custrecord_fp_adi_desconto"
     },
 
     "reboque": {
@@ -347,7 +357,6 @@ define([], function () {
       "REBOQUE": "customrecord_fp_reboque",
       "VOLUME": "customrecord_fp_volume",
       "DI": "customrecord_fp_di",
-      "DI_ADICAO": "customrecord_fp_di_adicao",
       "PAGAMENTO": "customrecord_fp_pagamento",
       "PAIS": "customrecord_fp_pais"
     },

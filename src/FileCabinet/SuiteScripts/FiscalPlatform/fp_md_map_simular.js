@@ -766,7 +766,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         'SELECT internalid AS id, abbreviation AS txt FROM unitstypeuom', 'internalid');
 
       var prestacao = montarPrestacao(newRecord);
-      var dis = montarDis(newRecord);
+      var dis = carregarDis(newRecord, total);
 
       var campoNat = fpFields.idLinha('LINHA_NATUREZA');
       var naturezas = campoNat
@@ -816,8 +816,15 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         acrescentarDaLinha(newRecord, i, linha);
         if (prestacao) copiarPara(linha, prestacao);
 
-        var di = dis[String(numeroItem)];
-        if (di) linha.di = di;
+        // A LINHA escolhe a DI, e leva a SUA adição dentro dela. Duas linhas podem apontar a
+        // mesma DI com adições diferentes — é o caso comum de uma importação com vários itens.
+        var idDi = valorLinha(newRecord, fpFields.idLinha('LINHA_DI'), i);
+        var diDaLinha = idDi && dis[String(idDi)];
+        if (diDaLinha) {
+          linha.di = clonar(diDaLinha);
+          var adicao = adicaoDaLinha(newRecord, i);
+          if (adicao) linha.di.adicoes = [adicao];
+        }
 
         var cad = item && cadastro[String(item)];
         if (cad) {
@@ -850,162 +857,135 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     }
 
     /**
-     * AS DECLARAÇÕES DE IMPORTAÇÃO, indexadas pelo número do item que cada uma cobre.
+     * AS DECLARAÇÕES DE IMPORTAÇÃO referenciadas pelas linhas, indexadas pelo id do registro.
      *
-     * ⚠ SUBLISTA DE CUSTOM RECORD PENDURA NA TRANSAÇÃO, NÃO NA LINHA. O NetSuite não tem sublista
-     * dentro de linha, então a DI declara a QUAL item pertence — o mesmo número que o mapeador
-     * grava no campo hidden de sequência. Sem esse número a DI não amarra na mercadoria, e uma
-     * nota com dois importados sairia com a DI errada no item errado.
+     * ⚠ A DI É REGISTRO MESTRE, não sublista da transação: ela é documento da Receita e a mesma DI
+     * cobre várias notas. Quem aponta é a LINHA, pela coluna `LINHA_DI`.
      *
-     * As ADIÇÕES são sublista DA DI, não da transação: adição pertence a uma DI, e pendurá-la na
-     * transação exigiria repetir de qual DI ela é.
+     * A primeira versão amarrava pelo número do item, e quebrava em dois casos que acontecem:
+     * **dois itens iguais na mesma nota** — mesmo produto, mesma descrição, nada que distinga um
+     * do outro — e **inserir uma linha no meio**, que faz a numeração andar e a DI passar a
+     * apontar para a mercadoria errada, sem erro nenhum. É o modelo do
+     * `customrecord_enl_importdeclaration` da Avalara.
+     *
+     * UMA consulta para todas as DIs da nota, nunca uma por linha.
      */
-    function montarDis(newRecord) {
-      var sublist = fpFields.idDi('SUBLIST');
-      var campoItem = fpFields.idDi('NUMERO_ITEM');
-      if (!sublist || !campoItem) return {};
-
-      var out = {};
-      var total = contarSublist(newRecord, sublist);
-
-      for (var i = 0; i < total; i++) {
-        var item = numero(valorDeSublist(newRecord, sublist, campoItem, i));
-        var ndi = texto(valorDeSublist(newRecord, sublist, fpFields.idDi('NDI'), i));
-        if (!ndi) continue;
-
-        if (!item) {
-          log.audit('fp_md_map_simular.montarDis',
-            'DI ' + ndi + ' sem o numero do item: ela NAO foi enviada. Sem isso a declaracao nao ' +
-            'amarra na mercadoria importada, e numa nota com dois importados iria no item errado.');
-          continue;
-        }
-
-        var di = { nDI: ndi };
-        textoSeTiver(newRecord, sublist, i, di, 'LOCAL_DESEMBARACO', 'xLocDesemb');
-        di.dDI = dataDeSublist(newRecord, sublist, fpFields.idDi('DDI'), i);
-        di.dDesemb = dataDeSublist(newRecord, sublist, fpFields.idDi('DATA_DESEMBARACO'), i);
-
-        var uf = texto(valorDeSublist(newRecord, sublist, fpFields.idDi('UF_DESEMBARACO'), i));
-        if (uf) di.ufDesemb = uf.toUpperCase().substring(0, 2);
-
-        var via = codigoDaLista(textoDeSublist(newRecord, sublist, fpFields.idDi('VIA_TRANSPORTE'), i));
-        if (via) di.tpViaTransp = via;
-
-        var afrmm = numero(valorDeSublist(newRecord, sublist, fpFields.idDi('AFRMM'), i));
-        if (afrmm) di.vAFRMM = afrmm;
-
-        // A via marítima é a única que torna o AFRMM obrigatório, e ele é FONTE ÚNICA: compõe a
-        // base do ICMS-importação e entra em vOutro. Faltando, o imposto sai a menor.
-        if (via === '1' && !afrmm) {
-          log.audit('fp_md_map_simular.montarDis',
-            'DI ' + ndi + ' e maritima e esta SEM o AFRMM. Ele compoe a base do ICMS-importacao e ' +
-            'entra em vOutro -- sem ele o imposto sai a menor.');
-        }
-
-        var interm = codigoDaLista(textoDeSublist(newRecord, sublist, fpFields.idDi('TP_INTERMEDIO'), i));
-        if (interm) di.tpIntermedio = interm;
-
-        var cnpjTerceiro = digitos(valorDeSublist(newRecord, sublist, fpFields.idDi('CNPJ_TERCEIRO'), i));
-        var ufTerceiro = texto(valorDeSublist(newRecord, sublist, fpFields.idDi('UF_TERCEIRO'), i));
-        if (cnpjTerceiro) di.cnpjTerceiro = cnpjTerceiro;
-        if (ufTerceiro) di.ufTerceiro = ufTerceiro.toUpperCase().substring(0, 2);
-
-        // Conta e ordem (2) e encomenda (3) EXIGEM o terceiro; conta própria (1) não o admite.
-        if ((interm === '2' || interm === '3') && !cnpjTerceiro) {
-          log.audit('fp_md_map_simular.montarDis',
-            'DI ' + ndi + ' e por conta e ordem ou encomenda e NAO tem o CNPJ do terceiro, que o ' +
-            'leiaute exige nessas duas intermediacoes.');
-        }
-
-        textoSeTiver(newRecord, sublist, i, di, 'EXPORTADOR', 'cExportador');
-
-        di._id = valorDeSublist(newRecord, sublist, 'id', i);
-        out[String(item)] = di;
-      }
-
-      acrescentarAdicoes(out);
-      return out;
-    }
-
-    /**
-     * AS ADIÇÕES DE TODAS AS DIs, EM UMA CONSULTA.
-     *
-     * ⚠ Aqui havia um `record.load` POR DI. Nota de dez itens importados custava dez cargas, e
-     * carga de registro é o que mais pesa na governança — numa simulação que roda dentro do
-     * `beforeSubmit`, com teto de 1.000 unidades, isso é o tipo de conta que estoura em produção e
-     * não no teste, porque o teste tem uma linha.
-     *
-     * É o mesmo princípio que já governa o cadastro de item: UMA consulta para a nota inteira, não
-     * uma por linha. A sublista de adições é filha do registro da DI, mas em SuiteQL ela é só uma
-     * tabela com uma coluna apontando para o pai — e `IN (...)` resolve todas de uma vez.
-     */
-    function acrescentarAdicoes(dis) {
-      var registro = fpFields.registro('DI_ADICAO');
-      var colDi = fpFields.idDiAdicao('DI');
-      if (!registro || !colDi) return;
+    function carregarDis(newRecord, total) {
+      var campoDi = fpFields.idLinha('LINHA_DI');
+      var registro = fpFields.registro('DI');
+      if (!campoDi || !registro) return {};
 
       var ids = [];
-      for (var k in dis) {
-        if (Object.prototype.hasOwnProperty.call(dis, k) && dis[k]._id) ids.push(dis[k]._id);
+      var vistos = {};
+      for (var i = 0; i < total; i++) {
+        var id = valorLinha(newRecord, campoDi, i);
+        if (!id || vistos[String(id)]) continue;
+        vistos[String(id)] = true;
+        ids.push(id);
       }
-      if (!ids.length) return limparIds(dis);
+      if (!ids.length) return {};
 
-      var cNum = fpFields.idDiAdicao('NUMERO');
-      var cSeq = fpFields.idDiAdicao('SEQUENCIA');
-      var cFab = fpFields.idDiAdicao('FABRICANTE');
-      var cDesc = fpFields.idDiAdicao('DESCONTO');
+      var C = {
+        NDI: fpFields.idDi('NDI'), DDI: fpFields.idDi('DDI'),
+        LOCAL: fpFields.idDi('LOCAL_DESEMBARACO'), UF: fpFields.idDi('UF_DESEMBARACO'),
+        DESEMB: fpFields.idDi('DATA_DESEMBARACO'), VIA: fpFields.idDi('VIA_TRANSPORTE'),
+        AFRMM: fpFields.idDi('AFRMM'), INTERM: fpFields.idDi('TP_INTERMEDIO'),
+        CNPJ: fpFields.idDi('CNPJ_TERCEIRO'), UFT: fpFields.idDi('UF_TERCEIRO'),
+        EXP: fpFields.idDi('EXPORTADOR')
+      };
+
+      var sel = ['id'];
+      var ordem = [];
+      for (var k in C) {
+        if (Object.prototype.hasOwnProperty.call(C, k) && C[k]) {
+          // `VIA` e `INTERM` são List/Record: sem `BUILTIN.DF` viria o internal id do valor.
+          sel.push((k === 'VIA' || k === 'INTERM' ? 'BUILTIN.DF(' + C[k] + ')' : C[k]) + ' AS ' + k);
+          ordem.push(k);
+        }
+      }
 
       var linhas = query.runSuiteQL({
-        query: 'SELECT ' + colDi + ' AS pai, ' + cNum + ' AS num, ' + cSeq + ' AS seq, ' +
-               cFab + ' AS fab, ' + cDesc + ' AS desc FROM ' + registro +
-               ' WHERE ' + colDi + ' IN (' + ids.map(function () { return '?'; }).join(',') + ')' +
-               ' ORDER BY ' + colDi + ', ' + cNum + ', ' + cSeq,
+        query: 'SELECT ' + sel.join(', ') + ' FROM ' + registro + ' WHERE id IN (' +
+               ids.map(function () { return '?'; }).join(',') + ')',
         params: ids
       }).asMappedResults();
 
-      var porDi = {};
-      for (var i = 0; i < linhas.length; i++) {
-        var r = linhas[i];
-        if (!numero(r.num)) continue;
-
-        var a = {
-          nAdicao: numero(r.num),
-          nSeqAdic: numero(r.seq),
-          cFabricante: texto(r.fab)
-        };
-        if (numero(r.desc)) a.vDescDI = numero(r.desc);
-
-        var chave = String(r.pai);
-        if (!porDi[chave]) porDi[chave] = [];
-        porDi[chave].push(a);
-      }
-
-      for (var k2 in dis) {
-        if (!Object.prototype.hasOwnProperty.call(dis, k2)) continue;
-        var achadas = porDi[String(dis[k2]._id)];
-        if (achadas && achadas.length) dis[k2].adicoes = achadas;
-      }
-      limparIds(dis);
+      var out = {};
+      for (var n = 0; n < linhas.length; n++) out[String(linhas[n].id)] = montarDi(linhas[n]);
+      return out;
     }
 
-    /** O `_id` é andaime para achar as adições; ele não existe no DTO e não pode sair no payload. */
-    function limparIds(dis) {
-      for (var k in dis) {
-        if (Object.prototype.hasOwnProperty.call(dis, k)) delete dis[k]._id;
+    function montarDi(r) {
+      var ndi = texto(r.NDI);
+      if (!ndi) return null;
+
+      var di = { nDI: ndi };
+      if (texto(r.LOCAL)) di.xLocDesemb = texto(r.LOCAL);
+      if (texto(r.UF)) di.ufDesemb = texto(r.UF).toUpperCase().substring(0, 2);
+      if (r.DDI) di.dDI = soData(r.DDI);
+      if (r.DESEMB) di.dDesemb = soData(r.DESEMB);
+      if (texto(r.EXP)) di.cExportador = texto(r.EXP);
+
+      var via = codigoDaLista(r.VIA);
+      if (via) di.tpViaTransp = via;
+
+      var afrmm = numero(r.AFRMM);
+      if (afrmm) di.vAFRMM = afrmm;
+
+      // A via marítima é a única que torna o AFRMM obrigatório, e ele é FONTE ÚNICA: compõe a base
+      // do ICMS-importação e entra em `vOutro`. Faltando, o imposto sai a menor.
+      if (via === '1' && !afrmm) {
+        log.audit('fp_md_map_simular.montarDi',
+          'DI ' + ndi + ' e maritima e esta SEM o AFRMM. Ele compoe a base do ICMS-importacao e ' +
+          'entra em vOutro -- sem ele o imposto sai a menor.');
       }
+
+      var interm = codigoDaLista(r.INTERM);
+      if (interm) di.tpIntermedio = interm;
+
+      var cnpj = digitos(r.CNPJ);
+      if (cnpj) di.cnpjTerceiro = cnpj;
+      if (texto(r.UFT)) di.ufTerceiro = texto(r.UFT).toUpperCase().substring(0, 2);
+
+      // Conta e ordem (2) e encomenda (3) EXIGEM o terceiro; conta própria (1) não o admite.
+      if ((interm === '2' || interm === '3') && !cnpj) {
+        log.audit('fp_md_map_simular.montarDi',
+          'DI ' + ndi + ' e por conta e ordem ou encomenda e NAO tem o CNPJ do terceiro, que o ' +
+          'leiaute exige nessas duas intermediacoes.');
+      }
+      return di;
     }
 
-    function textoSeTiver(newRecord, sublist, i, alvo, chave, destino) {
-      var v = texto(valorDeSublist(newRecord, sublist, fpFields.idDi(chave), i));
-      if (v) alvo[destino] = v;
+    /**
+     * A ADIÇÃO DESTA LINHA, dentro da DI que ela aponta.
+     *
+     * No leiaute cada item da nota corresponde a uma adição, então `nAdicao` e companhia são
+     * colunas da linha — não uma lista filha para percorrer. É o desenho do `custcol_enl_adicao*`
+     * da Avalara, e o que dispensa carregar registro por linha.
+     */
+    function adicaoDaLinha(newRecord, i) {
+      var nAdicao = numero(valorLinha(newRecord, fpFields.idLinha('LINHA_DI_ADICAO'), i));
+      if (!nAdicao) return null;
+
+      var a = {
+        nAdicao: nAdicao,
+        nSeqAdic: numero(valorLinha(newRecord, fpFields.idLinha('LINHA_DI_SEQ'), i)) || 1,
+        cFabricante: texto(valorLinha(newRecord, fpFields.idLinha('LINHA_DI_FABRICANTE'), i))
+      };
+
+      var desc = numero(valorLinha(newRecord, fpFields.idLinha('LINHA_DI_DESCONTO'), i));
+      if (desc) a.vDescDI = desc;
+      return a;
     }
 
-    /** `AAAA-MM-DD`, que é o formato do DTO. Campo DATE devolve `Date`. */
-    function dataDeSublist(newRecord, sublist, campo, linha) {
-      var d = campo && valorDeSublist(newRecord, sublist, campo, linha);
-      if (!d) return undefined;
-      if (typeof d === 'string') d = format.parse({ value: d, type: format.Type.DATE });
-      return d.getFullYear() + '-' + dois(d.getMonth() + 1) + '-' + dois(d.getDate());
+    /** `AAAA-MM-DD` a partir do que o SuiteQL devolve para coluna DATE. */
+    function soData(v) {
+      if (typeof v === 'string') {
+        var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v);
+        if (m) return m[0];
+        v = format.parse({ value: v, type: format.Type.DATE });
+      }
+      return v.getFullYear() + '-' + dois(v.getMonth() + 1) + '-' + dois(v.getDate());
     }
 
     /**
@@ -1055,6 +1035,16 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       }
 
       return temAlgo(p) ? p : null;
+    }
+
+    /** Cópia rasa: duas linhas na mesma DI não podem compartilhar o objeto, senão a adição de uma
+     * sobrescreve a da outra. */
+    function clonar(o) {
+      var c = {};
+      for (var k in o) {
+        if (Object.prototype.hasOwnProperty.call(o, k)) c[k] = o[k];
+      }
+      return c;
     }
 
     function copiarPara(alvo, origem) {
