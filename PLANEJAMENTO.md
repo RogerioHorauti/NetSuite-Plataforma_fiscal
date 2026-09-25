@@ -366,6 +366,50 @@ natureza no ERP **não é declarado** (o resolvedor de CFOP do motor decide) em 
 5. **Client OAuth registrado** para o bundle (`POST /oauth/clients`, escopos `fiscal:read nfe:emit`),
    e o `client_id`/`client_secret` resultante gravados em Secrets Management.
 
+## 7.1 Pendências do lado da PLATAFORMA — o bundle não pode adiantar
+
+Ao contrário das medições acima, estas não se resolvem com uma consulta: falta **contrato**. Campo
+que o DTO não declara é descartado em silêncio pelo Nest (`whitelist: true` sem
+`forbidNonWhitelisted`), então montá-lo aqui produziria um payload que parece certo e chega
+incompleto.
+
+### 7.1.1 `<cobr>` — fatura e duplicatas (parcelamento)
+
+**Estado medido em 25/09/2026:** não existe `cobranca`, `duplicatas`, `nDup`, `dVenc` nem `vDup` em
+DTO nenhum do FiscalPlatform, e o `nfe-builder.ts:5` lista `<cobr>` entre os grupos que "entram nas
+etapas seguintes".
+
+**O NetSuite já tem o dado, e é nativo:** sublista `installment` (Records Guide, *"Installments
+(installment)"*), que depende da feature **Installments** estar ligada na conta. Nenhum campo a
+criar deste lado.
+
+**Quando o DTO existir**, o mapa é direto:
+
+| NF-e | NetSuite |
+|---|---|
+| `dup[].nDup` | `installment.seqnum` |
+| `dup[].dVenc` | `installment.duedate` (AAAA-MM-DD) |
+| `dup[].vDup` | `installment.amount` |
+| `fat.nFat` | `tranid` |
+| `fat.vOrig` / `vDesc` / `vLiq` | total bruto / desconto / líquido do cabeçalho |
+
+⚠ **`<cobr>` e `<pag>` respondem perguntas diferentes, e a SEFAZ confere as duas.** `pag` é COMO se
+paga — dinheiro, cartão, boleto; `cobr` é QUANDO — as parcelas. Nota a prazo com boleto precisa dos
+dois, e é o `indPag = 1` do `pag` que anuncia que o `cobr` vem. Implementar um sem o outro deixa a
+nota coerente na tela e incoerente no XML.
+
+**Ordem:** DTO + builder na plataforma → só então o mapeador aqui.
+
+### 7.1.2 Grupos do `EmitirNotaDto` ainda não mapeados pelo bundle
+
+Estes existem no contrato e o bundle simplesmente não os monta — são frentes, não pendências de
+medição: `contingencia`, `exportacao`, `substituicao`, e os de outros modelos (`participantes` e
+`prestacao` do CT-e, `manifesto` do MDF-e, `guiaValores`).
+
+`indFinal` fica FORA de propósito: o motor o deriva da natureza, e o DTO diz que `null` deriva e
+valor explícito é override. Ele é eixo do DIFAL, e um `0` mandado por engano sai como recolhimento
+a menor.
+
 ## 8. Riscos
 
 | risco | mitigação |
