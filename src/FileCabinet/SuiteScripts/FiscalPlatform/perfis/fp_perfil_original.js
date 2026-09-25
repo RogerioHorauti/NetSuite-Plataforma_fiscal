@@ -84,6 +84,22 @@ define([], function () {
       "RET_CFOP": "custbody_fp_ret_cfop",
       "RET_CMUNFG": "custbody_fp_ret_cmunfg",
 
+      "_grupo_prestacao": [
+        "ONDE o servico foi prestado, na aba Shipping nativa (TRANSACTIONSHIPPING). E de CORPO e",
+        "nao de linha: o DTO admite por linha, mas uma nota de servico e de UM local de prestacao",
+        "-- a NFS-e e municipal. Nota com dois municipios sao duas notas.",
+        "",
+        "PAIS_RESULTADO e CONSUMO_EXTERIOR sao o par CUMULATIVO da exportacao de servico (LC",
+        "116/2003, art. 2o, paragrafo unico): os dois, nao um. Servico prestado aqui para cliente",
+        "de fora, com resultado AQUI, NAO e exportacao."
+      ],
+      "MUN_PRESTACAO": "custbody_fp_mun_prestacao",
+      "MUN_PRESTACAO_NOME": "custbody_fp_mun_prestacao_nome",
+      "UF_PRESTACAO": "custbody_fp_uf_prestacao",
+      "PAIS_PRESTACAO": "custbody_fp_pais_prestacao",
+      "PAIS_RESULTADO": "custbody_fp_pais_resultado",
+      "CONSUMO_EXTERIOR": "custbody_fp_consumo_exterior",
+
       "_grupo_adicionais": [
         "Campos do EmitirNotaDto que NAO existem no SimulacaoNotaInputDto -- so vao na emissao.",
         "Nenhum leva prefixo DOC_ porque sao DECLARACAO do ERP, nao retorno do motor: a copia",
@@ -116,7 +132,8 @@ define([], function () {
       "LINHA_INFO_ADICIONAL": "custcol_fp_info_adicional",
       "LINHA_CHAVE_REF": "custcol_fp_chave_ref",
       "LINHA_ITEM_REF": "custcol_fp_linha_ref",
-      "LINHA_DOACAO": "custcol_fp_doacao"
+      "LINHA_DOACAO": "custcol_fp_doacao",
+      "LINHA_DEDUCAO_MATERIAL": "custcol_fp_deducao_material"
     },
   
     "item": {
@@ -129,11 +146,9 @@ define([], function () {
       "ITEM_UNID_TRIB": "custitem_fp_unid_trib",
       "ITEM_FATOR_CONV": "custitem_fp_fator_conv",
       "ITEM_NAT_RECEITA": "custitem_fp_nat_receita",
-      "ITEM_TIPO": "custitem_fp_tipo_item",
-      "ITEM_EX_TIPI": "custitem_fp_ex_tipi",
-      "ITEM_UNID_TRIB": "custitem_fp_unid_trib",
-      "ITEM_FATOR_CONV": "custitem_fp_fator_conv",
-      "ITEM_NAT_RECEITA": "custitem_fp_nat_receita",
+      "ITEM_SERVICO_MUNICIPAL": "custitem_fp_servico_municipal",
+      "ITEM_DESDOBRAMENTO": "custitem_fp_desdobramento",
+      "ITEM_NBS": "custitem_fp_nbs",
       "_nota": [
         "NCM e CEST são CADASTRO, não régua: eles descrevem a mercadoria, não decidem tributo.",
         "O motor tem cadastro próprio de item (/api/v1/item); qual das duas pontas é a fonte é",
@@ -269,7 +284,8 @@ define([], function () {
     "location": {
       "_nota": "Campos FP na LOCATION (branch do FiscalPlatform).",
       "CNPJ": "custrecord_fp_cnpj_filial",
-      "SERIE": "custrecord_fp_serie_filial"
+      "SERIE": "custrecord_fp_serie_filial",
+      "CNAE": "custrecord_fp_cnae"
     },
 
     "natureza_operacao": {

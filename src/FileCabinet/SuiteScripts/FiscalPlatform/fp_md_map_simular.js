@@ -752,6 +752,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         colunaDaLinha(newRecord, total, 'units'),
         'SELECT internalid AS id, abbreviation AS txt FROM unitstypeuom', 'internalid');
 
+      var prestacao = montarPrestacao(newRecord);
+
       var campoNat = fpFields.idLinha('LINHA_NATUREZA');
       var naturezas = campoNat
         ? resolverTextos(colunaDaLinha(newRecord, total, campoNat),
@@ -798,6 +800,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         if (natLinha) linha.naturezaOperacaoId = natLinha;
 
         acrescentarDaLinha(newRecord, i, linha);
+        if (prestacao) copiarPara(linha, prestacao);
 
         var cad = item && cadastro[String(item)];
         if (cad) {
@@ -809,6 +812,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
           if (cad.tipoItem) linha.tipoItem = cad.tipoItem;
           if (cad.exTipi) linha.exTipi = cad.exTipi;
           if (cad.naturezaReceita) linha.naturezaReceita = cad.naturezaReceita;
+          if (cad.codigoServicoMunicipal) linha.codigoServicoMunicipal = cad.codigoServicoMunicipal;
+          if (cad.desdobramentoTribNac) linha.desdobramentoTribNac = cad.desdobramentoTribNac;
+          if (cad.nbs) linha.nbs = cad.nbs;
           if (!linha.descricao && cad.descricao) linha.descricao = cad.descricao;
 
           // A unidade tributável e o fator andam juntos: sem a unidade não há o que converter, e
@@ -822,6 +828,58 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         linhas.push(linha);
       }
       return linhas;
+    }
+
+    /**
+     * ONDE O SERVIÇO FOI PRESTADO — campo de CORPO, repetido em cada linha.
+     *
+     * O DTO declara `municipioPrestacao` e companhia na LINHA, mas na prática uma nota de serviço
+     * tem UM local de prestação: a NFS-e é municipal, e serviço prestado em dois municípios são
+     * duas notas. Por isso o dado é digitado uma vez, na aba Shipping, e o mapeador o copia para
+     * cada linha — quem preenche não repete, e o contrato continua honrado.
+     *
+     * ⚠ `paisResultadoServico` + `consumoNoExterior` são o par CUMULATIVO da exportação de serviço
+     * (LC 116/2003, art. 2º, parágrafo único): os DOIS, não um. Serviço prestado aqui para cliente
+     * de fora, com o resultado verificado AQUI, não é exportação — e mandar só um dos dois é o que
+     * faz o motor decidir errado.
+     */
+    function montarPrestacao(newRecord) {
+      var p = {};
+
+      var mun = digitos(valorTexto(newRecord, fpFields.id('MUN_PRESTACAO')));
+      if (mun) p.municipioPrestacao = mun;
+
+      // O nome é o caminho de exceção: só vai quando o código IBGE não foi informado.
+      var nome = valorTexto(newRecord, fpFields.id('MUN_PRESTACAO_NOME'));
+      if (nome && !mun) p.municipioPrestacaoNome = nome;
+
+      var uf = valorTexto(newRecord, fpFields.id('UF_PRESTACAO'));
+      if (uf) p.ufPrestacao = uf.toUpperCase().substring(0, 2);
+
+      var pais = digitos(valorTexto(newRecord, fpFields.id('PAIS_PRESTACAO')));
+      if (pais) p.paisPrestacao = pais;
+
+      var resultado = valorTexto(newRecord, fpFields.id('PAIS_RESULTADO'));
+      if (resultado) p.paisResultadoServico = resultado.toUpperCase();
+
+      var campoConsumo = fpFields.id('CONSUMO_EXTERIOR');
+      var consumo = campoConsumo && newRecord.getValue({ fieldId: campoConsumo }) === true;
+      if (consumo) p.consumoNoExterior = true;
+
+      if (consumo !== !!resultado) {
+        log.audit('fp_md_map_simular.montarPrestacao',
+          'exportacao de servico exige os DOIS: pais do resultado e consumo no exterior. So um ' +
+          'esta preenchido, e o motor nao tem como caracterizar a exportacao (LC 116/2003, ' +
+          'art. 2o, paragrafo unico).');
+      }
+
+      return temAlgo(p) ? p : null;
+    }
+
+    function copiarPara(alvo, origem) {
+      for (var k in origem) {
+        if (Object.prototype.hasOwnProperty.call(origem, k)) alvo[k] = origem[k];
+      }
     }
 
     /**
@@ -855,6 +913,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       // inventar um valor que a tabela não tem.
       var campoDoacao = fpFields.idLinha('LINHA_DOACAO');
       if (campoDoacao && valorLinha(newRecord, campoDoacao, i) === true) linha.indDoacao = 1;
+
+      var deducao = numero(valorLinha(newRecord, fpFields.idLinha('LINHA_DEDUCAO_MATERIAL'), i));
+      if (deducao) linha.deducaoMaterial = deducao;
     }
 
     /**
@@ -896,7 +957,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var logicas = { ncm: 'ITEM_NCM', cest: 'ITEM_CEST', origem: 'ITEM_ORIGEM',
                       servicoLc116: 'ITEM_SERVICO_LC116', tipoItem: 'ITEM_TIPO',
                       exTipi: 'ITEM_EX_TIPI', unidadeTributavel: 'ITEM_UNID_TRIB',
-                      fatorConversao: 'ITEM_FATOR_CONV', naturezaReceita: 'ITEM_NAT_RECEITA' };
+                      fatorConversao: 'ITEM_FATOR_CONV', naturezaReceita: 'ITEM_NAT_RECEITA',
+                      codigoServicoMunicipal: 'ITEM_SERVICO_MUNICIPAL',
+                      desdobramentoTribNac: 'ITEM_DESDOBRAMENTO', nbs: 'ITEM_NBS' };
       var mapa = {};
 
       // `origem` é List/Record; as outras são texto. O prefixo diz ao SuiteQL qual precisa de
