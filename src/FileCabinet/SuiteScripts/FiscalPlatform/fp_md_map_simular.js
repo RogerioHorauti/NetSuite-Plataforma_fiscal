@@ -797,6 +797,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         var natLinha = campoNat && naturezas[String(valorLinha(newRecord, campoNat, i))];
         if (natLinha) linha.naturezaOperacaoId = natLinha;
 
+        acrescentarDaLinha(newRecord, i, linha);
+
         var cad = item && cadastro[String(item)];
         if (cad) {
           if (cad.codigo) linha.codigoProduto = cad.codigo;
@@ -804,12 +806,55 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
           if (cad.cest) linha.cest = cad.cest;
           if (cad.origem) linha.origemProduto = cad.origem;
           if (cad.servicoLc116) linha.codigoServicoLc116 = cad.servicoLc116;
+          if (cad.tipoItem) linha.tipoItem = cad.tipoItem;
+          if (cad.exTipi) linha.exTipi = cad.exTipi;
+          if (cad.naturezaReceita) linha.naturezaReceita = cad.naturezaReceita;
           if (!linha.descricao && cad.descricao) linha.descricao = cad.descricao;
+
+          // A unidade tributável e o fator andam juntos: sem a unidade não há o que converter, e
+          // mandar o fator sozinho é um número sem denominador.
+          if (cad.unidadeTributavel) {
+            linha.unidadeTributavel = cad.unidadeTributavel;
+            if (cad.fatorConversao) linha.fatorConversao = cad.fatorConversao;
+          }
         }
 
         linhas.push(linha);
       }
       return linhas;
+    }
+
+    /**
+     * O QUE É DA LINHA, e só dela.
+     *
+     * A `SimulacaoLinhaDto` mistura atributo de mercadoria com atributo de venda — NCM ao lado de
+     * quantidade — e é o perfil que separa os dois. Aqui vai o segundo grupo: o que muda a cada
+     * venda do mesmo produto.
+     */
+    function acrescentarDaLinha(newRecord, i, linha) {
+      var info = textoLinha(newRecord, fpFields.idLinha('LINHA_INFO_ADICIONAL'), i);
+      if (info) linha.infoAdicional = info;
+
+      // Devolução: os dois andam juntos. Chave sem item não diz QUAL linha da origem está
+      // voltando, e a SEFAZ não tem como amarrar quando a nota de origem repete o produto.
+      var chaveRef = digitos(valorLinha(newRecord, fpFields.idLinha('LINHA_CHAVE_REF'), i));
+      var itemRef = numero(valorLinha(newRecord, fpFields.idLinha('LINHA_ITEM_REF'), i));
+      if (chaveRef) {
+        linha.chaveAcessoReferencia = chaveRef;
+        if (itemRef) {
+          linha.numeroLinhaReferencia = itemRef;
+        } else {
+          log.audit('fp_md_map_simular.acrescentarDaLinha',
+            'linha ' + (i + 1) + ' tem chave de origem e NAO tem o item de origem. A devolucao ' +
+            'nao amarra na linha certa quando a nota de origem repete o produto.');
+        }
+      }
+
+      // ⚠ `indDoacao` SÓ EXISTE COM O VALOR 1. O leiaute (TIndDoacao) não admite zero — a ausência
+      // é o "não". Por isso o campo é checkbox e o desmarcado NÃO manda nada: mandar `0` seria
+      // inventar um valor que a tabela não tem.
+      var campoDoacao = fpFields.idLinha('LINHA_DOACAO');
+      if (campoDoacao && valorLinha(newRecord, campoDoacao, i) === true) linha.indDoacao = 1;
     }
 
     /**
@@ -849,7 +894,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       // traga um dos dois, e os campos são excludentes por construção: os de mercadoria não
       // aplicam em item de serviço, e o de serviço não aplica em mercadoria.
       var logicas = { ncm: 'ITEM_NCM', cest: 'ITEM_CEST', origem: 'ITEM_ORIGEM',
-                      servicoLc116: 'ITEM_SERVICO_LC116' };
+                      servicoLc116: 'ITEM_SERVICO_LC116', tipoItem: 'ITEM_TIPO',
+                      exTipi: 'ITEM_EX_TIPI', unidadeTributavel: 'ITEM_UNID_TRIB',
+                      fatorConversao: 'ITEM_FATOR_CONV', naturezaReceita: 'ITEM_NAT_RECEITA' };
       var mapa = {};
 
       // `origem` é List/Record; as outras são texto. O prefixo diz ao SuiteQL qual precisa de
@@ -858,7 +905,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         if (!Object.prototype.hasOwnProperty.call(logicas, chave)) continue;
         var id = fpFields.idItem(logicas[chave]);
         if (!id) continue;
-        var col = chave === 'origem' ? 'DF:' + id : id;
+        // List/Record precisa de `BUILTIN.DF`, senão o SuiteQL devolve o internal id do valor.
+      var col = (chave === 'origem' || chave === 'tipoItem') ? 'DF:' + id : id;
         mapa[chave] = col;
         colunas.push(col);
       }
@@ -919,6 +967,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         if (reg.ncm) reg.ncm = digitos(reg.ncm);
         if (reg.cest) reg.cest = digitos(reg.cest);
         if (reg.origem) reg.origem = codigoDaOrigem(reg.origem);
+        if (reg.tipoItem) reg.tipoItem = codigoDaLista(reg.tipoItem);
+        if (reg.fatorConversao) reg.fatorConversao = numero(reg.fatorConversao);
         if (reg.servicoLc116) reg.servicoLc116 = texto(reg.servicoLc116).trim().replace(',', '.');
         out[String(r.id)] = reg;
       }

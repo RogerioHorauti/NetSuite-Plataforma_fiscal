@@ -101,9 +101,22 @@ define([], function () {
     },
   
     "linha": {
+      "_nota": [
+        "CAMPO DE LINHA e o que muda A CADA VENDA do mesmo produto. Atributo da mercadoria que se",
+        "repete em toda nota e campo de ITEM -- ver a secao `item`. O DTO nao separa os dois: a",
+        "SimulacaoLinhaDto mistura NCM (item) com quantidade (linha), e quem separa e este perfil.",
+        "",
+        "Errar o lado custa caro nos dois sentidos: NCM como campo de linha faz alguem redigitar",
+        "a cada nota ate divergir; lote como campo de item faz todas as notas do produto sairem",
+        "com o lote da ultima."
+      ],
       "LINHA_NATUREZA": "custcol_fp_natureza",
       "LINHA_CFOP": "custcol_fp_cfop",
-      "LINHA_NUMERO_ITEM": "custcol_fp_numero_item"
+      "LINHA_NUMERO_ITEM": "custcol_fp_numero_item",
+      "LINHA_INFO_ADICIONAL": "custcol_fp_info_adicional",
+      "LINHA_CHAVE_REF": "custcol_fp_chave_ref",
+      "LINHA_ITEM_REF": "custcol_fp_linha_ref",
+      "LINHA_DOACAO": "custcol_fp_doacao"
     },
   
     "item": {
@@ -111,6 +124,16 @@ define([], function () {
       "ITEM_CEST": "custitem_fp_cest",
       "ITEM_ORIGEM": "custitem_fp_origem",
       "ITEM_SERVICO_LC116": "custitem_fp_servico_lc116",
+      "ITEM_TIPO": "custitem_fp_tipo_item",
+      "ITEM_EX_TIPI": "custitem_fp_ex_tipi",
+      "ITEM_UNID_TRIB": "custitem_fp_unid_trib",
+      "ITEM_FATOR_CONV": "custitem_fp_fator_conv",
+      "ITEM_NAT_RECEITA": "custitem_fp_nat_receita",
+      "ITEM_TIPO": "custitem_fp_tipo_item",
+      "ITEM_EX_TIPI": "custitem_fp_ex_tipi",
+      "ITEM_UNID_TRIB": "custitem_fp_unid_trib",
+      "ITEM_FATOR_CONV": "custitem_fp_fator_conv",
+      "ITEM_NAT_RECEITA": "custitem_fp_nat_receita",
       "_nota": [
         "NCM e CEST são CADASTRO, não régua: eles descrevem a mercadoria, não decidem tributo.",
         "O motor tem cadastro próprio de item (/api/v1/item); qual das duas pontas é a fonte é",

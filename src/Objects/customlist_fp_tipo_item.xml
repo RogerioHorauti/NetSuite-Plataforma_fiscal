@@ -1,0 +1,20 @@
+<customlist scriptid="customlist_fp_tipo_item">
+  <description>Tipo do item, tabela 4.4.1 do SPED, campo tipoItem do DTO. O CODIGO abre o valor e e o que vai no payload -- o DTO valida com IsIn. E atributo do ITEM no estabelecimento: a mesma mercadoria e "revenda" numa distribuidora e "materia-prima" numa industria, mas nao muda de nota para nota.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Tipo do Item</name>
+  <customvalues>
+    <customvalue scriptid="val_tipo_item_00"><isinactive>F</isinactive><value>00 - Mercadoria para revenda</value></customvalue>
+    <customvalue scriptid="val_tipo_item_01"><isinactive>F</isinactive><value>01 - Materia-prima</value></customvalue>
+    <customvalue scriptid="val_tipo_item_02"><isinactive>F</isinactive><value>02 - Embalagem</value></customvalue>
+    <customvalue scriptid="val_tipo_item_03"><isinactive>F</isinactive><value>03 - Produto em processo</value></customvalue>
+    <customvalue scriptid="val_tipo_item_04"><isinactive>F</isinactive><value>04 - Produto acabado</value></customvalue>
+    <customvalue scriptid="val_tipo_item_05"><isinactive>F</isinactive><value>05 - Subproduto</value></customvalue>
+    <customvalue scriptid="val_tipo_item_06"><isinactive>F</isinactive><value>06 - Produto intermediario</value></customvalue>
+    <customvalue scriptid="val_tipo_item_07"><isinactive>F</isinactive><value>07 - Material de uso e consumo</value></customvalue>
+    <customvalue scriptid="val_tipo_item_08"><isinactive>F</isinactive><value>08 - Ativo imobilizado</value></customvalue>
+    <customvalue scriptid="val_tipo_item_09"><isinactive>F</isinactive><value>09 - Servicos</value></customvalue>
+    <customvalue scriptid="val_tipo_item_10"><isinactive>F</isinactive><value>10 - Outros insumos</value></customvalue>
+    <customvalue scriptid="val_tipo_item_99"><isinactive>F</isinactive><value>99 - Outras</value></customvalue>
+  </customvalues>
+</customlist>
