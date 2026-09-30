@@ -12,7 +12,7 @@
  * **descartado em silêncio**, sem aviso nenhum.
  *
  * ⚠ MEDIDO em `simulacao-nota-input.dto.ts:1564`: o DTO de simulação tem **dez** campos de topo —
- * `branchId`, `companyId`, `cnpjEmpresa`, `destinatario`, `naturezaOperacaoId`, `dataEmissao`,
+ * `branchId`, `companyId`, `cnpjEmpresa`, `contraparte`, `naturezaOperacaoId`, `dataEmissao`,
  * `dataSaidaEntrada`, `competenciaOriginal`, `dataReajuste`, `linhas`. Só `linhas` é obrigatório.
  * `serie`, `tipoDocumento`, `indPres`, `indFinal`, `pagamento`, `transporte` e `infAdicContrib`
  * **não existem nele** — a versão anterior deste arquivo mandava os sete, e os sete eram jogados
@@ -50,9 +50,9 @@
  *   cnpjEmpresa          Location › custrecord_fp_cnpj_filial  criado por nós
  *   naturezaOperacaoId   custbody_fp_natureza (getText)        criado por nós
  *   dataEmissao          trandate                              NATIVO
- *   destinatario.cnpjCpf customer.vatregnumber "Tax Reg.Num."  NATIVO
- *   destinatario.nome    customer.companyname / entityid       NATIVO
- *   destinatario.uf/cep  subrecord de endereço da transação    NATIVO
+ *   contraparte.cnpjCpf  customer.vatregnumber "Tax Reg.Num."  NATIVO
+ *   contraparte.nome      customer.companyname / entityid       NATIVO
+ *   contraparte.uf/cep   subrecord de endereço da transação    NATIVO
  *   linhas[].*           sublist `item`                        NATIVO
  *   linhas[].cfopCodigo  custcol_fp_cfop                       ainda não existe na conta
  *   linhas[].ncm/cest    custitem_fp_ncm / _cest               ainda não existem na conta
@@ -120,8 +120,11 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       dataSeTiver(newRecord, payload, 'COMPETENCIA_ORIGINAL', 'competenciaOriginal');
       dataSeTiver(newRecord, payload, 'DATA_REAJUSTE', 'dataReajuste');
 
-      var dest = montarDestinatario(newRecord);
-      if (dest) payload.destinatario = dest;
+      // `contraparte` (antes `destinatario`, sem alias desde o 31d554b9 da plataforma): a OUTRA
+      // parte da nota — destinatário na saída, fornecedor na entrada. Quem traduz o papel pela
+      // direção é o motor (`lerContraparte`); aqui só se declara quem ela é.
+      var contraparte = montarContraparte(newRecord);
+      if (contraparte) payload.contraparte = contraparte;
 
       // Atribuído aqui, e não no literal acima: `var` é hoisted, e lido antes desta linha o
       // campo sairia `undefined` — sem linha nenhuma, que é o único obrigatório do DTO.
@@ -239,16 +242,21 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     
     }
 
+    /** Transações em que a outra parte é FORNECEDOR. É tipo de registro do NetSuite, não régua. */
+    var TIPOS_DE_COMPRA = ['purchaseorder', 'vendorbill', 'vendorcredit', 'itemreceipt', 'vendorreturnauthorization'];
+
     /**
-     * Destinatário pelo que a transação e o cliente realmente têm.
+     * A CONTRAPARTE pelo que a transação e o cadastro realmente têm — o cliente na venda, o
+     * fornecedor na compra.
      *
      * O endereço vem DA TRANSAÇÃO, não do cadastro: a nota sai para onde a transação diz, e uma
      * nota pode sobrescrever o endereço do cliente.
      */
-    function montarDestinatario(newRecord) {
+    function montarContraparte(newRecord) {
       var entity = newRecord.getValue({ fieldId: fpFields.padrao('ENTITY') });
       if (!entity) return null;
 
+      var compra = TIPOS_DE_COMPRA.indexOf(newRecord.type) > -1;
       var dest = {};
 
       // `vatregnumber` é o "Tax Reg. Number" do Records Browser — o único campo nativo que
@@ -262,7 +270,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         ie: fpFields.idCliente('IE'),
         ind: fpFields.idCliente('IND_IE_DEST'),
         regime: fpFields.idCliente('REGIME_TRIB'),
-        qualif: fpFields.idCliente('QUALIFICACAO')
+        // A qualificação é eixo só de SAÍDA, e o campo nem se aplica a fornecedor: pedir a coluna
+        // num vendor derrubaria o lookup.
+        qualif: compra ? null : fpFields.idCliente('QUALIFICACAO')
       };
 
       var colunas = ['companyname', 'entityid', 'email', 'phone'];
@@ -270,7 +280,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         if (Object.prototype.hasOwnProperty.call(C, k) && C[k]) colunas.push(C[k]);
       }
 
-      var cad = lookup('customer', entity, colunas);
+      var cad = lookup(compra ? 'vendor' : 'customer', entity, colunas);
       if (cad) {
         // Razão social primeiro: `companyname` costuma guardar o nome fantasia, e a tag `xNome`
         // do grupo E quer a razão social registrada.
@@ -286,17 +296,17 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         var ie = C.ie && digitos(cad[C.ie]);
         if (ie) dest.ie = ie;
 
-        // `indIeDest` não é rótulo de cadastro: o motor deriva dele o `destinatarioContribuinte`
-        // (1 e 2 → true, 9 → false), e é isso que decide o DIFAL.
+        // `indIe` (antes `indIeDest`) não é rótulo de cadastro: na saída o motor deriva dele se
+        // o destinatário é contribuinte (1 e 2 → sim, 9 → não), e é isso que decide o DIFAL.
         var ind = C.ind && codigoDaLista(cad[C.ind]);
-        if (ind) dest.indIeDest = parseInt(ind, 10);
+        if (ind) dest.indIe = parseInt(ind, 10);
 
         // Regime em branco é SEGURO por desenho do motor: eixo não declarado não casa hipótese e
         // a linha sai com imposto cheio — o erro que não vira glosa. Não inventar default aqui.
         var regime = C.regime && codigoDaLista(cad[C.regime]);
         if (regime) dest.regimeTributario = regime;
 
-        // "Que tipo de entidade é" — órgão público e a esfera. Não se deriva do `indIeDest`: o 9
+        // "Que tipo de entidade é" — órgão público e a esfera. Não se deriva do `indIe`: o 9
         // cobre órgão público e pessoa física igualmente, e a norma trata os dois de modo oposto.
         var qualif = C.qualif && codigoDaLista(cad[C.qualif]);
         if (qualif) dest.qualificacao = qualif;

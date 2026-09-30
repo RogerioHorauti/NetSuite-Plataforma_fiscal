@@ -1303,3 +1303,19 @@ pré-teste, SEFAZ parada só aparece DEPOIS de o número ser reservado.
 `fp_sl_emissao.decidirPreEmissao` — só NF-e/NFC-e, só sem contingência (com ela a plataforma sonda
 a SVC, guarda anti-570), fail-open se a consulta falhar, barra com o texto da SEFAZ se
 `emOperacao` for falso. Os 7 ramos testados fora da conta com a função real. Chumbado responde 107.
+
+## 16. `destinatario` → `contraparte` (plataforma `31d554b9`, 2026-09-30)
+
+A plataforma trocou o bloco da outra parte **sem alias**: `destinatario`/`DestinatarioDto` →
+`contraparte`/`ContraparteDto`, e `indIeDest` → `indIe`. Motivo medido lá: na COMPRA a UF e o regime
+do fornecedor vinham de campos flat que o DTO não declara, o whitelist os apagava, e toda compra
+saía INTERNA (SP→ES: 1102/ICMS 0 com o nome antigo; 2102/7% com `contraparte`). O papel sai da
+direção da natureza (`engine/ler-contraparte.ts`): saída = destinatário, entrada = fornecedor.
+
+Bundle: `montarContraparte` — cliente na venda, **fornecedor** na compra (tipo do registro:
+`purchaseorder`, `vendorbill`, `vendorcredit`, `itemreceipt`, `vendorreturnauthorization`);
+`indIe`; a qualificação só na venda (o `custentity_fp_qualificacao` não se aplica a vendor, e pedir
+a coluna derrubaria o lookup). Os gabaritos das §13–14 que dizem `destinatario` leem-se `contraparte`.
+
+⚠ Todo `FP-*-payload.json` gravado até aqui tem `destinatario`. Emitir a partir dele mandaria a nota
+sem contraparte, calada — o Suitelet agora RECUSA e pede para salvar (simular) de novo.

@@ -243,6 +243,15 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
           'simular, confira o resultado, e emita depois.' } };
       }
 
+      // Simulação anterior ao contrato `contraparte` (plataforma 31d554b9, sem alias): o
+      // `destinatario` seria apagado pelo whitelist e a nota sairia sem a outra parte, calada.
+      // Converter aqui emitiria algo que ninguém simulou — simular de novo é um save.
+      if (simulado.destinatario && !simulado.contraparte) {
+        return { ok: false, code: 0, body: { erro:
+          'o payload simulado desta transação usa "destinatario", que a plataforma não aceita mais ' +
+          '(agora é "contraparte"). Salve a transação para simular de novo e emita depois.' } };
+      }
+
       var payload = fpMap.montarEmissao(rec, simulado);
       if (!payload) {
         return { ok: false, code: 0, body: { erro: 'payload não montou — ver o log do mapeador' } };
