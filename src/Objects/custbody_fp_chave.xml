@@ -28,7 +28,7 @@
   <defaultvalue></defaultvalue>
   <description></description>
   <displayheight></displayheight>
-  <displaytype>STATICTEXT</displaytype>
+  <displaytype>NORMAL</displaytype>
   <displaywidth></displaywidth>
   <dynamicdefault></dynamicdefault>
   <encryptatrest>F</encryptatrest>

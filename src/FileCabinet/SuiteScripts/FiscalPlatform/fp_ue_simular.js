@@ -162,7 +162,7 @@ define([
    * `DOC_*` (resultado do motor) nem `CORRID` (infraestrutura) é declaração, e declaração muda
    * imposto. Campo novo entra na comparação sozinho.
    */
-  function camposRelevantes() {
+  function camposRelevantes(tipo) {
     var l = [
       fpFields.padrao('ENTITY'),
       fpFields.padrao('SUBSIDIARY'),
@@ -179,6 +179,10 @@ define([
       var id = fpFields.id(chaves[i]);
       if (id) l.push(id);
     }
+
+    // Na COMPRA a chave é DECLARAÇÃO de quem lança (a nota do fornecedor), não retorno do motor:
+    // trocá-la muda o que vai ao `reclassificar`, então ela conta como mudança.
+    if (fpMapSimular.ehCompra(tipo) && fpFields.id('DOC_CHAVE')) l.push(fpFields.id('DOC_CHAVE'));
     return l;
   }
 
@@ -540,7 +544,11 @@ define([
     var danfedoc = fpFields.id('DOC_DANFE');
     
 
-    scriptContext.form.getField(chavedoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
+    // A CHAVE ABRE NA ENTRADA: na compra quem lança digita a chave da nota do fornecedor. No resto
+    // ela é retorno da emissão, e fica travada.
+    if (!fpMapSimular.ehCompra(scriptContext.newRecord.type)) {
+      scriptContext.form.getField(chavedoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
+    }
     scriptContext.form.getField(numerodoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
     scriptContext.form.getField(seriedoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
     scriptContext.form.getField(statusdoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
@@ -620,7 +628,7 @@ define([
     var novo = scriptContext.newRecord;
     if (!antigo) return true;
 
-    var campos = camposRelevantes();
+    var campos = camposRelevantes(novo.type);
     var camposLinha = camposLinhaRelevantes();
 
     var i;

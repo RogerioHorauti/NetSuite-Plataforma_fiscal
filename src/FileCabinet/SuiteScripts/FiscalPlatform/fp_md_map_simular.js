@@ -1772,6 +1772,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     return {
       montar: montar,
       montarReclassificar: montarReclassificar,
+      ehCompra: function (tipo) { return TIPOS_DE_COMPRA.indexOf(tipo) > -1; },
       montarEmissao: montarEmissao,
       aplicar: aplicar
     };

@@ -129,12 +129,10 @@ define([], function () {
       "DATA_SAIDA": "custbody_fp_data_saida",
 
       "_grupo_entrada": [
-        "Declaracao de quem LANCA a compra: a chave da nota do fornecedor e a data de entrada.",
-        "Com a natureza (NATUREZA / LINHA_NATUREZA), sao o corpo do POST /transacoes/reclassificar.",
-        "Nao levam DOC_: nao sao retorno do motor, e a guarda 4 precisa enxerga-las como mudanca.",
-        "⚠ Por nao levar DOC_, a COPIA da transacao herda a chave -- limpar a mao ao copiar."
+        "Na COMPRA, a chave da nota do FORNECEDOR vai no proprio DOC_CHAVE, que o beforeLoad abre",
+        "para digitacao so na compra; a data de entrada tem campo proprio. Com a natureza, sao o",
+        "corpo do POST /transacoes/reclassificar. A guarda 4 conta o DOC_CHAVE como mudanca na compra."
       ],
-      "CHAVE_ENTRADA": "custbody_fp_chave_entrada",
       "DATA_ENTRADA": "custbody_fp_data_entrada",
       "COMPETENCIA_ORIGINAL": "custbody_fp_competencia_original",
       "DATA_REAJUSTE": "custbody_fp_data_reajuste"

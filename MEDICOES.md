@@ -1455,3 +1455,16 @@ Preenchidas as **69** naturezas pela família do nome + sentido E/S (`carga/natu
 salvar na tela pode recusar a natureza. ⚠ `custrecord_fp_transacao_no` e o filtro do
 `custbody_fp_natureza` por ele **existem só na conta**: não estão em XML nenhum do projeto (§8.7
 tirou a referência). Importar os dois (`object:import`) antes que um deploy decida por eles.
+
+### 17.1 A chave de entrada é o próprio `custbody_fp_chave` (2026-09-30, Rogerio)
+
+Sai o `custbody_fp_chave_entrada`: a chave da nota do fornecedor vai no MESMO campo da chave da
+emissão. `custbody_fp_chave` passa a nascer `displaytype` NORMAL e o `beforeLoad`
+(`organizarFormulario`) o trava (INLINE) em tudo que **não** é compra — na compra ele abre para
+digitação. A guarda 4 conta o `DOC_CHAVE` como mudança só na compra (`camposRelevantes(tipo)`).
+Efeito bom: com o prefixo `DOC_`, a CÓPIA volta a limpar a chave sozinha (`limparNaCopia`).
+
+⚠ O `fp_ue_emissao` também põe botão de emissão na vendor bill (NF-e de entrada própria). Numa
+vendor bill com a chave do FORNECEDOR digitada e sem status, o botão Emitir aparece, e emitir
+gravaria a NOSSA chave por cima da do fornecedor. Os dois usos não convivem na mesma transação.
+⚠ A 2733 e a 2734 têm a chave no campo antigo; o campo antigo segue na conta até ser apagado na UI.

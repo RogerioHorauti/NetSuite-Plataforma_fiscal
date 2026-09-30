@@ -35,7 +35,9 @@ define(['./fp_fields'], function (fpFields) {
 
   /** Corpo do `reclassificar`, ou `null` quando a compra não declarou chave. */
   function montarReclassificar(newRecord, dataIsoDe, codigoLinhas, natureza) {
-    var campoChave = fpFields.id('CHAVE_ENTRADA');
+    // O MESMO campo da chave da emissão: na compra ele abre para digitação (`fp_ue_simular.
+    // organizarFormulario`) e recebe a chave da nota do FORNECEDOR.
+    var campoChave = fpFields.id('DOC_CHAVE');
     var chave = String((campoChave && newRecord.getValue({ fieldId: campoChave })) || '').replace(/\D/g, '');
     if (!chave) return null;
 
