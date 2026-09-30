@@ -48,7 +48,7 @@
  *   payload              origem no NetSuite                    estado
  *   ───────────────────  ────────────────────────────────────  ─────────────────────────────────
  *   cnpjEmpresa          Location › custrecord_fp_cnpj_filial  criado por nós
- *   naturezaOperacaoId   custbody_fp_natureza (getText)        criado por nós
+ *   naturezaOperacaoId   custbody_fp_natureza (id → nome, SQL)   criado por nós
  *   dataEmissao          trandate                              NATIVO
  *   contraparte.cnpjCpf  customer.vatregnumber "Tax Reg.Num."  NATIVO
  *   contraparte.nome      customer.companyname / entityid       NATIVO
@@ -151,7 +151,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var payload = JSON.parse(JSON.stringify(base));
 
       var serie = serieDaFilial(newRecord);
-      var tipoDoc = valorTexto(newRecord, fpFields.id('TIPODOC'));
+      var tipoDoc = textoDaLista(newRecord, 'TIPODOC', 'LISTA_TIPODOC');
 
       if (!serie || !tipoDoc) {
         log.error('fp_md_map_simular.montarEmissao',
@@ -176,7 +176,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       // DTO diz que `null` deriva e valor explícito é OVERRIDE. Ele é eixo do DIFAL — mandar 0
       // por engano sobrepõe a derivação e o erro sai como recolhimento a menor.
 
-      var indPres = codigoDaLista(valorTexto(newRecord, fpFields.id('IND_PRES')));
+      var indPres = codigoDaLista(textoDaLista(newRecord, 'IND_PRES', 'LISTA_IND_PRES'));
       if (indPres) payload.indPres = indPres;
 
       var transporte = montarTransporte(newRecord);
@@ -232,13 +232,11 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
      * O CÓDIGO da natureza, não o internal id.
      *
      * `custbody_fp_natureza` é List/Record para `customrecord_fp_natureza_operacao`, e `getValue`
-     * devolve o internal id. O motor espera o código (`VENDA`, `REMESSA_COMODATO`), e `getText` dá
+     * devolve o internal id. O motor espera o código (`VENDA`, `REMESSA_COMODATO`), e o nome do registro dá
      * o nome do registro, que é onde o código foi carregado.
      */
     function naturezaDeclarada(newRecord) {
-      var campo = fpFields.id('NATUREZA');
-      if (!campo) return null;
-      return newRecord.getText({ fieldId: campo }) || null;
+      return textoDaLista(newRecord, 'NATUREZA', 'NATUREZA_OPERACAO');
     
     }
 
@@ -409,7 +407,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       if (!just) return null;
 
       var c = { xJust: texto(just) };
-      var via = codigoDaLista(valorTexto(newRecord, fpFields.id('CONT_VIA')));
+      var via = codigoDaLista(textoDaLista(newRecord, 'CONT_VIA', 'LISTA_CONT_VIA'));
       if (via) c.via = via;
       return c;
     }
@@ -503,7 +501,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
      * dado diverge.
      */
     function montarTransporte(newRecord) {
-      var modFrete = codigoDaLista(valorTexto(newRecord, fpFields.id('FRETE_MODALIDADE')));
+      var modFrete = codigoDaLista(textoDaLista(newRecord, 'FRETE_MODALIDADE', 'LISTA_MOD_FRETE'));
       if (!modFrete) return null;
 
       var t = { modFrete: modFrete };
@@ -1594,9 +1592,33 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     
     }
 
+    /**
+     * Valor de campo de TEXTO. Só `getValue`: campo SELECT não passa por aqui — ele vai por
+     * `textoDaLista`, porque `getText` lança no `beforeSubmit` de registro criado por REST.
+     */
     function valorTexto(newRecord, campo) {
       if (!campo) return null;
-      return newRecord.getText({ fieldId: campo }) || newRecord.getValue({ fieldId: campo }) || null;
+      var v = newRecord.getValue({ fieldId: campo });
+      return v === null || v === undefined || v === '' ? null : String(v);
+    }
+
+    /**
+     * O NOME do valor de um campo SELECT de corpo, por SuiteQL — nunca `getText`.
+     *
+     * ⚠ MEDIDO em 2026-09-30 (vendor bill 2733, criada por REST): no `beforeSubmit`, `getText` de
+     * campo posto por `setValue` na mesma requisição LANÇA `SSS_INVALID_API_USAGE` — "You must use
+     * getValue to return the value set with setValue". A guarda 1 engolia, e o save passava sem
+     * simular. O id do `getValue` responde em todo contexto; o nome sai do registro da lista.
+     */
+    function textoDaLista(newRecord, chaveCampo, chaveRegistro) {
+      var campo = fpFields.id(chaveCampo);
+      var registro = fpFields.registro(chaveRegistro);
+      var id = campo && newRecord.getValue({ fieldId: campo });
+      if (!id || !registro) return null;
+      var r = query.runSuiteQL({
+        query: 'SELECT name AS txt FROM ' + registro + ' WHERE id = ?', params: [id]
+      }).asMappedResults();
+      return r.length ? texto(r[0].txt) || null : null;
     
     }
 
@@ -1700,7 +1722,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         if (!numero(valorLinha(newRecord, 'rate', i)) && !numero(valorLinha(newRecord, 'amount', i))) continue;
         porItem.push((campoNat && naturezas[String(valorLinha(newRecord, campoNat, i))]) || '');
       }
-      return fpEntrada.montarReclassificar(newRecord, dataIsoDe, porItem);
+      return fpEntrada.montarReclassificar(newRecord, dataIsoDe, porItem, naturezaDeclarada(newRecord));
     }
 
     return {

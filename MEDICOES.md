@@ -1367,3 +1367,17 @@ entrada 16/11/2023; COMPRA e COMPRA_ATIVO liberadas para Bill — id **17** no m
 `SSS_INVALID_API_USAGE` ("You must use getValue to return the value set with setValue") no `getText`
 da natureza — campo posto por `setValue` na mesma requisição não responde a `getText`. A guarda 1
 engole e o save passa; por isso "criação por REST não simulava".
+
+## 18. Sem `getText` no caminho do save (2026-09-30)
+
+`getText` de campo SELECT posto por `setValue` na mesma requisição LANÇA `SSS_INVALID_API_USAGE`
+no `beforeSubmit` (§17, vendor bill 2733 criada por REST). Trocado por `getValue` do id + SuiteQL do
+nome no registro da lista, em `textoDaLista`: natureza (`NATUREZA_OPERACAO`), tipo de documento,
+`indPres`, modalidade do frete e via da contingência (listas em `registros` do perfil). O
+`valorTexto` passa a ser só `getValue` — é para campo de texto. Ficam com `getText`/`getSublistText`
+os pontos que rodam em registro CARREGADO (`record.load` do Suitelet, `beforeLoad`): pagamentos,
+rótulo do botão, sublista de mídia na cópia.
+
+Harness com `getText` LANÇANDO a mesma exceção: venda (`VENDA_PROD`, `NFE`, `indPres` 1, `modFrete`
+0, contingência `EPEC`) e compra (`COMPRA` + `COMPRA_ATIVO` no item 2) montam inteiras. Custo: uma
+consulta por campo SELECT preenchido, fora do laço de linhas.

@@ -34,15 +34,15 @@
 define(['./fp_fields'], function (fpFields) {
 
   /** Corpo do `reclassificar`, ou `null` quando a compra não declarou chave. */
-  function montarReclassificar(newRecord, dataIsoDe, codigoLinhas) {
+  function montarReclassificar(newRecord, dataIsoDe, codigoLinhas, natureza) {
     var campoChave = fpFields.id('CHAVE_ENTRADA');
     var chave = String((campoChave && newRecord.getValue({ fieldId: campoChave })) || '').replace(/\D/g, '');
     if (!chave) return null;
 
     var corpo = { chaveAcesso: chave };
 
-    var campoNat = fpFields.id('NATUREZA');
-    var natureza = campoNat && newRecord.getText({ fieldId: campoNat });
+    // O CÓDIGO da natureza chega pronto do mapeador, por SuiteQL — `getText` lança no
+    // `beforeSubmit` de registro criado por REST (MEDICOES §18).
     if (natureza) corpo.naturezaOperacao = natureza;
 
     var campoData = fpFields.id('DATA_ENTRADA');

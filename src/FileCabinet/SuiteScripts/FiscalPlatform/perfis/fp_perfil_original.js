@@ -384,7 +384,16 @@ define([], function () {
         "-- sem isto hipoteseStInterestadual e tpCredPresIbsZfm nunca chegavam ao payload."
       ],
       "LISTA_HIPOTESE_ST": "customlist_fp_hipotese_st",
-      "LISTA_CRED_ZFM": "customlist_fp_cred_zfm"
+      "LISTA_CRED_ZFM": "customlist_fp_cred_zfm",
+      "_nota_listas_corpo": [
+        "Listas dos campos SELECT de CORPO. MEDIDO em 2026-09-30: no beforeSubmit de registro criado",
+        "por REST (e por script ou CSV), getText LANCA SSS_INVALID_API_USAGE -- 'You must use getValue",
+        "to return the value set with setValue'. O nome sai por SuiteQL a partir do id do getValue."
+      ],
+      "LISTA_TIPODOC": "customlist_fp_tipodoc",
+      "LISTA_IND_PRES": "customlist_fp_ind_pres",
+      "LISTA_MOD_FRETE": "customlist_fp_mod_frete",
+      "LISTA_CONT_VIA": "customlist_fp_cont_via"
     },
   
     "valores": {
