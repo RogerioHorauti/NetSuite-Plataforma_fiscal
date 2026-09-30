@@ -1,12 +1,12 @@
 <itemcustomfield scriptid="custitem_fp_desdobramento">
   <accesslevel>2</accesslevel>
   <appliestogroup>F</appliestogroup>
-  <appliestoinventory>T</appliestoinventory>
-  <appliestoitemassembly>T</appliestoitemassembly>
-  <appliestokit>T</appliestokit>
-  <appliestononinventory>T</appliestononinventory>
+  <appliestoinventory>F</appliestoinventory>
+  <appliestoitemassembly>F</appliestoitemassembly>
+  <appliestokit>F</appliestokit>
+  <appliestononinventory>F</appliestononinventory>
   <appliestoothercharge>F</appliestoothercharge>
-  <appliestoservice>F</appliestoservice>
+  <appliestoservice>T</appliestoservice>
   <applyformatting>F</applyformatting>
   <checkspelling>F</checkspelling>
   <defaultchecked>F</defaultchecked>

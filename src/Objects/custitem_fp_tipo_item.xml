@@ -6,7 +6,7 @@
   <appliestokit>T</appliestokit>
   <appliestononinventory>T</appliestononinventory>
   <appliestoothercharge>F</appliestoothercharge>
-  <appliestoservice>F</appliestoservice>
+  <appliestoservice>T</appliestoservice>
   <applyformatting>F</applyformatting>
   <checkspelling>F</checkspelling>
   <defaultchecked>F</defaultchecked>

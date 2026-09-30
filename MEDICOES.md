@@ -1233,3 +1233,17 @@ medido na conta.**
 | O "You do not have privileges" da URL externa era AUDIÊNCIA: `allroles` T só cobre papéis internos; o anônimo é `ONLINE_FORM_USER`, que precisa estar em `audslctrole` — é o aviso que o validate dava desde o início | XML importado da conta |
 | O deploy **reescreve a audiência** pelo XML (tirou o `ONLINE_FORM_USER` que estava só na UI) e **não** reescreve o `isonline` (§13.7) | antes × depois do deploy do `ba63e45` |
 | `object:import` traz papel customizado sem scriptid como `[SCRIPT_ID_NOT_SPECIFIED]`, e o validate o **recusa**. Removidas as 4 entradas; os papéis internos seguem cobertos por `allroles` T | validate |
+
+### 14.1 Campos de item por tipo — revisados 2026-09-30
+
+Erro meu: NBS, código do serviço municipal e desdobramento trib. nacional estavam só em mercadoria
+(`appliestoservice` F). Os três refinam o subitem da LC 116, que só existe em serviço. Revisão de
+todos os `custitem_fp_*` contra o DTO:
+
+| tipo | campos |
+|---|---|
+| só serviço | `servico_lc116`, `servico_municipal`, `desdobramento`, `nbs`, `cnae` |
+| só mercadoria (inventory, assembly, kit, non-inventory) | `ncm`, `cest`, `origem`, `ex_tipi`, `nfci`, `ean_trib`, `unid_trib`, `fator_conv` |
+| os dois | `tipo_item` (o `09 - Serviços` é valor da tabela do 0200), `nat_receita` (NAT_REC vale para toda receita com CST de PIS/COFINS 04-09, serviço inclusive) |
+
+Nenhum item tinha valor nos três campos que saíram de mercadoria (SuiteQL: 0 linhas). Validate 0 erros.
