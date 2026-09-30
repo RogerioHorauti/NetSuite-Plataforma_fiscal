@@ -1420,3 +1420,9 @@ exceção —, AUDIT `fp_governanca` com "usou N · restam M (entrou com K)". O 
 
 ✅ **Cada ponto de entrada começa com 1000 próprias**: o `afterSubmit` entra com 1000 depois de um
 `beforeSubmit` que usou 42 — as cotas NÃO são compartilhadas. O custo dominante é anexar arquivo.
+
+Depois do deploy do `dc32c39`: **`fp_gl_lines_plugin` usou 10** (entrou com 1000) no edit da invoice
+2241 e na criação da 2833, e o save passou nas duas — o `N/runtime` no plug-in síncrono está medido.
+Criação de invoice de serviço: `beforeSubmit` 32, `afterSubmit` 70. **Todos os pontos de entrada do
+bundle medem a governança no fim da execução.** ⚠ A linha do plug-in pode chegar ao `scriptnote` um
+instante depois das do UE do mesmo save — ler com folga de tempo.
