@@ -1136,3 +1136,15 @@ Três defeitos do mapeador, todos silenciosos:
 Harness com as respostas REAIS do SuiteQL: DI nas 4 linhas (clone por linha, `nSeqAdic` 1 por
 omissão, DI sem adição, datas `2026-09-10`, os dois avisos da DI-A), ZFM `1`/`4`/`0`/ausente,
 hipótese `PARTILHA`/`REPASSE`. Validate 0 erros. **Falta o deploy para medir na conta.**
+
+**Depois do deploy do `4ab3cf7`, mesma data: 12 de 12 batem.** Re-simulados S01 (`PARTILHA`/`REPASSE`,
+ZFM `0`/`3`), S06 (DI nas 4 linhas, adições distintas, `nSeqAdic` 1 por omissão, datas `2026-09-10`,
+DI-C sem adição e com `vAFRMM` 1234.56) e S09 (ZFM `1`/`4`/`0`/ausente, `valorOutras` 7.77).
+⚠ `scriptnote.internalid` **não cresce na ordem do horário** — ordenar por `date` perdia entradas;
+a leitura certa é por `internalid` dentro de uma janela de horário.
+
+Entidade da prestação: `sourcelist` = `STDBODYENTITY` (mesmo padrão `sourcelist` + `sourcefrom`
+vazio que o `custbody_fp_local_prestacao` já usa), e os dois campos com `bodypurchase` F — na
+compra a NFS-e é do fornecedor e o UE nem roda em vendor bill. Validate 0 erros. **Não medido:** se
+o sourcing reescreve a entidade num EDIT em que o `entity` não mudou (2239 e 2240 têm entidade ≠
+cliente de propósito).

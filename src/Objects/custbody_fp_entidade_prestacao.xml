@@ -21,7 +21,7 @@
   <bodyprintflag>F</bodyprintflag>
   <bodyprintpackingslip>F</bodyprintpackingslip>
   <bodyprintstatement>F</bodyprintstatement>
-  <bodypurchase>T</bodypurchase>
+  <bodypurchase>F</bodypurchase>
   <bodysale>T</bodysale>
   <bodystore>F</bodystore>
   <bodytransferorder>F</bodytransferorder>
@@ -59,7 +59,7 @@
   <showinlist>F</showinlist>
   <sourcefilterby></sourcefilterby>
   <sourcefrom></sourcefrom>
-  <sourcelist></sourcelist>
+  <sourcelist>STDBODYENTITY</sourcelist>
   <storevalue>T</storevalue>
   <subtab>[scriptid=custtab_27_t1647270_129]</subtab>
   <customfieldfilters>
