@@ -1,6 +1,9 @@
 <transactionbodycustomfield scriptid="custbody_fp_uf_prestacao">
   <accesslevel>2</accesslevel>
+  <aidescription></aidescription>
   <applyformatting>F</applyformatting>
+  <bodyassemblybuild>F</bodyassemblybuild>
+  <bodybom>F</bodybom>
   <bodycustomerpayment>F</bodycustomerpayment>
   <bodycustomtransactions></bodycustomtransactions>
   <bodydeposit>F</bodydeposit>
@@ -20,6 +23,7 @@
   <bodyprintstatement>F</bodyprintstatement>
   <bodypurchase>T</bodypurchase>
   <bodysale>T</bodysale>
+  <bodystore>F</bodystore>
   <bodytransferorder>T</bodytransferorder>
   <bodyvendorpayment>F</bodyvendorpayment>
   <checkspelling>F</checkspelling>
@@ -31,6 +35,7 @@
   <displaytype>NORMAL</displaytype>
   <displaywidth></displaywidth>
   <dynamicdefault></dynamicdefault>
+  <enabletextenhance>F</enabletextenhance>
   <encryptatrest>F</encryptatrest>
   <fieldtype>TEXT</fieldtype>
   <fldsizelabel></fldsizelabel>
@@ -56,5 +61,5 @@
   <sourcefrom></sourcefrom>
   <sourcelist></sourcelist>
   <storevalue>T</storevalue>
-  <subtab>TRANSACTIONSHIPPING</subtab>
+  <subtab>[scriptid=custtab_27_t1647270_129]</subtab>
 </transactionbodycustomfield>

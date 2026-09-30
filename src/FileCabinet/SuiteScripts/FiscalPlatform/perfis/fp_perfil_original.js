@@ -58,6 +58,7 @@ define([], function () {
       "DOC_IDEXTERNO": "custbody_fp_idexterno",
       "DOC_XML": "custbody_fp_xml",
       "DOC_DANFE": "custbody_fp_danfe",
+      "DOC_UUID": "custbody_fp_uuid",
   
       "_grupo_declaracao": "o que o ERP DECLARA - o dado que so ele tem. Aba PRINCIPAL, depois do memo (fp_form.js).",
       "TIPODOC": "custbody_fp_tipodoc",
