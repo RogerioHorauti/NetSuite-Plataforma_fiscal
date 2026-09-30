@@ -1247,3 +1247,10 @@ todos os `custitem_fp_*` contra o DTO:
 | os dois | `tipo_item` (o `09 - Serviços` é valor da tabela do 0200), `nat_receita` (NAT_REC vale para toda receita com CST de PIS/COFINS 04-09, serviço inclusive) |
 
 Nenhum item tinha valor nos três campos que saíram de mercadoria (SuiteQL: 0 linhas). Validate 0 erros.
+
+Depois do deploy do `78c01ae`: o item de serviço 12 aceitou NBS `115021000`, serviço municipal
+`01449`, desdobramento `01` e tipo `09 - Servicos`; o item de mercadoria 13 respondeu **204 e não
+gravou** o NBS (campo que não se aplica ao tipo é descartado calado pelo REST). A 2634 re-simulada e
+emitida leva `nbs`, `codigoServicoMunicipal`, `desdobramentoTribNac`, `tipoItem:"09"` e `codigoCnae`
+na linha, igual nos dois payloads. A URL externa do Suitelet seguiu respondendo depois do deploy —
+a audiência agora está no XML.
