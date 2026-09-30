@@ -1491,3 +1491,14 @@ na chamada direta. Substitui a ideia frágil de esconder o botão pela chave dig
 ⚠ O deploy troca o alvo do `custbody_fp_tipodoc` de lista para record: pela §13.6 (país do
 resultado), o valor que as transações têm deve ser APAGADO em silêncio. ⚠ O papel do token precisa
 do `customrecord_fp_tipodoc` na aba Custom Record para ler o catálogo por SuiteQL.
+
+**Medido na conta depois do deploy do `33d5d4c`** (com o `customrecord_fp_tipodoc` na aba Custom
+Record do papel — sem isso o SuiteQL diz "not found" e o PATCH do campo responde 204 SEM gravar):
+
+| o quê | resultado |
+|---|---|
+| instâncias | as 8, ids 1–8, código e Emissão Própria certos (`VAL_TIPODOC_*`) |
+| valor antigo do `custbody_fp_tipodoc` | **apagado** em todas as transações (0 com valor) — confirmado |
+| vendor bill 2733, "NF-e de Terceiro" | Suitelet **recusa**: "não é de emissão própria — é documento de terceiro" |
+| invoice 2833, "NF-e" | emitida (chumbada), payload com `tipoDocumento: "NFE"` |
+| invoice 2241, sem tipo | Suitelet **recusa**: "a transação não tem tipo de documento fiscal" |
