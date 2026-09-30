@@ -1319,3 +1319,8 @@ a coluna derrubaria o lookup). Os gabaritos das §13–14 que dizem `destinatari
 
 ⚠ Todo `FP-*-payload.json` gravado até aqui tem `destinatario`. Emitir a partir dele mandaria a nota
 sem contraparte, calada — o Suitelet agora RECUSA e pede para salvar (simular) de novo.
+
+Depois do deploy do `a6e8178`: 2238 e 2634 re-simuladas saem com `contraparte` (nenhum
+`destinatario`): 2238 com `indIe: 1`, `regimeTributario: "SN"` e o endereço completo; 2634 com
+`qualificacao: "ORGAO_PUBLICO_FEDERAL"`. A 2533, emitida sem re-simular, foi **recusada** com
+"o payload simulado desta transação usa destinatario… salve para simular de novo".
