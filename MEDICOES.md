@@ -1207,3 +1207,17 @@ diz override por tributo. Contrato a conferir do lado da plataforma.
 Harness (mapeador e perfil reais): datas `2026-10-01`/`2026-07-10`/`2026-08-01`, qualificação
 `ORGAO_PUBLICO_ESTADUAL`, GTIN, CNAE `6209-1/00` → `6209100`, `exportacao` e `contingencia` só na
 emissão (via `EPEC`), grupo ausente sem a porta. Validate 0 erros. **Falta o deploy para medir.**
+
+**Medido na conta depois do deploy do `ba63e45`.** Cadastro de teste: `upccode` 7891234567895 no item
+13, `custitem_fp_cnae` `6209-1/00` no item 12 (REST: `servicesaleitem`, não `serviceitem`),
+qualificação FEDERAL no cliente 31, naturezas 44 e 46 liberadas para pedido/invoice.
+
+| cen. | id | `/simular` |
+|---|---|---|
+| S13 exportação | 2533 | `dataSaidaEntrada` 2026-10-02, `codigoBarras` 7891234567895, `destinatario.pais` 1112 (BG); sem `exportacao` ✅ |
+| S14 complemento de preço + EPEC | 2633 | `competenciaOriginal` 2026-07-10, `dataReajuste` 2026-08-01 ✅ |
+| S15 serviço p/ órgão público + SVC | 2634 | `qualificacao` ORGAO_PUBLICO_FEDERAL, `codigoCnae` 6209100; sem `contingencia` ✅ |
+
+⚠ **Emissão bloqueada:** depois deste deploy, a URL externa do Suitelet voltou a responder "You do
+not have privileges to view this page" com o mesmo User-Agent que funcionava antes; `isonline`
+segue T. `exportacao` e `contingencia` ainda não medidos na conta.
