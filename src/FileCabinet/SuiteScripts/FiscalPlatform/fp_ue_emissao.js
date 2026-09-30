@@ -21,8 +21,8 @@
  * Não há `beforeSubmit` nem `afterSubmit` aqui, e não é omissão: emitir é ato explícito, fora do
  * save. Um User Event que emitisse no save queimaria um número por clique em "Salvar".
  */
-define(['N/url', 'N/runtime', 'N/log', 'N/query', './fp_fields', './fp_governanca'],
-  function (url, runtime, log, query, fpFields, fpGovernanca) {
+define(['N/url', 'N/runtime', 'N/log', './fp_fields', './fp_governanca', './fp_md_map_simular'],
+  function (url, runtime, log, fpFields, fpGovernanca, fpMap) {
 
     /**
      * Onde EXISTE documento fiscal a emitir.
@@ -80,8 +80,12 @@ define(['N/url', 'N/runtime', 'N/log', 'N/query', './fp_fields', './fp_governanc
       // Botão que não leva a nada é pior que botão ausente: convida ao clique e devolve uma
       // recusa que o usuário lê como defeito do sistema.
 
-      if (!status || status === 'REJEITADA') {
-        botao(form, 'custpage_fp_emitir', 'Emitir ' + tipoDeclarado(scriptContext.newRecord),
+      // EMITIR SÓ COM EMISSÃO PRÓPRIA. Quem diz é o cadastro do tipo de documento, não a presença
+      // da chave: numa vendor bill com a nota do FORNECEDOR (tipo "NF-e de Terceiro") não há o que
+      // emitir, e emitir gravaria a nossa chave por cima da dele.
+      var tipo = fpMap.tipoDocumento(scriptContext.newRecord);
+      if ((!status || status === 'REJEITADA') && tipo.emissaoPropria) {
+        botao(form, 'custpage_fp_emitir', 'Emitir ' + (tipo.codigo || 'documento fiscal'),
           scriptContext, id, 'emitir', true);
       }
 
@@ -105,24 +109,6 @@ define(['N/url', 'N/runtime', 'N/log', 'N/query', './fp_fields', './fp_governanc
           false, 'Texto da correção (15 a 1000). Não pode alterar valor, imposto nem as partes:');
       }
 
-    }
-
-    /**
-     * O CÓDIGO declarado, tal como está na lista — `NFE`, `CTE`, `MDFE`.
-     *
-     * É o vocabulário do catálogo da plataforma, e é ele que aparece no botão. Já esteve chumbado
-     * em "Emitir NF-e", e o bundle emite cinco tipos: o botão anunciava NF-e numa transação
-     * marcada como CT-e. Já esteve com a descrição junto no valor da lista, e isso quebrava o
-     * payload — o que sai tem de ser exatamente o que o catálogo conhece.
-     */
-    function tipoDeclarado(novoRegistro) {
-      // O id pelo getValue e o NOME pela lista — sem getText (MEDICOES §18).
-      var campo = fpFields.id('TIPODOC');
-      var lista = fpFields.registro('LISTA_TIPODOC');
-      var id = campo && novoRegistro.getValue({ fieldId: campo });
-      if (!id || !lista) return 'documento fiscal';
-      var r = query.runSuiteQL({ query: 'SELECT name FROM ' + lista + ' WHERE id = ?', params: [id] }).asMappedResults();
-      return String((r.length && r[0].name) || '').trim() || 'documento fiscal';
     }
 
     /**

@@ -216,6 +216,16 @@ define([], function () {
       "QUALIFICACAO": "custentity_fp_qualificacao"
     },
 
+    "tipodoc": {
+      "_nota": [
+        "Campos de customrecord_fp_tipodoc. CODIGO e o que vai no payload (tipoDocumento, vocabulario",
+        "do catalogo da plataforma). EMISSAO_PROPRIA decide se o bundle emite: desmarcado e documento",
+        "de terceiro -- sem botao Emitir, e o Suitelet recusa."
+      ],
+      "CODIGO": "custrecord_fp_tipodoc_codigo",
+      "EMISSAO_PROPRIA": "custrecord_fp_tipodoc_emissao_propria"
+    },
+
     "pais": {
       "_nota": [
         "De-para ISO alpha-2 -> cPais do BACEN, em customrecord_fp_pais. Nao e regua fiscal: o",
@@ -388,7 +398,7 @@ define([], function () {
         "por REST (e por script ou CSV), getText LANCA SSS_INVALID_API_USAGE -- 'You must use getValue",
         "to return the value set with setValue'. O nome sai por SuiteQL a partir do id do getValue."
       ],
-      "LISTA_TIPODOC": "customlist_fp_tipodoc",
+      "TIPODOC": "customrecord_fp_tipodoc",
       "LISTA_IND_PRES": "customlist_fp_ind_pres",
       "LISTA_MOD_FRETE": "customlist_fp_mod_frete",
       "LISTA_CONT_VIA": "customlist_fp_cont_via",
@@ -403,8 +413,8 @@ define([], function () {
         "como esta. Perfil que aponta para List/Record de outro bundle TEM de preencher esta secao -",
         "campo certo com valor nosso num List/Record e falha silenciosa.",
         "",
-        "EXCECAO NOSSA, e a mesma armadilha do lado de casa: TIPODOC e custbody_fp_tipodoc, que e",
-        "SELECT para customlist_fp_tipodoc. Campo SELECT devolve o INTERNAL ID do valor no getValue,",
+        "EXCECAO NOSSA, e a mesma armadilha do lado de casa: TIPODOC e custbody_fp_tipodoc, que e o",
+        "SELECT para customrecord_fp_tipodoc. Campo SELECT devolve o INTERNAL ID do valor no getValue,",
         "nao o texto. O mapeador busca o NOME pela lista (registros LISTA_*), numa consulta so -- NUNCA getText, que lanca no beforeSubmit de registro criado por REST -- para obter o codigo (NFE, NFCE, ...)",
         "que o EmitirNotaDto espera - ou fazer o de-para pelo abbreviation. Ler o internal id e",
         "manda-lo como tipoDocumento faria o motor receber algo como \"7\" e recusar."

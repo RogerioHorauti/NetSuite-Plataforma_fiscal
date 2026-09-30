@@ -235,6 +235,16 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
      * que a plataforma responde com o documento que já existe.
      */
     function emitir(rec, id, opcoes) {
+      // EMISSÃO PRÓPRIA OU NADA. O botão já some, mas botão é conveniência: a regra vale também
+      // para quem chama este Suitelet direto. Documento de TERCEIRO (a nota do fornecedor) não se
+      // emite daqui — emitir gravaria a nossa chave por cima da dele.
+      var tipo = fpMap.tipoDocumento(rec);
+      if (!tipo.emissaoPropria) {
+        return { ok: false, code: 0, body: { erro: tipo.nome
+          ? 'o tipo de documento "' + tipo.nome + '" não é de emissão própria — é documento de terceiro, e não se emite pelo NetSuite.'
+          : 'a transação não tem tipo de documento fiscal: declare-o antes de emitir.' } };
+      }
+
       var simulado = payloadSimulado(rec.type, id, opcoes.pasta);
       if (!simulado) {
         return { ok: false, code: 0, body: { erro:

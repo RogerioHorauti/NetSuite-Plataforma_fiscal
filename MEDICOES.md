@@ -1473,3 +1473,21 @@ Depois do deploy do `2cfa750`: o `custbody_fp_chave_entrada` já não existe na 
 "Unknown identifier") e levou a chave da 2733/2734. Gravada de novo no `custbody_fp_chave` por PATCH
 — a ÚNICA mudança do save —, e nas duas a guarda 4 a enxergou: `reclassificar` com a chave lida do
 `DOC_CHAVE`, "natureza declarada", `beforeSubmit` 42, `afterSubmit` 160, GL plug-in 10.
+
+## 20. Tipo de documento fiscal vira custom record, com Emissão Própria (2026-09-30, Rogerio)
+
+`customlist_fp_tipodoc` → **`customrecord_fp_tipodoc`**: `name` (o que se vê), `custrecord_fp_tipodoc_
+codigo` (o que vai no payload — NFE, NFCE, NFSE, CTE, MDFE) e `custrecord_fp_tipodoc_emissao_propria`
+(checkbox). Catálogo nas `<instances>` do próprio objeto — primeira vez no projeto; o validate aceita
+e avisa que `altname` não é suportado em instância (tirado). Oito: NF-e, NF-e de Terceiro, NFC-e,
+NFS-e, NFS-e Tomada, CT-e, CT-e de Terceiro, MDF-e.
+
+`fp_md_map_simular.tipoDocumento(rec)` → `{nome, codigo, emissaoPropria}`, uma consulta memorizada
+por registro, só nos caminhos de emissão (a simulação não lê tipo). Quem usa: o payload
+(`tipoDocumento = codigo`), o botão (Emitir só com Emissão Própria; o rótulo é o código) e o
+Suitelet, que RECUSA emitir documento de terceiro ou sem tipo — o botão é conveniência, a regra vale
+na chamada direta. Substitui a ideia frágil de esconder o botão pela chave digitada.
+
+⚠ O deploy troca o alvo do `custbody_fp_tipodoc` de lista para record: pela §13.6 (país do
+resultado), o valor que as transações têm deve ser APAGADO em silêncio. ⚠ O papel do token precisa
+do `customrecord_fp_tipodoc` na aba Custom Record para ler o catálogo por SuiteQL.

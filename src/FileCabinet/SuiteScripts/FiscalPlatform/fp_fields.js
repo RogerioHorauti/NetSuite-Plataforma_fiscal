@@ -227,6 +227,11 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
   }
 
   /** Campo do cadastro de natureza de operação. */
+  /** Campo do cadastro de tipo de documento fiscal. */
+  function idTipoDoc(chave) {
+    return resolver('tipodoc', chave);
+  }
+
   function idNatureza(chave) {
     return resolver('natureza_operacao', chave);
   }
@@ -413,6 +418,7 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
     idPais: idPais,
     idEndereco: idEndereco,
     idNatureza: idNatureza,
+    idTipoDoc: idTipoDoc,
     valor: valor,
     somenteLeitura: somenteLeitura,
     perfilAtivo: perfilAtivo,

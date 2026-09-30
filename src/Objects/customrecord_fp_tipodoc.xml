@@ -1,0 +1,149 @@
+<customrecordtype scriptid="customrecord_fp_tipodoc">
+  <accesstype>USEPERMISSIONLIST</accesstype>
+  <aidescription></aidescription>
+  <allowattachments>T</allowattachments>
+  <allowinlinedeleting>F</allowinlinedeleting>
+  <allowinlinedetaching>T</allowinlinedetaching>
+  <allowinlineediting>F</allowinlineediting>
+  <allowmobileaccess>F</allowmobileaccess>
+  <allownumberingoverride>F</allownumberingoverride>
+  <allowquickadd>T</allowquickadd>
+  <allowquicksearch>F</allowquicksearch>
+  <allowuiaccess>T</allowuiaccess>
+  <customsegment></customsegment>
+  <description>Tipo de documento fiscal da transacao. CODIGO DO CATALOGO e o que vai no payload (tipoDocumento: NFE, NFCE, NFSE, CTE, MDFE) -- vocabulario da plataforma. EMISSAO PROPRIA diz se o bundle EMITE o documento: desmarcado e documento de TERCEIRO (entra pela captura), e o botao Emitir nao aparece nem o Suitelet emite. O catalogo vem nas instancias deste objeto.</description>
+  <enabledle>T</enabledle>
+  <enablekeywords>T</enablekeywords>
+  <enablemailmerge>F</enablemailmerge>
+  <enablenametranslation>F</enablenametranslation>
+  <enablenumbering>F</enablenumbering>
+  <enableoptimisticlocking>T</enableoptimisticlocking>
+  <enablesystemnotes>T</enablesystemnotes>
+  <hierarchical>F</hierarchical>
+  <icon></icon>
+  <iconbuiltin>T</iconbuiltin>
+  <iconindex></iconindex>
+  <includeinsearchmenu>T</includeinsearchmenu>
+  <includename>T</includename>
+  <isinactive>F</isinactive>
+  <isordered>F</isordered>
+  <numberinginit></numberinginit>
+  <numberingmindigits></numberingmindigits>
+  <numberingprefix></numberingprefix>
+  <numberingsuffix></numberingsuffix>
+  <recordname>Tipo de Documento Fiscal</recordname>
+  <showcreationdate>T</showcreationdate>
+  <showcreationdateonlist>F</showcreationdateonlist>
+  <showid>T</showid>
+  <showlastmodified>T</showlastmodified>
+  <showlastmodifiedonlist>F</showlastmodifiedonlist>
+  <shownotes>T</shownotes>
+  <showowner>T</showowner>
+  <showownerallowchange>F</showownerallowchange>
+  <showowneronlist>F</showowneronlist>
+    <customrecordcustomfields>
+    <customrecordcustomfield scriptid="custrecord_fp_tipodoc_codigo">
+      <accesslevel>2</accesslevel>
+      <allowquickadd>F</allowquickadd>
+      <applyformatting>F</applyformatting>
+      <checkspelling>F</checkspelling>
+      <defaultchecked>F</defaultchecked>
+      <defaultselection></defaultselection>
+      <defaultvalue></defaultvalue>
+      <description>O que vai no payload como tipoDocumento -- NFE, NFCE, NFSE, CTE, MDFE. E o vocabulario do catalogo da plataforma (TipoDocumento.codigo), nao se inventa aqui.</description>
+      <displaytype>NORMAL</displaytype>
+      <encryptatrest>F</encryptatrest>
+      <fieldtype>TEXT</fieldtype>
+      <globalsearch>F</globalsearch>
+      <isformula>F</isformula>
+      <ismandatory>T</ismandatory>
+      <isparent>F</isparent>
+      <label>Codigo do Catalogo</label>
+      <maxlength>10</maxlength>
+      <rolerestrict>F</rolerestrict>
+      <searchlevel>2</searchlevel>
+      <showinlist>T</showinlist>
+      <storevalue>T</storevalue>
+    </customrecordcustomfield>
+    <customrecordcustomfield scriptid="custrecord_fp_tipodoc_emissao_propria">
+      <accesslevel>2</accesslevel>
+      <allowquickadd>F</allowquickadd>
+      <applyformatting>F</applyformatting>
+      <checkspelling>F</checkspelling>
+      <defaultchecked>F</defaultchecked>
+      <defaultselection></defaultselection>
+      <defaultvalue></defaultvalue>
+      <description>Marcado: o bundle EMITE este documento (botao Emitir e Suitelet). Desmarcado: documento de TERCEIRO -- a nota do fornecedor, a NFS-e tomada --, que entra pela captura e nunca e emitida daqui.</description>
+      <displaytype>NORMAL</displaytype>
+      <encryptatrest>F</encryptatrest>
+      <fieldtype>CHECKBOX</fieldtype>
+      <globalsearch>F</globalsearch>
+      <isformula>F</isformula>
+      <ismandatory>F</ismandatory>
+      <isparent>F</isparent>
+      <label>Emissao Propria</label>
+      <maxlength></maxlength>
+      <rolerestrict>F</rolerestrict>
+      <searchlevel>2</searchlevel>
+      <showinlist>T</showinlist>
+      <storevalue>T</storevalue>
+    </customrecordcustomfield>
+    </customrecordcustomfields>
+  <permissions>
+    <permission>
+      <permittedlevel>FULL</permittedlevel>
+      <permittedrole>ADMINISTRATOR</permittedrole>
+      <restriction></restriction>
+    </permission>
+  </permissions>
+  <instances>
+    <instance scriptid="val_tipodoc_nfe">
+      <isinactive>F</isinactive>
+      <name>NF-e</name>
+      <custrecord_fp_tipodoc_codigo>NFE</custrecord_fp_tipodoc_codigo>
+      <custrecord_fp_tipodoc_emissao_propria>T</custrecord_fp_tipodoc_emissao_propria>
+    </instance>
+    <instance scriptid="val_tipodoc_nfe_terceiro">
+      <isinactive>F</isinactive>
+      <name>NF-e de Terceiro</name>
+      <custrecord_fp_tipodoc_codigo>NFE</custrecord_fp_tipodoc_codigo>
+      <custrecord_fp_tipodoc_emissao_propria>F</custrecord_fp_tipodoc_emissao_propria>
+    </instance>
+    <instance scriptid="val_tipodoc_nfce">
+      <isinactive>F</isinactive>
+      <name>NFC-e</name>
+      <custrecord_fp_tipodoc_codigo>NFCE</custrecord_fp_tipodoc_codigo>
+      <custrecord_fp_tipodoc_emissao_propria>T</custrecord_fp_tipodoc_emissao_propria>
+    </instance>
+    <instance scriptid="val_tipodoc_nfse">
+      <isinactive>F</isinactive>
+      <name>NFS-e</name>
+      <custrecord_fp_tipodoc_codigo>NFSE</custrecord_fp_tipodoc_codigo>
+      <custrecord_fp_tipodoc_emissao_propria>T</custrecord_fp_tipodoc_emissao_propria>
+    </instance>
+    <instance scriptid="val_tipodoc_nfse_tomada">
+      <isinactive>F</isinactive>
+      <name>NFS-e Tomada</name>
+      <custrecord_fp_tipodoc_codigo>NFSE</custrecord_fp_tipodoc_codigo>
+      <custrecord_fp_tipodoc_emissao_propria>F</custrecord_fp_tipodoc_emissao_propria>
+    </instance>
+    <instance scriptid="val_tipodoc_cte">
+      <isinactive>F</isinactive>
+      <name>CT-e</name>
+      <custrecord_fp_tipodoc_codigo>CTE</custrecord_fp_tipodoc_codigo>
+      <custrecord_fp_tipodoc_emissao_propria>T</custrecord_fp_tipodoc_emissao_propria>
+    </instance>
+    <instance scriptid="val_tipodoc_cte_terceiro">
+      <isinactive>F</isinactive>
+      <name>CT-e de Terceiro</name>
+      <custrecord_fp_tipodoc_codigo>CTE</custrecord_fp_tipodoc_codigo>
+      <custrecord_fp_tipodoc_emissao_propria>F</custrecord_fp_tipodoc_emissao_propria>
+    </instance>
+    <instance scriptid="val_tipodoc_mdfe">
+      <isinactive>F</isinactive>
+      <name>MDF-e</name>
+      <custrecord_fp_tipodoc_codigo>MDFE</custrecord_fp_tipodoc_codigo>
+      <custrecord_fp_tipodoc_emissao_propria>T</custrecord_fp_tipodoc_emissao_propria>
+    </instance>
+  </instances>
+</customrecordtype>

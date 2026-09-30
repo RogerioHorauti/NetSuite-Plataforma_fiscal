@@ -49,7 +49,7 @@
   <searchcomparefield></searchcomparefield>
   <searchdefault></searchdefault>
   <searchlevel>2</searchlevel>
-  <selectrecordtype>[scriptid=customlist_fp_tipodoc]</selectrecordtype>
+  <selectrecordtype>[scriptid=customrecord_fp_tipodoc]</selectrecordtype>
   <showhierarchy>F</showhierarchy>
   <showinlist>T</showinlist>
   <sourcefilterby></sourcefilterby>

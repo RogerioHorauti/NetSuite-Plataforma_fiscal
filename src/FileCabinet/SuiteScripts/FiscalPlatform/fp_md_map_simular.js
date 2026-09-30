@@ -151,7 +151,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var payload = JSON.parse(JSON.stringify(base));
 
       var serie = serieDaFilial(newRecord);
-      var tipoDoc = textoDaLista(newRecord, 'TIPODOC');
+      var tipoDoc = tipoDocumento(newRecord).codigo;
 
       if (!serie || !tipoDoc) {
         log.error('fp_md_map_simular.montarEmissao',
@@ -1603,7 +1603,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     }
 
     /** Os campos SELECT de CORPO que o payload lê pelo NOME, e o registro de cada lista. */
-    var LISTAS_DO_CORPO = [['NATUREZA', 'NATUREZA_OPERACAO'], ['TIPODOC', 'LISTA_TIPODOC'],
+    var LISTAS_DO_CORPO = [['NATUREZA', 'NATUREZA_OPERACAO'],
       ['IND_PRES', 'LISTA_IND_PRES'], ['FRETE_MODALIDADE', 'LISTA_MOD_FRETE'], ['CONT_VIA', 'LISTA_CONT_VIA']];
 
     // Memória POR REGISTRO: `montar`, `montarEmissao` e `montarReclassificar` da mesma transação não
@@ -1665,6 +1665,29 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
      * campo posto por `setValue` na mesma requisição LANÇA `SSS_INVALID_API_USAGE`. O id do
      * `getValue` responde em todo contexto, e o nome de TODOS os campos sai de `listasDoCorpo`.
      */
+    /**
+     * O TIPO DE DOCUMENTO declarado: `{ nome, codigo, emissaoPropria }` do `customrecord_fp_tipodoc`,
+     * numa consulta, memorizada por registro. `codigo` é o que vai no payload; `emissaoPropria` diz se
+     * o bundle emite — falso é documento de terceiro. Sem tipo declarado, tudo vazio e falso.
+     */
+    var memoTipo = { rec: null, v: null };
+    function tipoDocumento(newRecord) {
+      if (memoTipo.rec === newRecord) return memoTipo.v;
+      var v = { nome: '', codigo: '', emissaoPropria: false };
+      var campo = fpFields.id('TIPODOC'), registro = fpFields.registro('TIPODOC');
+      var colCod = fpFields.idTipoDoc('CODIGO'), colEmi = fpFields.idTipoDoc('EMISSAO_PROPRIA');
+      var id = campo && newRecord.getValue({ fieldId: campo });
+      if (id && registro && colCod && colEmi) {
+        var r = query.runSuiteQL({
+          query: 'SELECT name, ' + colCod + ' AS codigo, ' + colEmi + ' AS emite FROM ' + registro + ' WHERE id = ?',
+          params: [id]
+        }).asMappedResults();
+        if (r.length) v = { nome: texto(r[0].name), codigo: texto(r[0].codigo).trim().toUpperCase(), emissaoPropria: r[0].emite === 'T' || r[0].emite === true };
+      }
+      memoTipo = { rec: newRecord, v: v };
+      return v;
+    }
+
     function textoDaLista(newRecord, chaveCampo) {
       return listasDoCorpo(newRecord)[chaveCampo] || null;
     }
@@ -1772,6 +1795,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     return {
       montar: montar,
       montarReclassificar: montarReclassificar,
+      tipoDocumento: tipoDocumento,
       ehCompra: function (tipo) { return TIPOS_DE_COMPRA.indexOf(tipo) > -1; },
       montarEmissao: montarEmissao,
       aplicar: aplicar
