@@ -65,6 +65,29 @@
       <showinlist>T</showinlist>
       <storevalue>T</storevalue>
     </customrecordcustomfield>
+    <customrecordcustomfield scriptid="custrecord_fp_tipodoc_modelo">
+      <accesslevel>2</accesslevel>
+      <allowquickadd>F</allowquickadd>
+      <applyformatting>F</applyformatting>
+      <checkspelling>F</checkspelling>
+      <defaultchecked>F</defaultchecked>
+      <defaultselection></defaultselection>
+      <defaultvalue></defaultvalue>
+      <description>Modelo do documento no leiaute (posicoes 21-22 da chave de acesso): 55 NF-e, 65 NFC-e, 57 CT-e, 58 MDF-e. Vazio no documento sem chave de 44 (NFS-e). O validador da chave confere o modelo da chave contra este.</description>
+      <displaytype>NORMAL</displaytype>
+      <encryptatrest>F</encryptatrest>
+      <fieldtype>TEXT</fieldtype>
+      <globalsearch>F</globalsearch>
+      <isformula>F</isformula>
+      <ismandatory>F</ismandatory>
+      <isparent>F</isparent>
+      <label>Modelo</label>
+      <maxlength>2</maxlength>
+      <rolerestrict>F</rolerestrict>
+      <searchlevel>2</searchlevel>
+      <showinlist>T</showinlist>
+      <storevalue>T</storevalue>
+    </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_tipodoc_emissao_propria">
       <accesslevel>2</accesslevel>
       <allowquickadd>F</allowquickadd>
@@ -102,48 +125,56 @@
       <name>NF-e</name>
       <custrecord_fp_tipodoc_codigo>NFE</custrecord_fp_tipodoc_codigo>
       <custrecord_fp_tipodoc_emissao_propria>T</custrecord_fp_tipodoc_emissao_propria>
+      <custrecord_fp_tipodoc_modelo>55</custrecord_fp_tipodoc_modelo>
     </instance>
     <instance scriptid="val_tipodoc_nfe_terceiro">
       <isinactive>F</isinactive>
       <name>NF-e de Terceiro</name>
       <custrecord_fp_tipodoc_codigo>NFE</custrecord_fp_tipodoc_codigo>
       <custrecord_fp_tipodoc_emissao_propria>F</custrecord_fp_tipodoc_emissao_propria>
+      <custrecord_fp_tipodoc_modelo>55</custrecord_fp_tipodoc_modelo>
     </instance>
     <instance scriptid="val_tipodoc_nfce">
       <isinactive>F</isinactive>
       <name>NFC-e</name>
       <custrecord_fp_tipodoc_codigo>NFCE</custrecord_fp_tipodoc_codigo>
       <custrecord_fp_tipodoc_emissao_propria>T</custrecord_fp_tipodoc_emissao_propria>
+      <custrecord_fp_tipodoc_modelo>65</custrecord_fp_tipodoc_modelo>
     </instance>
     <instance scriptid="val_tipodoc_nfse">
       <isinactive>F</isinactive>
       <name>NFS-e</name>
       <custrecord_fp_tipodoc_codigo>NFSE</custrecord_fp_tipodoc_codigo>
       <custrecord_fp_tipodoc_emissao_propria>T</custrecord_fp_tipodoc_emissao_propria>
+      <custrecord_fp_tipodoc_modelo></custrecord_fp_tipodoc_modelo>
     </instance>
     <instance scriptid="val_tipodoc_nfse_tomada">
       <isinactive>F</isinactive>
       <name>NFS-e Tomada</name>
       <custrecord_fp_tipodoc_codigo>NFSE</custrecord_fp_tipodoc_codigo>
       <custrecord_fp_tipodoc_emissao_propria>F</custrecord_fp_tipodoc_emissao_propria>
+      <custrecord_fp_tipodoc_modelo></custrecord_fp_tipodoc_modelo>
     </instance>
     <instance scriptid="val_tipodoc_cte">
       <isinactive>F</isinactive>
       <name>CT-e</name>
       <custrecord_fp_tipodoc_codigo>CTE</custrecord_fp_tipodoc_codigo>
       <custrecord_fp_tipodoc_emissao_propria>T</custrecord_fp_tipodoc_emissao_propria>
+      <custrecord_fp_tipodoc_modelo>57</custrecord_fp_tipodoc_modelo>
     </instance>
     <instance scriptid="val_tipodoc_cte_terceiro">
       <isinactive>F</isinactive>
       <name>CT-e de Terceiro</name>
       <custrecord_fp_tipodoc_codigo>CTE</custrecord_fp_tipodoc_codigo>
       <custrecord_fp_tipodoc_emissao_propria>F</custrecord_fp_tipodoc_emissao_propria>
+      <custrecord_fp_tipodoc_modelo>57</custrecord_fp_tipodoc_modelo>
     </instance>
     <instance scriptid="val_tipodoc_mdfe">
       <isinactive>F</isinactive>
       <name>MDF-e</name>
       <custrecord_fp_tipodoc_codigo>MDFE</custrecord_fp_tipodoc_codigo>
       <custrecord_fp_tipodoc_emissao_propria>T</custrecord_fp_tipodoc_emissao_propria>
+      <custrecord_fp_tipodoc_modelo>58</custrecord_fp_tipodoc_modelo>
     </instance>
   </instances>
 </customrecordtype>

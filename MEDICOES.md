@@ -1502,3 +1502,27 @@ Record do papel — sem isso o SuiteQL diz "not found" e o PATCH do campo respon
 | vendor bill 2733, "NF-e de Terceiro" | Suitelet **recusa**: "não é de emissão própria — é documento de terceiro" |
 | invoice 2833, "NF-e" | emitida (chumbada), payload com `tipoDocumento: "NFE"` |
 | invoice 2241, sem tipo | Suitelet **recusa**: "a transação não tem tipo de documento fiscal" |
+
+## 21. Validador da chave de acesso na entrada (2026-09-30)
+
+Portado do `AVLR_AccessKeyValidation_MD`/`_CS` (`GitHubGLO/ns-br/AvataxV3`, Nafis Costa & Rogerio
+Horauti) para `fp_chave.js` (regra, servidor e cliente) e `fp_cs_entrada.js` (tela da compra),
+com os campos do bundle (tabela no docblock do `fp_chave`). Novo campo `Modelo` no
+`customrecord_fp_tipodoc` (55/55/65/—/—/57/57/58 nas instâncias): o modelo é dado do catálogo.
+
+| regra | efeito |
+|---|---|
+| tipo de TERCEIRO com modelo exige chave | bloqueia |
+| 44 dígitos · DV módulo 11 · modelo da chave × do tipo · mês/ano da chave × `trandate` · outra vendor bill com a mesma chave | bloqueia |
+| CNPJ do emitente ≠ fornecedor e ≠ filial | avisa (como no original) |
+| chave válida | preenche `DOC_SERIE`/`DOC_NUMERO` (tela e `beforeSubmit`) |
+
+Tipo, CNPJ do fornecedor, CNPJ da filial e duplicidade numa consulta `UNION ALL` (medida na conta —
+e ela já achou a 2734 duplicando a chave da 2733). No servidor não se bloqueia o save (guarda 1): chave
+inválida ou duplicada, ou tipo que não é de terceiro com modelo, NÃO vai ao `reclassificar`. Saem do
+original: isenção de fornecedor estrangeiro (importação não tem chave de fornecedor), a obrigatoriedade
+por `track_landed_costs` e o `getNFUF` (que tinha `procura = 'SP'` fixo). A data vem do `trandate`:
+não há data do documento própria no bundle.
+
+Harness: 11 casos (válida; sem chave; 43 dígitos; DV; modelo 57 em NF-e; data fora do mês; CNPJ de
+outro emitente; emissão própria; NFS-e tomada; sem tipo; duplicidade) — todos certos, 1 consulta cada.

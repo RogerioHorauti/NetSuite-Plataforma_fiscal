@@ -223,7 +223,8 @@ define([], function () {
         "de terceiro -- sem botao Emitir, e o Suitelet recusa."
       ],
       "CODIGO": "custrecord_fp_tipodoc_codigo",
-      "EMISSAO_PROPRIA": "custrecord_fp_tipodoc_emissao_propria"
+      "EMISSAO_PROPRIA": "custrecord_fp_tipodoc_emissao_propria",
+      "MODELO": "custrecord_fp_tipodoc_modelo"
     },
 
     "pais": {

@@ -58,9 +58,10 @@ define([
   './fp_md_map_simular',
   './fp_entrada',
   './fp_governanca',
-  'N/query'
+  'N/query',
+  './fp_chave'
 ], function (serverWidget, record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular, fpEntrada,
-  fpGovernanca, query) {
+  fpGovernanca, query, fpChave) {
   /** Tipos de transação em que a simulação roda. Fora desta lista, o script não faz nada. */
   var TIPOS = [
     'invoice',
@@ -351,6 +352,26 @@ define([
 
     var r = { aplicada: false, avisos: [], erro: null, diferentes: 0, rastro: { payload: reclass } };
 
+    // A CHAVE ANTES DA REDE (`fp_chave`, o mesmo validador da tela). Aqui não se bloqueia o save —
+    // guarda 1 —, mas chave inválida ou duplicada NÃO vai à plataforma. Sem tipo de documento de
+    // TERCEIRO com modelo, não é nota de fornecedor, e a entrada não roda.
+    var v = fpChave.validar(newRecord);
+    r.rastro.validacao = v;
+    if (!v.aplica) {
+      r.avisos.push('Chave de acesso informada, mas o tipo de documento não é de terceiro com modelo (NF-e ou CT-e de ' +
+        'terceiro). A natureza NÃO foi declarada à plataforma.');
+      return r;
+    }
+    if (!v.podeSalvar) {
+      r.avisos = r.avisos.concat(v.erros).concat(v.avisos);
+      r.avisos.push('A natureza NÃO foi declarada: a chave não passou na validação.');
+      return r;
+    }
+    r.avisos = r.avisos.concat(v.avisos);
+    // Série e número saem da chave — também na criação por REST, que não tem tela.
+    if (fpFields.id('DOC_SERIE')) newRecord.setValue({ fieldId: fpFields.id('DOC_SERIE'), value: String(v.serie) });
+    if (fpFields.id('DOC_NUMERO')) newRecord.setValue({ fieldId: fpFields.id('DOC_NUMERO'), value: v.numero });
+
     var existe = fpClient.existePorChave(reclass.chaveAcesso, payloadSim.cnpjEmpresa, opcoes);
     r.rastro.existe = existe.body;
     if (!existe.ok) {
@@ -548,6 +569,12 @@ define([
     // ela é retorno da emissão, e fica travada.
     if (!fpMapSimular.ehCompra(scriptContext.newRecord.type)) {
       scriptContext.form.getField(chavedoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
+    } else {
+      // Na compra, o validador da chave na tela (fp_cs_entrada, portado do AVLR_AccessKeyValidation_CS).
+      var T = scriptContext.UserEventType;
+      if (scriptContext.type === T.CREATE || scriptContext.type === T.EDIT || scriptContext.type === T.COPY) {
+        scriptContext.form.clientScriptModulePath = './fp_cs_entrada.js';
+      }
     }
     scriptContext.form.getField(numerodoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
     scriptContext.form.getField(seriedoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
