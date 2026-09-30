@@ -784,6 +784,53 @@ custom records e `account` funcionam normalmente.
 Consequência: inventário de campo standard **não** se faz por este token. Vai por metadata-catalog
 (quando o record type estiver exposto) ou pelo Records Browser.
 
+#### 10.3.1 Integração nova (`Consumer Key  Client ID-1.txt`) — medido em 2026-09-30
+
+> Mesmo método da §8.9 (TBA HMAC-SHA256, `tstdrv1647270`), mesma hora, os dois arquivos.
+> O token antigo (`Consumer-Key-Client-ID.txt`) agora devolve **401 `INVALID_LOGIN`** em tudo:
+> revogado ou desativado. O novo autentica.
+
+| sonda | resultado |
+|---|---|
+| `GET /record/v1/metadata-catalog` | **37** record types (eram 158): `invoice`, `salesorder`, `vendorbill`, `purchaseorder`, `creditmemo`, `itemreceipt`, `itemfulfillment`, `transferorder`, `vendorreturnauthorization`, `customerpayment`, e as `customlist_fp_*` |
+| SuiteQL por tipo: `FROM invoice` / `vendorbill` / `salesorder` / `purchaseorder` | ✅ **200** — 130 vendorbill, 27 salesorder, 36 purchaseorder |
+| `GET /record/v1/invoice/4` (por id) | ✅ **200**, registro completo |
+| SuiteQL `FROM customlist_fp_natureza_contabil` | ✅ 200 |
+| SuiteQL `FROM transaction`, `transactionline` | ❌ 400 "Record not found" |
+| `GET /record/v1/invoice?limit=2` (listagem) | ❌ 400 — a listagem usa a busca de `transaction`: "INSUFFICIENT_PERMISSIONS" |
+| `location`, `subsidiary`, `account`, `employee`, `customer`, `item` | ❌ 400 — **`account` regrediu** (o token antigo lia) |
+| `customrecord_fp_imposto`, `_impostos`, `_classificador_contabil` | ❌ 400 — **regrediu** (o token antigo lia e escrevia) |
+
+Leitura: o papel novo tem permissão de **transação por tipo** e de custom list, e nada de lista
+standard nem de custom record. Para fechar §10.3 falta no papel: *Lists > Accounts*, *Locations*,
+*Subsidiaries*, *Customers*, *Items*, *Find Transaction* (libera `transaction`/`transactionline` e a
+listagem REST) e *Custom Record Entries* (ou a permissão por record type em cada `customrecord_fp_*`).
+
+**Correção, mesmo dia:** *Custom Record Entries* o papel (`customrole1075`) já tinha, e não adianta:
+os nove `customrecord_fp_*.xml` são `<accesstype>USEPERMISSIONLIST</accesstype>` com só
+`ADMINISTRATOR` na lista (ex.: `customrecord_fp_imposto.xml:213`). Os nove foram então postos na aba
+*Custom Record* do papel, em Full, e a sonda repetida devolveu **200 em todos**: `imposto` 31,
+`impostos` 6, `classificador_contabil` 8, `natureza_operacao` 69, `pais` 257, `di`/`pagamento`/
+`reboque`/`volume` 0. Os números de `imposto` e `classificador_contabil` batem com os da §10.4.
+
+⚠ **Ainda NÃO medido:** se o próximo `project:deploy` mantém esse acesso. O XML de cada record
+leva a lista `<permissions>` só com `ADMINISTRATOR`, e o deploy regrava o objeto. Depois do deploy,
+repetir `SELECT COUNT(*) FROM customrecord_fp_imposto` com este token: 400 quer dizer que o acesso foi
+apagado.
+
+Depois de preenchida a aba *Lists* do papel (Accounts, Customers, Employees, Items, Locations,
+Subsidiaries, Classes), mesma data: ✅ `account` 178, `location` 3 (4 = "GROUP LINK O.N.E. MATRIZ -
+SP", 5, 6), `subsidiary` 4 (1 Parent Company, 2 Servicos, 3 Produtos, 4 Produtos - V3), `customer`
+14, `item` 14. ❌ `vendor` (Vendors não está na aba), `employee` (400 apesar de Employees Full), e
+`transaction`/`transactionline` e a listagem REST — falta *Find Transaction* na aba *Transactions*.
+
+Depois de *Find Transaction*, mesma data: ✅ `transaction` 1057, `transactionline` 9754, a 2232 da
+§10.3 aparece (`WHERE id = 2232` → 1), `GET /record/v1/invoice?limit=1` → 200. **A §10.3 está
+fechada** para o que o bundle lê. Seguem ❌ só `vendor` e `employee`. Com *Vendors* na aba *Lists*:
+✅ `vendor` 9. Resta ❌ só `employee`, que o bundle não lê. Repetido na sequência: ✅ `employee` 14
+(SuiteQL e `GET /record/v1/employee`), `entity` 38 — o que abriu foi **Employee Record**, permissão
+distinta de *Employees*: esta sozinha não libera a tabela `employee`. **Nenhuma sonda da §10.3 segue fechada.**
+
 ### 10.4 O que o deploy faz e o que não faz — medido em 2026-09-22, depois do deploy
 
 > Método: REST SuiteQL e `metadata-catalog`, contra a conta, depois do `project:deploy`.

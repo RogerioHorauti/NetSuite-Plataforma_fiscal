@@ -41,6 +41,7 @@ project.json
 
 # Credenciais — NUNCA no repositório (vão para Secrets Management do NetSuite)
 Consumer-Key-Client-ID.txt
+Consumer Key*Client ID*.txt
 *.pfx
 *.p12
 *.pem
