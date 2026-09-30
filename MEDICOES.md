@@ -1468,3 +1468,8 @@ Efeito bom: com o prefixo `DOC_`, a CÓPIA volta a limpar a chave sozinha (`limp
 vendor bill com a chave do FORNECEDOR digitada e sem status, o botão Emitir aparece, e emitir
 gravaria a NOSSA chave por cima da do fornecedor. Os dois usos não convivem na mesma transação.
 ⚠ A 2733 e a 2734 têm a chave no campo antigo; o campo antigo segue na conta até ser apagado na UI.
+
+Depois do deploy do `2cfa750`: o `custbody_fp_chave_entrada` já não existe na conta (SuiteQL:
+"Unknown identifier") e levou a chave da 2733/2734. Gravada de novo no `custbody_fp_chave` por PATCH
+— a ÚNICA mudança do save —, e nas duas a guarda 4 a enxergou: `reclassificar` com a chave lida do
+`DOC_CHAVE`, "natureza declarada", `beforeSubmit` 42, `afterSubmit` 160, GL plug-in 10.
