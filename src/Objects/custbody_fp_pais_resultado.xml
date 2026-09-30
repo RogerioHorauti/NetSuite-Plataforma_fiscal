@@ -30,14 +30,14 @@
   <defaultchecked>F</defaultchecked>
   <defaultselection></defaultselection>
   <defaultvalue></defaultvalue>
-  <description>paisResultadoServico -- ONDE O RESULTADO se verifica, que e o teste do ISS na exportacao de servico (LC 116/2003, art. 2o, paragrafo unico). NAO e o mesmo que o pais do destinatario: servico prestado aqui para cliente de fora, com resultado AQUI, nao e exportacao.</description>
+  <description>paisResultadoServico (vai como ISO alfa-2, lido da tabela de paises) -- ONDE O RESULTADO se verifica, que e o teste do ISS na exportacao de servico (LC 116/2003, art. 2o, paragrafo unico). NAO e o mesmo que o pais do destinatario: servico prestado aqui para cliente de fora, com resultado AQUI, nao e exportacao.</description>
   <displayheight></displayheight>
   <displaytype>NORMAL</displaytype>
   <displaywidth></displaywidth>
   <dynamicdefault></dynamicdefault>
   <enabletextenhance>F</enabletextenhance>
   <encryptatrest>F</encryptatrest>
-  <fieldtype>TEXT</fieldtype>
+  <fieldtype>SELECT</fieldtype>
   <fldsizelabel></fldsizelabel>
   <globalsearch>F</globalsearch>
   <help></help>
@@ -46,7 +46,7 @@
   <isparent>F</isparent>
   <label>Pais do Resultado do Servico</label>
   <linktext></linktext>
-  <maxlength>2</maxlength>
+  <maxlength></maxlength>
   <maxvalue></maxvalue>
   <minvalue></minvalue>
   <onparentdelete></onparentdelete>
@@ -54,7 +54,7 @@
   <searchcomparefield></searchcomparefield>
   <searchdefault></searchdefault>
   <searchlevel>2</searchlevel>
-  <selectrecordtype></selectrecordtype>
+  <selectrecordtype>[scriptid=customrecord_fp_pais]</selectrecordtype>
   <showhierarchy>F</showhierarchy>
   <showinlist>F</showinlist>
   <sourcefilterby></sourcefilterby>

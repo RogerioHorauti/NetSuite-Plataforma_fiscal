@@ -1097,3 +1097,16 @@ Cenários (os de S02–S04 da §13.1 ficam valendo só para resultado/consumo):
 | S03 | 2239 | 1 Cliente SP (sem city) | só `paisPrestacao:"1058"` e `paisResultadoServico:"AR"`; log "SEM município ou UF" |
 | S04 | 2240 | 11 Orlando/US (fornecedor 25) | `paisPrestacao` = cPais dos EUA, `municipioPrestacaoNome:"Orlando"`, `ufPrestacao:"FL"`, `consumoNoExterior:true` → o motor RECUSA (prestação no exterior, por desenho) |
 | S12 | 2433 | 20 Manaus | igual ao S02 sem resultado/consumo |
+
+### 13.5 Depois do deploy de 2026-09-30 — e o país do resultado vira lista
+
+| fato | como se sabe |
+|---|---|
+| Os quatro scripts da conta batem byte a byte com o disco (`fp_md_map_simular` 72761, `fp_sl_emissao` 16869, `fp_ue_simular` 33397, `fp_perfil_original` 18002) | `file.filesize` × `wc -c` |
+| ✅ **O deploy NÃO derrubou o acesso do papel aos custom records** (§10.3.1): `customrecord_fp_imposto` 31, `customrecord_fp_di` 3 | SuiteQL com o token |
+| `custcol_fp_valor_outras` existe; `custbody_fp_mun_prestacao` não existe mais | `SELECT <coluna>`: 200 × 400 |
+
+`custbody_fp_pais_resultado`: TEXT(2) → **SELECT de `customrecord_fp_pais`** (257 registros, todos com
+ISO). O mapeador lê o id e manda o ISO alfa-2 do registro (`78` → `US`), que é o que o DTO pede.
+Validate 0 erros. ⚠ Duas transações têm texto no campo (2239 `AR`, 2241 `us`); o que o deploy faz
+com texto num campo que vira SELECT **não foi medido**.

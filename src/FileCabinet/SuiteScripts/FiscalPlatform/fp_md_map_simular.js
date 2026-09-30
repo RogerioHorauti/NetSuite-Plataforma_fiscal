@@ -781,6 +781,20 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       return texto(r[0].cpais);
     }
 
+    /** O ISO alfa-2 de um registro de `customrecord_fp_pais`, pelo id. Vazio sem id. */
+    function isoDoPais(id) {
+      if (!id) return '';
+      var registro = fpFields.registro('PAIS');
+      var colIso = fpFields.idPais('ISO');
+      if (!registro || !colIso) return '';
+
+      var r = query.runSuiteQL({
+        query: 'SELECT ' + colIso + ' AS iso FROM ' + registro + ' WHERE id = ?',
+        params: [id]
+      }).asMappedResults();
+      return r.length ? texto(r[0].iso).trim().toUpperCase() : '';
+    }
+
     /** Campo ausente no subrecord não pode derrubar a leitura dos outros. */
     function ler(sub, campo) {
       if (!sub) return '';
@@ -1073,8 +1087,11 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         if (cpais) p.paisPrestacao = cpais;
       }
 
-      var resultado = valorTexto(newRecord, fpFields.id('PAIS_RESULTADO'));
-      if (resultado) p.paisResultadoServico = resultado.toUpperCase();
+      // SELECT para `customrecord_fp_pais`: o getValue é o id do registro, e o DTO quer o ISO
+      // alfa-2 ("PT") — não o nome, não o cPais.
+      var campoResultado = fpFields.id('PAIS_RESULTADO');
+      var resultado = isoDoPais(campoResultado && newRecord.getValue({ fieldId: campoResultado }));
+      if (resultado) p.paisResultadoServico = resultado;
 
       var campoConsumo = fpFields.id('CONSUMO_EXTERIOR');
       if (campoConsumo && newRecord.getValue({ fieldId: campoConsumo }) === true) p.consumoNoExterior = true;
