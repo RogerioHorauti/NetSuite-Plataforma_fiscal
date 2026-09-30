@@ -127,6 +127,15 @@ define([], function () {
         "sozinho (na 2233, trandate + 2). O fato gerador do ICMS/IPI e a saida real."
       ],
       "DATA_SAIDA": "custbody_fp_data_saida",
+
+      "_grupo_entrada": [
+        "Declaracao de quem LANCA a compra: a chave da nota do fornecedor e a data de entrada.",
+        "Com a natureza (NATUREZA / LINHA_NATUREZA), sao o corpo do POST /transacoes/reclassificar.",
+        "Nao levam DOC_: nao sao retorno do motor, e a guarda 4 precisa enxerga-las como mudanca.",
+        "⚠ Por nao levar DOC_, a COPIA da transacao herda a chave -- limpar a mao ao copiar."
+      ],
+      "CHAVE_ENTRADA": "custbody_fp_chave_entrada",
+      "DATA_ENTRADA": "custbody_fp_data_entrada",
       "COMPETENCIA_ORIGINAL": "custbody_fp_competencia_original",
       "DATA_REAJUSTE": "custbody_fp_data_reajuste"
   

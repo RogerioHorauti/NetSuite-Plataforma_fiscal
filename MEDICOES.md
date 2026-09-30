@@ -1324,3 +1324,28 @@ Depois do deploy do `a6e8178`: 2238 e 2634 re-simuladas saem com `contraparte` (
 `destinatario`): 2238 com `indIe: 1`, `regimeTributario: "SN"` e o endereço completo; 2634 com
 `qualificacao: "ORGAO_PUBLICO_FEDERAL"`. A 2533, emitida sem re-simular, foi **recusada** com
 "o payload simulado desta transação usa destinatario… salve para simular de novo".
+
+## 17. Entrada no `beforeSubmit` da vendor bill (2026-09-30)
+
+Contrato lido no fonte: `POST /transacoes/reclassificar` (`ReclassificarDto`: `chaveAcesso`,
+`naturezaOperacao`, `dataEntrada`, `linhas[{numeroItem, naturezaOperacao, …}]`) devolve
+`detalhar(id)` — `linhas[].impostos[]` com `taxCodigo`, `cst`, `cclasstrib`, `baseCalculo`,
+`reducaoBase`, `aliquota`, `valor`, `naturezaContabil`, `compoeTotalNf` (os nomes do `/simular`, então
+o `aplicar` grava sem adaptar). `GET /transacoes/chave/:chave/existe?entradaSaida=E&cnpj=` devolve
+`{existe, ocorrencias, id?, status?, numero?}`.
+
+| decisão | por quê |
+|---|---|
+| `custbody_fp_chave_entrada` (TEXT 54) e `custbody_fp_data_entrada` (DATE), só compra, subaba FiscalPlatform | declaração de quem lança; sem `DOC_` para a guarda 4 enxergar mudança — ⚠ e por isso a CÓPIA herda a chave |
+| chave não capturada → simulação como PRÉVIA + aviso | a natureza não pode ir sem a nota na plataforma |
+| capturada → sublista = DOCUMENTO (`reclassificar`); simulação só compara | o documento é o que existe; a simulação é o que o motor calcularia |
+| comparação lado a lado, sem veredito | tolerância e o que conta é régua (CLAUDE.md); quadro inteiro em `-comparacao.json` |
+| natureza de linha por `numeroItem` na ordem da vendor bill (linha sem valor não conta) | ⚠ casa com o `nItem` do XML só se a vendor bill seguir a ordem da nota |
+| deployment `customdeploy3` do `fp_ue_simular` em VENDORBILL | — |
+
+⚠ `TransactionTaxDetail` não tem `sentidoDaPernaFixa` nem `geraLancamento` (só o resultado do
+`/simular` tem): na entrada a sublista sai sem a perna que o GL plug-in lê. Pedido à plataforma.
+
+Harness: corpo do reclassificar (chave sem máscara, `COMPRA`, `2026-10-02`, `COMPRA_ATIVO` no item 2
+com a linha de valor zero pulada), sem chave → nada; comparação com diferença de valor, tributo só no
+documento e só na simulação. Chumbado para `existe` e `reclassificar`. Validate 0 erros.

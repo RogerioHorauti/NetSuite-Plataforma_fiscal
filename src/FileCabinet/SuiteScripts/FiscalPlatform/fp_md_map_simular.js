@@ -73,8 +73,8 @@
  * Isto roda no `beforeSubmit`, no caminho do save. Os itens são lidos em UMA busca para o conjunto
  * inteiro, não um `lookupFields` por linha: nota de 50 itens pagaria 50 idas ao banco por nada.
  */
-define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'],
-  function (search, query, format, log, fpFields, fpClient) {
+define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client', './fp_entrada'],
+  function (search, query, format, log, fpFields, fpClient, fpEntrada) {
 
     // ─────────────────────────────────────────────────────────────────────────
     // montagem do payload
@@ -1682,8 +1682,30 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       return isNaN(n) ? 0 : n;
     }
 
+    /**
+     * Corpo do `POST /transacoes/reclassificar` da compra, ou `null` sem chave de entrada.
+     *
+     * A natureza de LINHA sai com a MESMA numeração do `/simular` — linha sem valor não conta —,
+     * porque o `numeroItem` é o casamento com o `nItem` do XML (ver o docblock de `fp_entrada`).
+     */
+    function montarReclassificar(newRecord) {
+      var total = contarLinhas(newRecord);
+      var campoNat = fpFields.idLinha('LINHA_NATUREZA');
+      var naturezas = campoNat
+        ? resolverTextos(colunaDaLinha(newRecord, total, campoNat),
+            'SELECT id AS id, name AS txt FROM ' + fpFields.registro('NATUREZA_OPERACAO'), 'id')
+        : {};
+      var porItem = [];
+      for (var i = 0; i < total; i++) {
+        if (!numero(valorLinha(newRecord, 'rate', i)) && !numero(valorLinha(newRecord, 'amount', i))) continue;
+        porItem.push((campoNat && naturezas[String(valorLinha(newRecord, campoNat, i))]) || '');
+      }
+      return fpEntrada.montarReclassificar(newRecord, dataIsoDe, porItem);
+    }
+
     return {
       montar: montar,
+      montarReclassificar: montarReclassificar,
       montarEmissao: montarEmissao,
       aplicar: aplicar
     };

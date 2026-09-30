@@ -55,8 +55,9 @@ define([
   './fp_fields',
   './fp_form',
   './fp_client',
-  './fp_md_map_simular'
-], function (serverWidget, record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular) {
+  './fp_md_map_simular',
+  './fp_entrada'
+], function (serverWidget, record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular, fpEntrada) {
   /** Tipos de transação em que a simulação roda. Fora desta lista, o script não faz nada. */
   var TIPOS = [
     'invoice',
@@ -257,9 +258,31 @@ define([
       // CRIAÇÃO a transação ainda não tem id e `record.attach` não teria a que anexar.
       guardarRastro(corrId, { payload: payload, resposta: null });
 
+      // ENTRADA — compra com chave de acesso declarada. Roda antes de olhar a simulação: a
+      // recusa da simulação não impede declarar a natureza da nota que existe.
+      var opcoesRede = {
+        subsidiaria: scriptContext.newRecord.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') }),
+        transacao: scriptContext.newRecord.id,
+        corrId: corrId
+      };
+      var entrada = rodarEntrada(scriptContext.newRecord, payload, resposta, opcoesRede);
+      if (entrada && entrada.aplicada) {
+        guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada.rastro });
+        fpMsg.sucesso(corrId, '');
+        if (entrada.avisos.length) fpMsg.aviso(corrId, entrada.avisos);
+        log.audit('fp_ue_simular.entrada', 'natureza declarada · ' + entrada.diferentes + ' diferença(s) documento × simulação · ' +
+          'governança restante: ' + runtime.getCurrentScript().getRemainingUsage());
+        return;
+      }
+      if (entrada) {
+        guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada.rastro });
+        if (entrada.erro) fpMsg.erro(corrId, fpMsg.ORIGEM.FISCALPLATFORM, entrada.erro.code, entrada.erro.mensagens);
+        if (entrada.avisos.length) fpMsg.aviso(corrId, entrada.avisos);
+      }
+
       if (!resposta.ok) {
         // RECUSA DO MOTOR. O texto dele vai INTEIRO para a tela — sem traduzir, sem resumir.
-        guardarRastro(corrId, { payload: payload, resposta: resposta.body });
+        guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada && entrada.rastro });
 
         fpMsg.erro(corrId, fpMsg.ORIGEM.FISCALPLATFORM, resposta.code, mensagensDaRecusa(resposta.body));
         log.error('fp_ue_simular.recusa', { code: resposta.code, body: resposta.body });
@@ -270,7 +293,7 @@ define([
       // checar. Divergência se investiga no payload gravado acima.
       fpMapSimular.aplicar(scriptContext.newRecord, resposta.body);
 
-      guardarRastro(corrId, { payload: payload, resposta: resposta.body });
+      guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada && entrada.rastro });
 
       // Sem resumo: o que foi apurado está no sublist, linha por linha. Contar linha na
       // mensagem é ruído que cresce junto com a nota.
@@ -302,6 +325,61 @@ define([
       if (corrId) fpMsg.excecao(corrId, e);
 
     }
+  }
+
+  /**
+   * A NATUREZA DA COMPRA VAI À PLATAFORMA — quando a compra declarou a chave da nota do fornecedor.
+   *
+   *   sem chave               → `null`: é a compra comum, e a simulação segue sozinha
+   *   chave ainda não chegou  → a simulação vira PRÉVIA na sublista, e um aviso diz para salvar de
+   *                             novo quando o DF-e trouxer a nota
+   *   chave capturada         → `reclassificar`; a SUBLISTA recebe o DOCUMENTO (o que o fornecedor
+   *                             destacou, reprocessado), e a simulação fica só para a comparação
+   *   reclassificar recusado  → o texto da plataforma inteiro, e a simulação como prévia
+   *
+   * A comparação não tem veredito (ver `fp_entrada`): mostra os dois valores onde diferem.
+   */
+  function rodarEntrada(newRecord, payloadSim, respostaSim, opcoes) {
+    var reclass = fpMapSimular.montarReclassificar(newRecord);
+    if (!reclass) return null;
+
+    var r = { aplicada: false, avisos: [], erro: null, diferentes: 0, rastro: { payload: reclass } };
+
+    var existe = fpClient.existePorChave(reclass.chaveAcesso, payloadSim.cnpjEmpresa, opcoes);
+    r.rastro.existe = existe.body;
+    if (!existe.ok) {
+      r.erro = { code: existe.code, mensagens: mensagensDaRecusa(existe.body) };
+      return r;
+    }
+    if (!existe.body || !existe.body.existe) {
+      r.avisos.push('A nota ' + reclass.chaveAcesso + ' ainda não foi capturada pela plataforma (DF-e). ' +
+        'A natureza NÃO foi declarada; o que está na sublista é a simulação. Salve de novo quando a nota chegar.');
+      return r;
+    }
+
+    var resposta = fpClient.reclassificar(reclass, opcoes);
+    r.rastro.resposta = resposta.body;
+    if (!resposta.ok) {
+      r.erro = { code: resposta.code, mensagens: mensagensDaRecusa(resposta.body) };
+      return r;
+    }
+
+    fpMapSimular.aplicar(newRecord, resposta.body);
+    r.aplicada = true;
+
+    if (respostaSim && respostaSim.ok) {
+      var cmp = fpEntrada.comparar(resposta.body, respostaSim.body);
+      r.rastro.comparacao = cmp.quadro;
+      r.diferentes = cmp.diferentes.length;
+      if (cmp.diferentes.length) {
+        r.avisos.push(cmp.diferentes.length + ' tributo(s) com valor diferente entre a nota do fornecedor e a ' +
+          'simulação desta compra — os dois lados, sem veredito:');
+        r.avisos = r.avisos.concat(fpEntrada.descrever(cmp.diferentes, 10));
+      }
+    } else {
+      r.avisos.push('A simulação desta compra não voltou, então não há comparação com a nota do fornecedor.');
+    }
+    return r;
   }
 
   /**
@@ -687,6 +765,15 @@ define([
     anexar(pasta, tipo, id, 'FP-' + tipo + '-' + id + '-payload.json', rastro.payload);
     if (rastro.resposta) {
       anexar(pasta, tipo, id, 'FP-' + tipo + '-' + id + '-retorno.json', rastro.resposta);
+    }
+
+    // ENTRADA: o corpo do reclassificar, o que voltou e o quadro documento × simulação.
+    var e = rastro.entrada;
+    if (e) {
+      var base = 'FP-' + tipo + '-' + id + '-reclassificar-';
+      anexar(pasta, tipo, id, base + 'payload.json', e.payload);
+      anexar(pasta, tipo, id, base + 'retorno.json', { existe: e.existe || null, resposta: e.resposta || null });
+      if (e.comparacao) anexar(pasta, tipo, id, 'FP-' + tipo + '-' + id + '-comparacao.json', e.comparacao);
     }
   }
 

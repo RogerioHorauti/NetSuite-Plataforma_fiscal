@@ -421,9 +421,51 @@ define([
       body: { cStat: '107', xMotivo: 'Servico em Operacao (CHUMBADO)', emOperacao: true, deCache: false } };
   }
 
-  /** `POST /transacoes/reclassificar`. Endereça o documento pela chave de acesso. */
+  /**
+   * `GET /transacoes/chave/:chave/existe?entradaSaida=E&cnpj=` — a nota do fornecedor já chegou pelo
+   * DF-e? Devolve `{ existe, ocorrencias, id?, status?, numero? }` (`transacoes.service.existePorChave`).
+   * O `id` é UUID da plataforma e NÃO entra no NetSuite.
+   */
+  function existePorChave(chave, cnpjFilial, opcoes) {
+    var caminho = '/transacoes/chave/' + encodeURIComponent(String(chave)) + '/existe?entradaSaida=E&cnpj=' +
+      encodeURIComponent(String(cnpjFilial || ''));
+    // return obter(caminho, opcoes);
+    log.audit('fp_client.existePorChave', 'RESPOSTA CHUMBADA — nada foi à rede. ' + caminho);
+    return { ok: true, code: 200, durationMs: 0,
+      body: { existe: true, ocorrencias: 1, status: 'AUTORIZADA', numero: 12345 } };
+  }
+
+  /**
+   * `POST /transacoes/reclassificar`. Endereça o documento pela chave de acesso e devolve o
+   * documento DETALHADO (`transacoes.service.detalhar`): `linhas[].impostos[]` com `taxCodigo`, `cst`,
+   * `cclasstrib`, `baseCalculo`, `reducaoBase`, `aliquota`, `valor`, `naturezaContabil`,
+   * `compoeTotalNf` — os nomes do resultado do `/simular`.
+   */
   function reclassificar(payload, opcoes) {
-    return chamar('POST', '/transacoes/reclassificar', payload, opcoes);
+    // return chamar('POST', '/transacoes/reclassificar', payload, opcoes);
+    log.audit('fp_client.reclassificar', 'RESPOSTA CHUMBADA — nada foi à rede. chave=' + (payload && payload.chaveAcesso));
+    return { ok: true, code: 200, durationMs: 0, body: reclassificacaoChumbada(payload) };
+  }
+
+  /**
+   * O documento detalhado, na forma de `detalhar`. Sem o XML não há valor de verdade: uma linha por
+   * `numeroItem` declarado (ou uma só), base 100 e ICMS/PIS/COFINS de entrada — é a FORMA que se
+   * exercita, não o conteúdo.
+   */
+  function reclassificacaoChumbada(p) {
+    p = p || {};
+    var n = 1;
+    (p.linhas || []).forEach(function (l) { if (l.numeroItem > n) n = l.numeroItem; });
+    var linhas = [];
+    for (var i = 1; i <= n; i++) {
+      linhas.push({ numeroItem: i, impostos: [
+        { taxCodigo: 'ICMS', cst: '00', cclasstrib: null, baseCalculo: 100, reducaoBase: null, aliquota: 12, valor: 12, naturezaContabil: 'RECUPERAVEL_INTEGRAL', compoeTotalNf: false },
+        { taxCodigo: 'PIS', cst: '50', cclasstrib: null, baseCalculo: 88, reducaoBase: null, aliquota: 1.65, valor: 1.45, naturezaContabil: 'RECUPERAVEL_INTEGRAL', compoeTotalNf: false },
+        { taxCodigo: 'COFINS', cst: '50', cclasstrib: null, baseCalculo: 88, reducaoBase: null, aliquota: 7.6, valor: 6.69, naturezaContabil: 'RECUPERAVEL_INTEGRAL', compoeTotalNf: false }
+      ] });
+    }
+    return { chaveAcesso: p.chaveAcesso, origem: 'CAPTURA_XML', status: 'AUTORIZADA', entradaSaida: 'E',
+      naturezaOperacao: p.naturezaOperacao || null, dataEntrada: p.dataEntrada || null, linhas: linhas };
   }
 
   /** GET genérico. `caminho` já com query string quando houver. */
@@ -704,6 +746,7 @@ define([
     simularNota: simularNota,
     emitir: emitir,
     statusSefaz: statusSefaz,
+    existePorChave: existePorChave,
     reclassificar: reclassificar,
     obter: obter,
     baixar: baixar,

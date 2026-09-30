@@ -333,6 +333,12 @@ Cancelamento, carta de correção, inutilização do número preso, download de 
 motor; inutilizar um número de nota rejeitada fecha a lacuna com `cStat 102`.
 
 ### Fase 4 — entrada: declaração de natureza em lote
+
+> ⚠ **REVISTA em 2026-09-30 (Rogerio): não é lote, e não é Map/Reduce.** A natureza vai no
+> `beforeSubmit` da vendor bill, quando quem lança a compra digita chave, natureza e data de
+> entrada: `existe` + `POST /transacoes/reclassificar`, e o `/simular` de compra (contraparte =
+> fornecedor) ao lado, para comparar com a nota do fornecedor. MEDICOES §17. O texto abaixo é o
+> desenho anterior.
 `fp_mr_entrada.js` (Map/Reduce), `fp_map_reclassificar.js`, campo de natureza no item/pedido de compra.
 **Aceite:** o Map/Reduce lê `GET /transacoes?entradaSaida=E&dataDe=…&dataAte=…` paginado, declara
 natureza por linha via `POST /transacoes/reclassificar` e o retorno do `GET /transacoes/chave/{chave}`
