@@ -1426,3 +1426,32 @@ Depois do deploy do `dc32c39`: **`fp_gl_lines_plugin` usou 10** (entrou com 1000
 Criação de invoice de serviço: `beforeSubmit` 32, `afterSubmit` 70. **Todos os pontos de entrada do
 bundle medem a governança no fim da execução.** ⚠ A linha do plug-in pode chegar ao `scriptnote` um
 instante depois das do UE do mesmo save — ler com folga de tempo.
+
+## 19. Tipos de transação de cada natureza (`custrecord_fp_transacao_no`) — 2026-09-30
+
+O campo é multiselect da lista **-100** (tipos de transação). Ids medidos por sonda (gravar um id e
+ler o `refName`): 1 Journal · 5 Cash Sale · 6 Estimate · 7 Invoice · 10 Credit Memo · 15 Purchase
+Order · 16 Item Receipt · 17 Bill · 20 Bill Credit · 31 Sales Order · 32 Item Fulfillment · 33
+Return Authorisation · 43 Vendor Return Authorization · 48 Transfer Order (e os demais até 57).
+
+Preenchidas as **69** naturezas pela família do nome + sentido E/S (`carga/naturezas_tipos_de_transacao.js`):
+
+| família | tipos |
+|---|---|
+| VENDA\* (S) | Estimate, Invoice, Sales Order, Cash Sale |
+| SAIDA_ATIVO, SIMPLES_FATURA, BONIFICACAO (S) | Invoice, Sales Order, Item Fulfillment |
+| COMPL_\* (S) | Invoice |
+| REMESSA_\*, INDUSTRIALIZACAO_ENCOMENDA, RETORNO_INDUST_\* (S) | Sales Order, Invoice, Item Fulfillment, Transfer Order |
+| TRANSFER\* (S) | Transfer Order, Item Fulfillment |
+| DEVOL_COMPRA\*, DEVOL_IMPORT (S) | Vendor Return Authorization, Bill Credit, Item Fulfillment |
+| COMPRA\*, FRETE_TOMADO, ENTRADA_\* (E) | Purchase Order, Item Receipt, Bill |
+| ENTRADA_TRANSF\* (E) | Transfer Order, Item Receipt |
+| DEVOL_VENDA\* (E) | Return Authorisation, Credit Memo, Item Receipt |
+| RETORNO_\* (E) | Return Authorisation, Item Receipt, Transfer Order, Purchase Order, Bill |
+
+69 gravadas, 0 falhas; conferidas por leitura (69, 25, 24, 3).
+
+⚠ O pedido de venda 2236 (S05) usa DEVOL_COMPRA_PROD, que agora não inclui Sales Order — reabrir e
+salvar na tela pode recusar a natureza. ⚠ `custrecord_fp_transacao_no` e o filtro do
+`custbody_fp_natureza` por ele **existem só na conta**: não estão em XML nenhum do projeto (§8.7
+tirou a referência). Importar os dois (`object:import`) antes que um deploy decida por eles.
