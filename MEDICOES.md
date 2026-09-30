@@ -1273,3 +1273,22 @@ a chave entra pelo `EnderecoDoDocumentoPipe`. **Batem.** O que não batia era a 
 Emissão chumbada: chave de 44 com DV módulo 11 (conferido contra a chave real da 2232: DV 4 = 4),
 número 900.000.000 + `idExterno`, idempotente. Cada rota de evento tem a forma do fonte.
 Validate 0 erros. **Falta o deploy para medir.**
+
+**Medido na conta depois do deploy do `37e8989`** — Suitelet pela URL externa, respostas chumbadas,
+campos DOC_ relidos por SuiteQL e rastro baixado por SOAP a cada passo:
+
+| passo | transação | tela | campos DOC_ | rastro |
+|---|---|---|---|---|
+| emitir 2433 | → AUTORIZADA | cStat 100, chave de 44, nº 900002433, série 2, protocolo | chave, número, série, status, cStat, xMotivo, protocolo e os links de XML/DANFE **gravados — primeira vez que a gravação do retorno de emissão rodou** | `-emissao-*` |
+| consultar | AUTORIZADA | cStat 100 | inalterados | `-consultar-*`, corpo `{}` |
+| reconciliar | AUTORIZADA | cStat 100 | inalterados | `-reconciliar-*` |
+| CC-e | **segue AUTORIZADA** | evento cStat 135, `nSeqEvento` 1, protocolo do EVENTO | protocolo da AUTORIZAÇÃO intacto | `-carta-*`, corpo `{"correcao": …}` |
+| cancelar | **→ CANCELADA** | evento cStat 135, protocolo do evento | status CANCELADA | `-cancelar-*`, corpo `{"justificativa": …}`; retorno com `transaction` + `evento` |
+| inutilizar 2234 (REJEITADA 539 marcada por PATCH) | **segue REJEITADA** | cStat 102 e protocolo da INUTILIZAÇÃO | cStat 539 e o motivo da rejeição intactos | `-inutilizar-*` |
+
+Nenhum par de evento sobrescreveu o `-emissao-*`.
+
+⚠ Do chumbado, não do bundle: o `transaction` do cancelamento chumbado só traz `status` — o
+cStat/xMotivo da transação ficam os da autorização. Com a plataforma real, o que ela devolver em
+`transaction` entra inteiro. ⚠ Depois da inutilização a nota segue REJEITADA, então o botão
+Inutilizar continua aparecendo; repetir é seguro (a plataforma responde `jaRegistrado`).
