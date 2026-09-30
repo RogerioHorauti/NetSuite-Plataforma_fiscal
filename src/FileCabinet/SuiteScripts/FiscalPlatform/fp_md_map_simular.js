@@ -125,14 +125,20 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     }
 
     /**
-     * Acrescenta ao payload o que só a EMISSÃO exige.
+     * O payload de EMISSÃO = o request que o `/simular` JÁ MONTOU + o que só a emissão exige.
      *
-     * Separado de propósito: `/simular` e `/emitir` compartilham o corpo, e a diferença é pequena e
-     * obrigatória — `serie` e `tipoDocumento` são required no `EmitirNotaDto`.
+     * `base` é o payload simulado, lido do rastro anexado (`FP-<tipo>-<id>-payload.json`). Partir
+     * dele, e não montar de novo, é o que garante que o documento emitido é o que foi simulado e
+     * conferido — mesmas linhas, mesma natureza, mesmo destinatário. Montar duas vezes abriria a
+     * janela para as duas montagens divergirem (cadastro de item alterado entre uma e outra, DI
+     * editada, que a guarda 4 não enxerga).
+     *
+     * Aqui só se ACRESCENTA: `serie` e `tipoDocumento` (required no `EmitirNotaDto`) e os grupos que
+     * o `SimulacaoNotaInputDto` não tem. Nada do que veio na base é tocado.
      */
-    function montarEmissao(newRecord) {
-      var payload = montar(newRecord);
-      if (!payload) return null;
+    function montarEmissao(newRecord, base) {
+      if (!base) return null;
+      var payload = JSON.parse(JSON.stringify(base));
 
       var serie = serieDaFilial(newRecord);
       var tipoDoc = valorTexto(newRecord, fpFields.id('TIPODOC'));
@@ -168,6 +174,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
 
       var pagamento = montarPagamentos(newRecord);
       if (pagamento.length) payload.pagamento = pagamento;
+
+      var cobranca = montarCobranca(newRecord);
+      if (cobranca) payload.cobranca = cobranca;
 
       var fisco = valorTexto(newRecord, fpFields.id('INFADIC_FISCO'));
       if (fisco) payload.infAdicFisco = fisco;
@@ -342,6 +351,50 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         out.push(pag);
       }
       return out;
+    }
+
+    /**
+     * O GRUPO Y — fatura e duplicatas. Sai do que o NetSuite JÁ movimenta, sem campo novo.
+     *
+     * As parcelas são a sublist nativa `installment` (feature Installments, prazo parcelado — "2x",
+     * "3x"): vencimento e valor de cada uma. Prazo sem parcelas ("Net 30") é uma duplicata só, no
+     * `duedate`. Sem nenhum dos dois não há o que cobrar, e o grupo não vai.
+     *
+     * A fatura é a própria transação: `nFat` = `tranid`, `vOrig` = `total`. `vDesc` e `vLiq` NÃO
+     * vão: sem desconto da fatura, a plataforma deriva `vLiq = vOrig` — e as parcelas do NetSuite
+     * somam o `total` por construção, que é o que a regra 851 confere. `nDup` também não: a
+     * plataforma numera pela posição, então a ORDEM das parcelas é a do vencimento (Y09-30, 850).
+     *
+     * ⚠ Nenhuma das oito regras do MOC é conferida aqui — quem confere é a plataforma, antes de
+     * reservar número. Repeti-las no bundle seria a segunda régua que diverge na próxima NT.
+     */
+    function montarCobranca(newRecord) {
+      var total = numero(newRecord.getValue({ fieldId: fpFields.padrao('TOTAL') }));
+      if (!total) return null;
+
+      var duplicatas = [];
+      var n = contarSublist(newRecord, 'installment');
+      for (var i = 0; i < n; i++) {
+        var venc = newRecord.getSublistValue({ sublistId: 'installment', fieldId: 'duedate', line: i });
+        var valor = numero(newRecord.getSublistValue({ sublistId: 'installment', fieldId: 'amount', line: i }));
+        if (venc && valor) duplicatas.push({ vencimento: dataIsoDe(venc), valor: valor });
+      }
+
+      if (!duplicatas.length) {
+        var vencUnico = newRecord.getValue({ fieldId: 'duedate' });
+        if (!vencUnico) return null;
+        duplicatas.push({ vencimento: dataIsoDe(vencUnico), valor: total });
+      }
+
+      duplicatas.sort(function (a, b) { return a.vencimento < b.vencimento ? -1 : a.vencimento > b.vencimento ? 1 : 0; });
+
+      return {
+        fatura: {
+          numero: texto(newRecord.getValue({ fieldId: fpFields.padrao('TRANID') })),
+          valorOriginal: total
+        },
+        duplicatas: duplicatas
+      };
     }
 
     /** Grupo `card`: só existe em cartão de crédito (03) e débito (04). */
@@ -1093,6 +1146,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       valorSeTiver(newRecord, i, linha, 'LINHA_VALOR_FRETE', 'valorFrete');
       valorSeTiver(newRecord, i, linha, 'LINHA_VALOR_SEGURO', 'valorSeguro');
       valorSeTiver(newRecord, i, linha, 'LINHA_VALOR_DESCONTO', 'valorDesconto');
+      // `<vOutro>` da operação DOMÉSTICA. Na importação o motor o recusa: lá a despesa aduaneira
+      // é `despesasBaseIcms`. Quem escolhe o campo é quem preenche; aqui só se transporta.
+      valorSeTiver(newRecord, i, linha, 'LINHA_VALOR_OUTRAS', 'valorOutras');
       valorSeTiver(newRecord, i, linha, 'LINHA_DESP_BASE_II', 'despesasBaseII');
       valorSeTiver(newRecord, i, linha, 'LINHA_DESP_BASE_ICMS', 'despesasBaseIcms');
       valorSeTiver(newRecord, i, linha, 'LINHA_CRED_ICMS_TRANSF', 'creditoIcmsTransferido');
@@ -1391,7 +1447,11 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
 
     /** `YYYY-MM-DD`. O motor recebe a data como string; a hora do NetSuite não lhe interessa. */
     function dataIso(newRecord, campo) {
-      var d = newRecord.getValue({ fieldId: campo });
+      return dataIsoDe(newRecord.getValue({ fieldId: campo }));
+    }
+
+    /** O mesmo, a partir do valor — o vencimento da parcela vem de sublist, não de campo. */
+    function dataIsoDe(d) {
       if (!d) return null;
       if (typeof d === 'string') d = format.parse({ value: d, type: format.Type.DATE });
       var mes = d.getMonth() + 1;

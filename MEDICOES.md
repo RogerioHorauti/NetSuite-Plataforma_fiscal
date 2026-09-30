@@ -842,6 +842,7 @@ distinta de *Employees*: esta sozinha não libera a tabela `employee`. **Nenhuma
 | ✅ **O deploy APAGA campo de custom record removido do projeto.** Os 6 campos do classificador (`debito_cc`, `credito_cc`, as duas origens, `sentido_cc`, `sem_lancamento_cc`) sumiram sozinhos | `SELECT <coluna>` devolve 400 para cada um |
 | ✅ **O deploy APAGA custom list removida do projeto.** `customlist_fp_sentido` sumiu | `SELECT ... FROM customlist_fp_sentido` → erro |
 | ⚠ **O deploy NÃO apaga o registro inteiro.** Isso continua sendo da UI | — |
+| ⚠ **E nem sempre apaga o campo.** Medido em 2026-09-30: `custrecord_fp_di_transacao` e `custrecord_fp_di_numero_item`, tirados do `customrecord_fp_di.xml` em `c4de117`, **seguem na conta** depois do deploy desse commit (o `fp_md_map_simular.js` da conta é o dele, byte a byte). Não se sabe o que difere do caso dos 6 campos do classificador. Depois de deploy que remove campo, conferir com `SELECT <coluna>` | `customfield` e `SELECT` por REST |
 | ⚠ **ARMADILHA DE MEDIÇÃO: `SELECT *` pelo REST OMITE coluna nula.** Coluna ausente na resposta **não** significa campo inexistente. Custou um alarme falso aqui: `custrecord_fp_cclasstrib_imp` "sumiu" da listagem e nunca foi removido — só estava vazio | teste correto é `SELECT <coluna>`: **400** se o campo não existe, **200** se existe e está nulo |
 | ✅ 7 campos novos chegaram: 4 no classificador (`perna_cc`, `conta_tributo_cc`, `contrapartida_origem_cc`, `contrapartida_cc`) e 3 em `customrecord_fp_impostos` (`perna_imp`, `geralancamento_imp`, `razaoperna_imp`) | `SELECT <coluna>` → 200 em todos |
 | ✅ 12 regras antigas apagadas e **8 novas criadas**; relidas pela query de `carregarRegua()` do plug-in: 8 de 8 | — |
@@ -974,3 +975,99 @@ linhas do FiscalPlatform saem sozinhas.
 | **`othercustomfield` não aceita** `availabletosso`, `ismatrixoption` | idem | — |
 | **`rectype` de `othercustomfield`** | Location `-103`, Subsidiary `-117`, Account `-112`, Role `-118`, **Address `-289`** | Sondar chutando não acha: `-289` não estava entre os onze que testei |
 | **O deploy APAGA** campo de custom record e custom list removidos do projeto | os 6 campos do classificador e a `customlist_fp_sentido` sumiram sozinhos | Só o **registro inteiro** sobrevive e precisa de UI |
+
+## 13. Cenários de payload criados por REST — 2026-09-30
+
+> Método: token TBA da §10.3.1, `POST /record/v1/{salesorder|invoice}` e releitura por SuiteQL.
+> Todas em `location` 4 (única com CNPJ), memo `FPTESTE Snn ...`, e *Info ao contribuinte* =
+> `APAGUE` — apagar esse texto é a mudança que faz a guarda 4 deixar o EDIT simular.
+
+| cen. | id | tipo | o que exercita |
+|---|---|---|---|
+| S01 | 2233 | SO | todo campo de corpo (transporte, retenção completa, veículo com placa `abc-1d23`, vagão, balsa, indPres, infAdic); L1 com todas as colunas de linha; L2 CFOP `61a2`, frete 0, ZFM tipo 3; 3 pagamentos (cartão completo, dinheiro com bandeira que NÃO deve ir, 99 com descrição); 6 reboques (corte em 5); 2 volumes (lacres `L1, L2 ,,L3`) |
+| S02 | 2241 | INV | serviço, exportação completa: IBGE + nome (nome NÃO deve ir), UF `sp`, país 1058, resultado `us` + consumo; dedução de material; data 2023-11-14 (único período aberto) |
+| S03 | 2239 | SO | só nome do município; país `BR` (ISO no lugar do BACEN → `digitos` zera); resultado sem consumo (aviso) |
+| S04 | 2240 | SO | consumo sem resultado (aviso); IBGE de 6 dígitos; UF `S.`; sem natureza |
+| S05 | 2236 | SO | devolução: chave + item de origem; chave sem item (aviso); item sem chave (não vai) |
+| S06 | 2235 | SO | DI 1 em duas linhas com adições diferentes (clone), seq omitida → 1; DI 101 completa; DI 201 sem adição na linha |
+| S07 | 2237 | SO | natureza de linha ≠ cabeçalho e linha calada; modFrete 9 só com vagão/balsa; retenção incompleta (aviso); débito sem tpIntegra, 99 sem descrição (avisos), pagamento sem forma (pulado); reboque sem placa e volume vazio (pulados) |
+| S08 | 2234 | SO | sem natureza, só CFOP; placa sem modalidade (transporte não vai); NFC-e; indPres 0 |
+| S09 | 2238 | SO | ZFM tipo 1, tipo 4, `0` (vai, é valor) e não escolhido (não vai) |
+
+DIs de apoio (`customrecord_fp_di`): **1** marítima sem AFRMM + conta e ordem sem CNPJ (dois
+avisos), **101** aérea por encomenda completa, **201** marítima com AFRMM por conta própria.
+
+Medido no caminho:
+
+| fato | como se sabe |
+|---|---|
+| `fp_ue_simular` só está deployado em **SALESORDER** e **INVOICE** — os outros seis de `TIPOS` nunca simulam | `customscript_fp_ue_simular.xml` |
+| ⚠ `/simular` leva só `montar()`: transporte, reboque, volume, pagamento, `indPres`, `infAdic*` estão só em `montarEmissao()` — conferir esses exige o `/emitir` (hoje chumbado, ver abaixo) | `fp_md_map_simular.js:133-179` |
+| POST de transação pelo REST **ignora as sublistas `recmach`** (204, zero filhos) — filho vai como registro próprio com o campo de vínculo | releitura por SuiteQL |
+| Limites que barram máscara na origem: `ret_cmunfg` 7, `mun_prestacao` 7, `pais_prestacao` 4, `uf_prestacao` 2, `custcol_fp_cfop` 4, `pag_tband` 2, `reb_placa` 8 | 400 do REST, `<maxlength>` do XML |
+| PERCENT pelo SuiteQL volta fração: `ret_picmsret` 12 → `0.12` | releitura |
+| **`custbody_fp_natureza` tem filtro por `custrecord_fp_transacao_no` NA CONTA**, que o projeto não tem (§8.7 o removeu). Só a 64 estava marcada; marcadas 16, 3, 39, 24, 4 com Estimate/Invoice/Sales Order para os cenários. A coluna de linha não filtra | 400 "Invalid Field Value"; multiselect lido por REST |
+| ⚠ **Guarda 3 NÃO segura EDIT por REST.** CREATE por REST não simulou (nenhum arquivo em 2234–2241); o PATCH de `custbody_fp_infadic_contrib` na 2233 (`RWS`, 09:35:45) simulou, marcou `numeroItem` e anexou payload/retorno | `systemnote` + `file` |
+| Retorno da 2233 (II, IPI_IMP… sobre 49.320,54, só na linha 1) **não é do motor**: é a resposta chumbada de `fp_client.chumbado()`, que `simularNota` e `emitir` devolvem sem rede. Com o cliente chumbado, **só o payload enviado se confere**; a resposta é sempre a mesma | `fp_client.js:98`, `:297-299`, `:309-319` |
+| Por isso `/emitir` também **não transmite nem consome numeração** hoje — o botão de emissão monta e grava `FP-<tipo>-<id>-emissao-payload.json`. É o caminho para conferir transporte, pagamento, `indPres` e `infAdic*`. Ordem: simular antes, porque a persistência grava a chave chumbada e a guarda 6 barra simular depois | idem; `fp_ue_simular.js:504` |
+
+### 13.1 O que o REQUEST tem de trazer — gabarito, lido do mapeador
+
+> Em todas: `cnpjEmpresa: "10664687000113"`, `destinatario` do cliente 28 (Manaus, AM, CNPJ
+> `70219692000149`, IE `40325274123`, `indIeDest: 1`, `regimeTributario: "SN"`) — exceto S02, cliente
+> 24 (sem campos FP, país `BG` pelo `customrecord_fp_pais`). `numeroItem` 1..n. **(E)** = só no
+> `...-emissao-payload.json`.
+
+| cen. | tem de estar | NÃO pode estar |
+|---|---|---|
+| S01 2233 | `naturezaOperacaoId:"VENDA_PROD"`; L1: `naturezaOperacaoId:"VENDA_ST"`, `cfopCodigo:"5405"`, `infoAdicional`, `indDoacao:1`, `indBemMovelUsado:1`, `deducaoMaterial:7.5`, `valorFrete:10`, `valorSeguro:5`, `valorDesconto:3`, `despesasBaseII:4`, `despesasBaseIcms:6`, `creditoIcmsTransferido:2.25`, `quantidadeTributavel:20`, `valorUnitarioTrib:10`, `hipoteseStInterestadual:"PARTILHA"`, `tpCredPresIbsZfm:"0"`; L2: `hipoteseStInterestadual:"REPASSE"`, `tpCredPresIbsZfm:"3"`, `ncm:"85176272"`, `origemProduto:"0"`. **(E)** `indPres:"1"`, `infAdicFisco`, `transporte.modFrete:"0"`, `transportadora` do fornecedor 11 com endereço, `retencaoIcms` com os 6 (`pICMSRet` 12, `cMunFG` "3550308"), `veiculo.placa:"ABC1D23"`, `uf:"SP"`, **5** reboques (1º `REB0001`/`SP`), `vagao`, `balsa`, volumes (1º com `lacres:["L1","L2","L3"]`), pagamento `03` com `tpIntegra:"1"`, `cnpjCredenciadora:"01027058000191"`, `tBand:"01"`, `cAut`; `01` com `indPag:"0"`; `99` com `descricao:"Permuta"` | L2 `cfopCodigo` (`61a2`); L2 `valorFrete` (0), `indDoacao`, `indBemMovelUsado`; `infAdicContrib` depois de apagado; **(E)** 6º reboque; `tBand`/`cAut` no pagamento `01` |
+| S02 2241 | `dataEmissao:"2023-11-14"`, `naturezaOperacaoId:"VENDA_SERV_EXPORT"`; nas **duas** linhas `municipioPrestacao:"3550308"`, `ufPrestacao:"SP"`, `paisPrestacao:"1058"`, `paisResultadoServico:"US"`, `consumoNoExterior:true`; L1 `deducaoMaterial:12.34` | `municipioPrestacaoNome` |
+| S03 2239 | `municipioPrestacaoNome:"Rio de Janeiro"`, `ufPrestacao:"RJ"`, `paisResultadoServico:"AR"`; log "exportacao de servico exige os DOIS" | `paisPrestacao` (`BR` → dígitos vazios), `consumoNoExterior`, `municipioPrestacao` |
+| S04 2240 | `municipioPrestacao:"355030"` (6 dígitos — vai, o mapeador não confere tamanho), `ufPrestacao:"S."`, `paisPrestacao:"1058"`, `consumoNoExterior:true`; log do par | `naturezaOperacaoId`, `paisResultadoServico` |
+| S05 2236 | L1 `chaveAcessoReferencia` (44) + `numeroLinhaReferencia:1`; L2 só a chave + log "NAO tem o item de origem" | L3 `numeroLinhaReferencia` (sem chave, não vai) |
+| S06 2235 | L1 e L2 `di.nDI:"2612345678"`, `tpViaTransp:"1"`, `tpIntermedio:"2"`, `ufDesemb:"SP"`, `dDI:"2026-09-10"`, `dDesemb:"2026-09-15"`, `cExportador`; L1 `adicoes:[{nAdicao:1,nSeqAdic:1,cFabricante:"FAB-A",vDescDI:1.5}]`, L2 `adicoes:[{nAdicao:2,nSeqAdic:1,cFabricante:"FAB-B"}]` (objetos DIFERENTES); L3 DI `2698765432` com `tpViaTransp:"4"`, `tpIntermedio:"3"`, `cnpjTerceiro:"12345678000195"`, `ufTerceiro:"MG"`, `nSeqAdic:3`; L4 DI `2611112222` com `vAFRMM:1234.56` e **sem** `adicoes`; logs: DI-A marítima sem AFRMM, DI-A conta e ordem sem CNPJ | `vAFRMM` na DI-A e DI-B (0) |
+| S07 2237 | cabeçalho `"VENDA"`; L1 `"BONIFICACAO"`, L3 `"REMESSA_AMOSTRA"`; **(E)** `indPres:"9"`, `transporte:{modFrete:"9", vagao, balsa}`, pagamentos `04` (sem tpIntegra) e `99` (sem descrição); logs de retTransp incompleto, cartão sem tpIntegra, 99 sem descrição | L2 `naturezaOperacaoId` (cala — o cabeçalho não é copiado para a linha); **(E)** `retencaoIcms`, `veiculo`, `reboque`, `volumes`, 3º pagamento |
+| S08 2234 | L1 `cfopCodigo:"6102"`; **(E)** `indPres:"0"`, `infAdicFisco:"fisco S08"`, `tipoDocumento:"NFCE"` | `naturezaOperacaoId`; L2 `cfopCodigo`; **(E)** `transporte` inteiro (placa sem modFrete) |
+| S09 2238 | `"VENDA_ZFM"`; `tpCredPresIbsZfm` L1 `"1"`, L2 `"4"`, L3 `"0"` | L4 `tpCredPresIbsZfm` |
+
+### 13.2 Despesas da importação, outras despesas e cobrança — 2026-09-30
+
+**S06 (2235) corrigido**, porque o cenário de importação não levava despesa nenhuma na base. PATCH
+nas linhas: L1 `despesasBaseII` 150 + `despesasBaseIcms` 80; L2 `despesasBaseII` 50; L3
+`despesasBaseIcms` 30 + `valorFrete` 10 + `valorSeguro` 4 (borda: o DTO diz que na importação o
+frete é `despesasBaseII` e o `<vFrete>` é suprimido); L4 sem despesa. O PATCH simulou (guarda 3,
+§13) e gravou `FP-salesorder-2235-payload.json`.
+
+**Lacunas contra o DTO**, medidas em `emitir-nota.dto.ts` e `simulacao-nota-input.dto.ts`:
+
+| DTO | estado |
+|---|---|
+| `linhas[].valorOutras` (`<vOutro>`, base de ICMS/IPI, **recusado em linha de importação**) | ✅ implementado: `custcol_fp_valor_outras` + `LINHA_VALOR_OUTRAS` + mapeador. Só existe na conta depois do deploy |
+| `cobranca { fatura, duplicatas[] }` (commit `7f6b1a5b` da plataforma) | ✅ implementado em `montarEmissao`: parcelas da sublist NATIVA `installment` (`duedate`, `amount`), ordenadas por vencimento; sem parcelas, uma duplicata no `duedate`; sem nenhum, o grupo não vai. `nFat` = `tranid`, `vOrig` = `total`; `vDesc`, `vLiq` e `nDup` ficam com a plataforma |
+| `exportacao { ufSaidaPais, xLocExporta, xLocDespacho }` | ❌ não mapeado — sem ele a exportação é rejeitada (355/225) |
+| `linhas[].codigoBarras` (cEAN) | ❌ só o `codigoBarrasTrib` vai |
+| `linhas[].codigoCnae` | ❌ `custrecord_fp_cnae` da location está no perfil e ninguém lê |
+
+Mapeador rodado fora do NetSuite (`N/*` como stub, perfil real): parcelas fora de ordem saem em
+ordem; "Net 30" vira uma duplicata; sem vencimento, sem `cobranca`; `valorOutras: 20` vai e
+`valorFrete: 0` não. `project:validate --server`: 0 erros.
+
+Cenários de cobrança (invoice, 2023-11-14, serviço, só se conferem pelo **Emitir**, chumbado, e
+**depois do deploy**):
+
+| cen. | id | prazo | `cobranca` que tem de sair |
+|---|---|---|---|
+| S10 | 2333 | 9 "2x" | `fatura {numero:"682", valorOriginal:999.99}`, `duplicatas [{2023-11-14, 500}, {2023-12-14, 499.99}]` |
+| S11 | 2334 | 1 "Net 15" | `fatura {numero:"683", valorOriginal:999.99}`, `duplicatas [{2023-11-29, 999.99}]` |
+
+### 13.3 A emissão parte do payload simulado — 2026-09-30
+
+`fp_sl_emissao.emitir` lê `FP-<tipo>-<id>-payload.json` da pasta `custscript_fp_pasta_payload` (o
+request do último `/simular`, gravado pelo `fp_ue_simular.anexarRastro`) e `montarEmissao(rec, base)`
+só ACRESCENTA `serie`, `tipoDocumento`, `idExterno`, `indPres`, `transporte`, `pagamento`,
+`cobranca`, `infAdic*`. Sem o arquivo, a emissão é **recusada** dizendo para simular antes — não
+remonta em silêncio. Harness: base intacta, `linhas` idênticas às simuladas; validate 0 erros.
+
+Consequência para os cenários: **salvar (simular) antes de Emitir** deixa de ser só ordem de
+guarda 6 — sem o `-payload.json` a emissão não sai. As 2333 e 2334 (cobrança) nasceram por REST,
+sem simular: precisam do save com `APAGUE` antes do Emitir.

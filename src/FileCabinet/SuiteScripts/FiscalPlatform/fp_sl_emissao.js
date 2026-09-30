@@ -36,9 +36,9 @@
  * e o botão o pinta na transação — aqui não há banner para pintar, e quem está olhando é a tela
  * de onde o usuário clicou.
  */
-define(['N/record', 'N/file', 'N/runtime', 'N/log',
+define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
   './fp_fields', './fp_client', './fp_md_map_simular', './fp_persist'],
-  function (record, file, runtime, log, fpFields, fpClient, fpMap, fpPersist) {
+  function (record, file, query, runtime, log, fpFields, fpClient, fpMap, fpPersist) {
 
     var ACOES = {
       EMITIR: 'emitir',
@@ -225,7 +225,15 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
      * que a plataforma responde com o documento que já existe.
      */
     function emitir(rec, id, opcoes) {
-      var payload = fpMap.montarEmissao(rec);
+      var simulado = payloadSimulado(rec.type, id, opcoes.pasta);
+      if (!simulado) {
+        return { ok: false, code: 0, body: { erro:
+          'não há payload simulado desta transação (FP-' + rec.type + '-' + id + '-payload.json na ' +
+          'pasta do payload). A emissão parte do que o /simular montou: salve a transação para ' +
+          'simular, confira o resultado, e emita depois.' } };
+      }
+
+      var payload = fpMap.montarEmissao(rec, simulado);
       if (!payload) {
         return { ok: false, code: 0, body: { erro: 'payload não montou — ver o log do mapeador' } };
       }
@@ -241,6 +249,25 @@ define(['N/record', 'N/file', 'N/runtime', 'N/log',
         ' tipo=' + payload.tipoDocumento + ' — consome numeração');
 
       return fpClient.emitir(payload, opcoes);
+    }
+
+    /**
+     * O REQUEST DO ÚLTIMO `/simular`, tal como foi enviado.
+     *
+     * É o arquivo que o `fp_ue_simular.anexarRastro` grava a cada simulação — nome só com tipo e id,
+     * sem carimbo, então o File Cabinet o SUBSTITUI e o que existe é sempre o último. O nome é a
+     * convenção `FP-` do bundle, e tem de ser o mesmo dos dois lados.
+     *
+     * Sem pasta, ou sem arquivo, devolve `null` e quem chama recusa a emissão dizendo por quê.
+     */
+    function payloadSimulado(tipo, id, pasta) {
+      if (!pasta) return null;
+      var r = query.runSuiteQL({
+        query: 'SELECT id FROM file WHERE folder = ? AND name = ?',
+        params: [pasta, 'FP-' + tipo + '-' + id + '-payload.json']
+      }).asMappedResults();
+      if (!r.length) return null;
+      return JSON.parse(file.load({ id: r[0].id }).getContents());
     }
 
     /**
