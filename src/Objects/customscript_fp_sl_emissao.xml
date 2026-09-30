@@ -12,8 +12,10 @@
       <allemployees>F</allemployees>
       <allpartners>F</allpartners>
       <allroles>T</allroles>
-      <audslctrole></audslctrole>
+      <audslctrole>CUSTOMER_CENTER|EMPLOYEE_CENTER|NETSUITE_SUPPORT_CENTER|NETSUITE_SUPPORT_CENTER__BASIC|ONLINE_FORM_USER|PARTNER_CENTER|SHOPPER|VENDOR_CENTER</audslctrole>
+      <eventtype></eventtype>
       <isdeployed>T</isdeployed>
+      <isonline>T</isonline>
       <loglevel>DEBUG</loglevel>
       <runasrole>ADMINISTRATOR</runasrole>
       <status>RELEASED</status>

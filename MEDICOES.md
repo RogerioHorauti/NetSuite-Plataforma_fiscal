@@ -1221,3 +1221,15 @@ qualificação FEDERAL no cliente 31, naturezas 44 e 46 liberadas para pedido/in
 ⚠ **Emissão bloqueada:** depois deste deploy, a URL externa do Suitelet voltou a responder "You do
 not have privileges to view this page" com o mesmo User-Agent que funcionava antes; `isonline`
 segue T. `exportacao` e `contingencia` ainda não medidos na conta.
+
+**Emissão medida (depois de o Rogerio importar o deployment do Suitelet):** 2533 `exportacao`
+`{xLocExporta:"Porto de Santos", ufSaidaPais:"SP", xLocDespacho:"Recinto Alfandegado Santos"}`;
+2633 `contingencia {xJust, via:"EPEC"}`; 2634 `contingencia {xJust}` sem `via` (plataforma → SVC).
+Nas três as `linhas` emitidas são idênticas às simuladas. **Todo o EmitirNotaDto de NF-e está
+medido na conta.**
+
+| fato | como se sabe |
+|---|---|
+| O "You do not have privileges" da URL externa era AUDIÊNCIA: `allroles` T só cobre papéis internos; o anônimo é `ONLINE_FORM_USER`, que precisa estar em `audslctrole` — é o aviso que o validate dava desde o início | XML importado da conta |
+| O deploy **reescreve a audiência** pelo XML (tirou o `ONLINE_FORM_USER` que estava só na UI) e **não** reescreve o `isonline` (§13.7) | antes × depois do deploy do `ba63e45` |
+| `object:import` traz papel customizado sem scriptid como `[SCRIPT_ID_NOT_SPECIFIED]`, e o validate o **recusa**. Removidas as 4 entradas; os papéis internos seguem cobertos por `allroles` T | validate |
