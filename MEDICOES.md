@@ -1071,3 +1071,29 @@ remonta em silêncio. Harness: base intacta, `linhas` idênticas às simuladas; 
 Consequência para os cenários: **salvar (simular) antes de Emitir** deixa de ser só ordem de
 guarda 6 — sem o `-payload.json` a emissão não sai. As 2333 e 2334 (cobrança) nasceram por REST,
 sem simular: precisam do save com `APAGUE` antes do Emitir.
+
+### 13.4 Prestação por entidade + endereço — 2026-09-30
+
+`custbody_fp_entidade_prestacao` (Entity `-9`, filtro de tipo aceita cliente **e fornecedor** —
+PATCH com o 25 entrou) e `custbody_fp_local_prestacao` (Address `-137`, filtrado pelo address book
+da entidade). **Saem** `MUN_PRESTACAO`, `MUN_PRESTACAO_NOME`, `UF_PRESTACAO`, `PAIS_PRESTACAO`
+(objetos removidos do projeto; os campos seguem na conta até serem apagados pela UI — §10.4).
+**Ficam** `PAIS_RESULTADO` e `CONSUMO_EXTERIOR`: declaração, não endereço (o DTO diz que o
+resultado "NÃO SE DERIVA DO ENDEREÇO DO TOMADOR"), e testes diferentes — ISS (LC 116, art. 2º,
+p.ú.) × LC 214, art. 80. O aviso "exige os DOIS" que o mapeador dava estava errado e saiu.
+
+| fato | como se sabe |
+|---|---|
+| `custbody_fp_local_prestacao` guarda o `internalid` da entrada do address book (`20`), não o `nkey` do endereço (`56`) | POST da 2433 e releitura |
+| `entityaddressbook` ⨝ `entityaddress` resolve cliente, fornecedor e funcionário numa consulta | SuiteQL |
+| Mapeador manda `municipioPrestacaoNome` + `ufPrestacao` (a plataforma resolve o IBGE; recusa nome sem UF) e `paisPrestacao` pelo `customrecord_fp_pais` (BR → 1058) | `simulacao-nota-input.dto.ts` §municipioPrestacaoNome; SuiteQL |
+| ⚠ **17 dos 20 endereços da conta têm cidade e UF só no `addrtext`**, com `city`/`state` vazios (2019/2021). Sem município o DTO assume o do PRESTADOR. O mapeador avisa no log; não extrai do texto. Conserto: regravar o endereço | `SELECT a.* FROM entityaddress` |
+
+Cenários (os de S02–S04 da §13.1 ficam valendo só para resultado/consumo):
+
+| cen. | id | local | nas linhas tem de sair |
+|---|---|---|---|
+| S02 | 2241 | 20 Manaus (cliente 28) | `municipioPrestacaoNome:"Manaus"`, `ufPrestacao:"AM"`, `paisPrestacao:"1058"`, `paisResultadoServico:"US"`, `consumoNoExterior:true` |
+| S03 | 2239 | 1 Cliente SP (sem city) | só `paisPrestacao:"1058"` e `paisResultadoServico:"AR"`; log "SEM município ou UF" |
+| S04 | 2240 | 11 Orlando/US (fornecedor 25) | `paisPrestacao` = cPais dos EUA, `municipioPrestacaoNome:"Orlando"`, `ufPrestacao:"FL"`, `consumoNoExterior:true` → o motor RECUSA (prestação no exterior, por desenho) |
+| S12 | 2433 | 20 Manaus | igual ao S02 sem resultado/consumo |

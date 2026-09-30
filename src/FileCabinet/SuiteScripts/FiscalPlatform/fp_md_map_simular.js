@@ -34,7 +34,8 @@
  * nota de quinhentas custam o mesmo.
  *
  * As idas, todas fora do laço de linhas: cadastro dos itens, unidades, naturezas, cliente,
- * transportador, endereço do transportador, país e adições das DIs. Oito, fixas.
+ * transportador, endereço do transportador, país, DIs e local da prestação (mais o país dele).
+ * Fixas por nota.
  *
  * ⚠ Já houve um `record.load` POR DI aqui, e carga de registro é o que mais pesa. Nota com dez
  * importados custava dez cargas — o tipo de conta que estoura em produção e passa no teste, porque
@@ -1046,48 +1047,76 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
      *
      * O DTO declara `municipioPrestacao` e companhia na LINHA, mas na prática uma nota de serviço
      * tem UM local de prestação: a NFS-e é municipal, e serviço prestado em dois municípios são
-     * duas notas. Por isso o dado é digitado uma vez, na aba Shipping, e o mapeador o copia para
-     * cada linha — quem preenche não repete, e o contrato continua honrado.
+     * duas notas. Por isso o local é escolhido uma vez, no corpo, e o mapeador o copia para cada
+     * linha — quem preenche não repete, e o contrato continua honrado.
      *
-     * ⚠ `paisResultadoServico` + `consumoNoExterior` são o par CUMULATIVO da exportação de serviço
-     * (LC 116/2003, art. 2º, parágrafo único): os DOIS, não um. Serviço prestado aqui para cliente
-     * de fora, com o resultado verificado AQUI, não é exportação — e mandar só um dos dois é o que
-     * faz o motor decidir errado.
+     * O LOCAL É UM ENDEREÇO DE CADASTRO: entidade + entrada do address book dela. Município, UF e
+     * país saem do endereço; o código IBGE NÃO — a plataforma o resolve por `municipioPrestacaoNome`
+     * + `ufPrestacao` (e recusa nome ambíguo sem UF). Digitar IBGE nota a nota era onde o erro
+     * nascia, e cadastro errado aparece na primeira recusa, não calado em cada nota.
+     *
+     * `paisResultadoServico` e `consumoNoExterior` são DECLARAÇÃO, não endereço, e testes distintos:
+     * o resultado é o do ISS (LC 116/2003, art. 2º, p.ú.), o consumo é o da LC 214/2025, art. 80.
+     * Quando a natureza declara exportação, quem exige os dois é o motor — aviso aqui seria a
+     * segunda régua.
      */
     function montarPrestacao(newRecord) {
       var p = {};
 
-      var mun = digitos(valorTexto(newRecord, fpFields.id('MUN_PRESTACAO')));
-      if (mun) p.municipioPrestacao = mun;
-
-      // O nome é o caminho de exceção: só vai quando o código IBGE não foi informado.
-      var nome = valorTexto(newRecord, fpFields.id('MUN_PRESTACAO_NOME'));
-      if (nome && !mun) p.municipioPrestacaoNome = nome;
-
-      var uf = valorTexto(newRecord, fpFields.id('UF_PRESTACAO'));
-      if (uf) p.ufPrestacao = uf.toUpperCase().substring(0, 2);
-
-      var pais = digitos(valorTexto(newRecord, fpFields.id('PAIS_PRESTACAO')));
-      if (pais) p.paisPrestacao = pais;
+      var end = enderecoDaPrestacao(newRecord);
+      if (end) {
+        if (texto(end.city)) p.municipioPrestacaoNome = texto(end.city);
+        var uf = texto(end.dropdownstate) || texto(end.state);
+        if (uf) p.ufPrestacao = uf.toUpperCase().substring(0, 2);
+        // cPais do BACEN, que é o que o DTO pede ("1058"). O endereço guarda o ISO.
+        var cpais = codigoDoPais(end.country);
+        if (cpais) p.paisPrestacao = cpais;
+      }
 
       var resultado = valorTexto(newRecord, fpFields.id('PAIS_RESULTADO'));
       if (resultado) p.paisResultadoServico = resultado.toUpperCase();
 
-      // `campoConsumo && ...` devolveria `null` quando o perfil não resolve a chave, e `null` não
-      // é `false`: a comparação abaixo disparava o aviso em TODA nota sem serviço.
       var campoConsumo = fpFields.id('CONSUMO_EXTERIOR');
-      var consumo = !!(campoConsumo && newRecord.getValue({ fieldId: campoConsumo }) === true);
-      if (consumo) p.consumoNoExterior = true;
-
-      // Só avisa quando UM dos dois foi declarado. Nenhum dos dois é a nota de mercadoria comum.
-      if ((consumo || !!resultado) && consumo !== !!resultado) {
-        log.audit('fp_md_map_simular.montarPrestacao',
-          'exportacao de servico exige os DOIS: pais do resultado e consumo no exterior. So um ' +
-          'esta preenchido, e o motor nao tem como caracterizar a exportacao (LC 116/2003, ' +
-          'art. 2o, paragrafo unico).');
-      }
+      if (campoConsumo && newRecord.getValue({ fieldId: campoConsumo }) === true) p.consumoNoExterior = true;
 
       return temAlgo(p) ? p : null;
+    }
+
+    /**
+     * A entrada do address book escolhida em `LOCAL_PRESTACAO`, resolvida em UMA consulta.
+     *
+     * MEDIDO em 2026-09-30: o campo (select `-137`) guarda o `internalid` da entrada do address
+     * book (`20`), não o `nkey` do endereço (`56`). `entityaddressbook` cobre cliente, fornecedor e
+     * funcionário — é o filtro de tipo do campo de entidade que decide quais aparecem.
+     */
+    function enderecoDaPrestacao(newRecord) {
+      var campo = fpFields.id('LOCAL_PRESTACAO');
+      var id = campo && newRecord.getValue({ fieldId: campo });
+      if (!id) return null;
+
+      var r = query.runSuiteQL({
+        query: 'SELECT a.city, a.state, a.dropdownstate, a.country FROM entityaddressbook b ' +
+               'JOIN entityaddress a ON a.nkey = b.addressbookaddress WHERE b.internalid = ?',
+        params: [id]
+      }).asMappedResults();
+
+      if (!r.length) {
+        log.audit('fp_md_map_simular.enderecoDaPrestacao',
+          'local da prestação ' + id + ' não encontrado no address book — a nota sai sem o local.');
+        return null;
+      }
+
+      // ⚠ MEDIDO: endereços antigos desta conta têm cidade e UF SÓ no `addrtext` (texto de exibição),
+      // com `city`/`state` vazios. Sem município o DTO assume o do PRESTADOR — o ISS iria para o
+      // ente errado sem erro. Não se extrai do texto: o conserto é regravar o endereço.
+      if (!texto(r[0].city) || !(texto(r[0].dropdownstate) || texto(r[0].state))) {
+        log.audit('fp_md_map_simular.enderecoDaPrestacao',
+          'local da prestação ' + id + ' SEM município ou UF nos campos do endereço (city="' +
+          texto(r[0].city) + '" state="' + (texto(r[0].dropdownstate) || texto(r[0].state)) + '"). ' +
+          'Sem eles a plataforma assume o município do PRESTADOR. Abra o endereço no cadastro da ' +
+          'entidade e salve com cidade e estado preenchidos.');
+      }
+      return r[0];
     }
 
     /** Cópia rasa: duas linhas na mesma DI não podem compartilhar o objeto, senão a adição de uma

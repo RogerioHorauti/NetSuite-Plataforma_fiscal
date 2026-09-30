@@ -85,18 +85,20 @@ define([], function () {
       "RET_CMUNFG": "custbody_fp_ret_cmunfg",
 
       "_grupo_prestacao": [
-        "ONDE o servico foi prestado, na aba Shipping nativa (TRANSACTIONSHIPPING). E de CORPO e",
-        "nao de linha: o DTO admite por linha, mas uma nota de servico e de UM local de prestacao",
-        "-- a NFS-e e municipal. Nota com dois municipios sao duas notas.",
+        "ONDE o servico foi prestado, na subaba Local da Prestacao. E de CORPO e nao de linha: o",
+        "DTO admite por linha, mas uma nota de servico e de UM local -- a NFS-e e municipal.",
         "",
-        "PAIS_RESULTADO e CONSUMO_EXTERIOR sao o par CUMULATIVO da exportacao de servico (LC",
-        "116/2003, art. 2o, paragrafo unico): os dois, nao um. Servico prestado aqui para cliente",
-        "de fora, com resultado AQUI, NAO e exportacao."
+        "O LOCAL e um ENDERECO DE CADASTRO, nao texto: escolhe-se a entidade e uma entrada do",
+        "address book dela. Municipio, UF e pais saem do endereco, e a plataforma resolve o IBGE",
+        "por nome + UF. Digitar codigo IBGE em cada nota era onde o erro nascia.",
+        "",
+        "PAIS_RESULTADO e CONSUMO_EXTERIOR NAO saem de endereco nenhum: sao DECLARACAO de quem",
+        "prestou, e testes diferentes -- o resultado e o do ISS (LC 116/2003, art. 2o, p.u.), o",
+        "consumo e o da LC 214/2025, art. 80. Um nao dispensa o outro, e o DTO diz que o resultado",
+        "NAO se deriva do endereco do tomador."
       ],
-      "MUN_PRESTACAO": "custbody_fp_mun_prestacao",
-      "MUN_PRESTACAO_NOME": "custbody_fp_mun_prestacao_nome",
-      "UF_PRESTACAO": "custbody_fp_uf_prestacao",
-      "PAIS_PRESTACAO": "custbody_fp_pais_prestacao",
+      "ENTIDADE_PRESTACAO": "custbody_fp_entidade_prestacao",
+      "LOCAL_PRESTACAO": "custbody_fp_local_prestacao",
       "PAIS_RESULTADO": "custbody_fp_pais_resultado",
       "CONSUMO_EXTERIOR": "custbody_fp_consumo_exterior",
 
