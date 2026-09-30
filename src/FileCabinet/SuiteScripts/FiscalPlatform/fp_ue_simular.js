@@ -273,8 +273,7 @@ define([
         guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada.rastro });
         fpMsg.sucesso(corrId, '');
         if (entrada.avisos.length) fpMsg.aviso(corrId, entrada.avisos);
-        log.audit('fp_ue_simular.entrada', 'natureza declarada · ' + entrada.diferentes + ' diferença(s) documento × simulação · ' +
-          'governança restante: ' + runtime.getCurrentScript().getRemainingUsage());
+        log.audit('fp_ue_simular.entrada', 'natureza declarada · ' + entrada.diferentes + ' diferença(s) documento × simulação');
         return;
       }
       if (entrada) {
@@ -308,8 +307,8 @@ define([
         fpMsg.aviso(corrId, resposta.body.avisos);
       }
 
-      log.audit('fp_ue_simular', 'ok em ' + resposta.durationMs + 'ms · governança restante: ' +
-        runtime.getCurrentScript().getRemainingUsage());
+      // A governança da execução sai no fim, pelo `fp_governanca`.
+      log.audit('fp_ue_simular', 'ok em ' + resposta.durationMs + 'ms');
     } catch (e) {
       // GUARDA 1 — o save NÃO cai. Nem falha de rede, nem defeito do mapeador, nem governança.
       log.error('fp_ue_simular.beforeSubmit', { name: e.name, message: e.message, stack: e.stack });

@@ -1407,3 +1407,18 @@ pagamentos (forma, indicador e integração de todas as linhas — `listasDoPaga
 exceção —, AUDIT `fp_governanca` com "usou N · restam M (entrou com K)". ⚠ O GL plug-in fica FORA:
 ele só importa `N/query`/`N/log`, roda síncrono no save, e a §8.8 registra como não medido se
 exceção nele derruba o save — pôr `N/runtime` ali sem medir arrisca o lançamento.
+
+**Governança medida na conta depois do deploy do `769cc4f`** (linhas `fp_governanca` do log):
+
+| execução | usou | observação |
+|---|---|---|
+| `fp_ue_simular.beforeSubmit` vendor bill 2734 **criada por REST** | 42 | simulação + `existe` + `reclassificar`, e **sem** o erro do `getText`: 6 impostos e 5 anexos |
+| `fp_ue_simular.afterSubmit` create | 160 | 5 anexos (~30 por `file.create`+`save`+`attach`) |
+| `fp_ue_simular.beforeSubmit` venda (2238, 2239) | 42 e 62 | |
+| `fp_ue_simular.afterSubmit` edit | 70 | 2 anexos |
+| `fp_sl_emissao` emitir 2239 | 111 | |
+| `beforeSubmit` xedit (o `submitFields` do persist) | 0 | a guarda pula |
+| `beforeLoad` | 0 | |
+
+✅ **Cada ponto de entrada começa com 1000 próprias**: o `afterSubmit` entra com 1000 depois de um
+`beforeSubmit` que usou 42 — as cotas NÃO são compartilhadas. O custo dominante é anexar arquivo.
