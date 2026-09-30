@@ -1381,3 +1381,14 @@ rótulo do botão, sublista de mídia na cópia.
 Harness com `getText` LANÇANDO a mesma exceção: venda (`VENDA_PROD`, `NFE`, `indPres` 1, `modFrete`
 0, contingência `EPEC`) e compra (`COMPRA` + `COMPRA_ATIVO` no item 2) montam inteiras. Custo: uma
 consulta por campo SELECT preenchido, fora do laço de linhas.
+
+### 18.1 Listas: junta os ids, UMA busca, depois preenche
+
+Pedido do Rogerio. `resolverListas` faz um `UNION ALL` entre as tabelas das listas (medido pelo
+token: custom record e lista custom na mesma consulta, cada linha marcada pelo grupo `g`).
+`listasDoCorpo` (natureza, tipo de documento, `indPres`, modalidade do frete, via da contingência) e
+`listasDasLinhas` (unidade, natureza, hipótese de ST, ZFM) memorizam por registro, e o
+`montarReclassificar` reaproveita a busca do `montar`. Harness contando consultas: venda com todas as
+listas **9 → 2**; compra (`montar` + `montarReclassificar`) **7 → 2**. Seguem à parte, uma por nota e
+só quando há dado: endereço do fornecedor, país (cPais e ISO), DIs em lote, local da prestação,
+itens em lote.

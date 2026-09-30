@@ -151,7 +151,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var payload = JSON.parse(JSON.stringify(base));
 
       var serie = serieDaFilial(newRecord);
-      var tipoDoc = textoDaLista(newRecord, 'TIPODOC', 'LISTA_TIPODOC');
+      var tipoDoc = textoDaLista(newRecord, 'TIPODOC');
 
       if (!serie || !tipoDoc) {
         log.error('fp_md_map_simular.montarEmissao',
@@ -176,7 +176,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       // DTO diz que `null` deriva e valor explícito é OVERRIDE. Ele é eixo do DIFAL — mandar 0
       // por engano sobrepõe a derivação e o erro sai como recolhimento a menor.
 
-      var indPres = codigoDaLista(textoDaLista(newRecord, 'IND_PRES', 'LISTA_IND_PRES'));
+      var indPres = codigoDaLista(textoDaLista(newRecord, 'IND_PRES'));
       if (indPres) payload.indPres = indPres;
 
       var transporte = montarTransporte(newRecord);
@@ -236,7 +236,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
      * o nome do registro, que é onde o código foi carregado.
      */
     function naturezaDeclarada(newRecord) {
-      return textoDaLista(newRecord, 'NATUREZA', 'NATUREZA_OPERACAO');
+      return textoDaLista(newRecord, 'NATUREZA');
     
     }
 
@@ -407,7 +407,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       if (!just) return null;
 
       var c = { xJust: texto(just) };
-      var via = codigoDaLista(textoDaLista(newRecord, 'CONT_VIA', 'LISTA_CONT_VIA'));
+      var via = codigoDaLista(textoDaLista(newRecord, 'CONT_VIA'));
       if (via) c.via = via;
       return c;
     }
@@ -501,7 +501,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
      * dado diverge.
      */
     function montarTransporte(newRecord) {
-      var modFrete = codigoDaLista(textoDaLista(newRecord, 'FRETE_MODALIDADE', 'LISTA_MOD_FRETE'));
+      var modFrete = codigoDaLista(textoDaLista(newRecord, 'FRETE_MODALIDADE'));
       if (!modFrete) return null;
 
       var t = { modFrete: modFrete };
@@ -902,25 +902,17 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       // `getSublistText` fica de fora deste módulo: em parte dos contextos ele devolve
       // `undefined` sem erro, e aí a unidade sairia vazia no payload sem nada acusar. Resolver por
       // SuiteQL é uma consulta a mais e um comportamento a menos para adivinhar.
-      var unidades = resolverTextos(
-        colunaDaLinha(newRecord, total, 'units'),
-        'SELECT internalid AS id, abbreviation AS txt FROM unitstypeuom', 'internalid');
+      // UMA consulta para TODAS as listas das linhas — unidade, natureza, hipótese de ST e ZFM:
+      // junta os ids de todas as linhas, busca uma vez, e o laço abaixo só preenche.
+      var L = listasDasLinhas(newRecord, total);
+      var unidades = L.UNIDADE;
 
       var prestacao = montarPrestacao(newRecord);
       var dis = carregarDis(newRecord, total);
 
       var campoNat = fpFields.idLinha('LINHA_NATUREZA');
-      var naturezas = campoNat
-        ? resolverTextos(colunaDaLinha(newRecord, total, campoNat),
-            'SELECT id AS id, name AS txt FROM ' + fpFields.registro('NATUREZA_OPERACAO'), 'id')
-        : {};
-
-      // As outras colunas SELECT da linha, pelo mesmo caminho da natureza: o id do valor vira o
-      // NOME da lista numa consulta por lista, e é do nome ("PARTILHA - ...") que o código sai.
-      var listas = {
-        hipotese: textosDaLista(newRecord, total, 'LINHA_HIPOTESE_ST', 'LISTA_HIPOTESE_ST'),
-        zfm: textosDaLista(newRecord, total, 'LINHA_CRED_ZFM', 'LISTA_CRED_ZFM')
-      };
+      var naturezas = L.LINHA_NATUREZA;
+      var listas = { hipotese: L.LINHA_HIPOTESE_ST, zfm: L.LINHA_CRED_ZFM };
 
       var linhas = [];
       for (i = 0; i < total; i++) {
@@ -1305,16 +1297,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       if (zfm !== '') linha.tpCredPresIbsZfm = zfm;
     }
 
-    /** `{ id: nome }` dos valores de uma coluna SELECT da linha, numa consulta. Vazio sem lista. */
-    function textosDaLista(newRecord, total, chaveCampo, chaveLista) {
-      var campo = fpFields.idLinha(chaveCampo);
-      var lista = fpFields.registro(chaveLista);
-      if (!campo || !lista) return {};
-      return resolverTextos(colunaDaLinha(newRecord, total, campo),
-        'SELECT id AS id, name AS txt FROM ' + lista, 'id');
-    }
-
-    /** O NOME do valor escolhido na coluna SELECT, pelo mapa de `textosDaLista`. */
+/** O NOME do valor escolhido na coluna SELECT, pelo mapa de `listasDasLinhas`. */
     function textoDaLinha(newRecord, chaveCampo, i, mapa) {
       var campo = fpFields.idLinha(chaveCampo);
       var id = campo && valorLinha(newRecord, campo, i);
@@ -1569,27 +1552,79 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     }
 
     /**
-     * `{ id: texto }` numa consulta só, para o conjunto inteiro.
+     * LISTAS: JUNTA TODOS OS IDS, BUSCA UMA VEZ, DEPOIS PREENCHE — é assim que funciona no NetSuite.
      *
-     * Existe no lugar de `getSublistText` — que em parte dos contextos devolve `undefined` sem
-     * erro, e o campo sairia vazio do payload sem nada acusar. Falha devolve `{}`: o payload sai
-     * sem aquele campo, e o motor recusa dizendo o que falta, que é melhor que adivinhar.
+     * `pedidos`: `[{ grupo, tabela, colId, colTxt, ids }]`. Vira UMA consulta com `UNION ALL` entre
+     * as tabelas (medido na conta em 2026-09-30: lista custom e custom record na mesma consulta,
+     * cada linha marcada pelo grupo). Devolve `{ grupo: { id: texto } }`, com grupo vazio para
+     * pedido sem id — quem preenche não precisa testar.
+     *
+     * ⚠ MEDIDO: o SuiteQL NÃO aceita alias no `WHERE` — `unitstypeuom` se filtra por `internalid`, e
+     * `... AS id ... WHERE id IN (2)` devolve 400. Por isso a coluna de filtro vem separada.
+     *
+     * Existe no lugar de `getText`/`getSublistText`: o primeiro LANÇA no `beforeSubmit` de registro
+     * criado por REST, o segundo devolve `undefined` sem erro em parte dos contextos.
      */
-    function resolverTextos(ids, sql, colunaId) {
-      if (!ids.length) return {};
-      // MEDIDO: o SuiteQL NÃO aceita alias no `WHERE`. `unitstypeuom` se filtra por
-      // `internalid`, e `... AS id ... WHERE id IN (2)` devolve 400. A coluna de filtro vem
-      // separada do SELECT por isso.
-      var r = query.runSuiteQL({
-        query: sql + ' WHERE ' + colunaId + ' IN (' +
-               ids.map(function () { return '?'; }).join(',') + ')',
-        params: ids
-      }).asMappedResults();
-
-      var out = {};
-      for (var i = 0; i < r.length; i++) out[String(r[i].id)] = texto(r[i].txt);
+    function resolverListas(pedidos) {
+      var out = {}, partes = [], params = [];
+      for (var i = 0; i < pedidos.length; i++) {
+        var p = pedidos[i];
+        out[p.grupo] = {};
+        if (!p.tabela || !p.ids.length) continue;
+        partes.push("SELECT '" + p.grupo + "' AS g, " + p.colId + ' AS id, ' + p.colTxt + ' AS txt FROM ' +
+          p.tabela + ' WHERE ' + p.colId + ' IN (' + p.ids.map(function () { return '?'; }).join(',') + ')');
+        params = params.concat(p.ids);
+      }
+      if (!partes.length) return out;
+      var r = query.runSuiteQL({ query: partes.join(' UNION ALL '), params: params }).asMappedResults();
+      for (var k = 0; k < r.length; k++) out[r[k].g][String(r[k].id)] = texto(r[k].txt);
       return out;
-    
+    }
+
+    /** Os campos SELECT de CORPO que o payload lê pelo NOME, e o registro de cada lista. */
+    var LISTAS_DO_CORPO = [['NATUREZA', 'NATUREZA_OPERACAO'], ['TIPODOC', 'LISTA_TIPODOC'],
+      ['IND_PRES', 'LISTA_IND_PRES'], ['FRETE_MODALIDADE', 'LISTA_MOD_FRETE'], ['CONT_VIA', 'LISTA_CONT_VIA']];
+
+    // Memória POR REGISTRO: `montar`, `montarEmissao` e `montarReclassificar` da mesma transação não
+    // repetem a busca. Registro diferente é objeto diferente, e aí busca de novo.
+    var memoCorpo = { rec: null, v: null };
+    var memoLinhas = { rec: null, v: null };
+
+    /** `{ chave: nome }` de todos os campos SELECT de corpo preenchidos — uma consulta. */
+    function listasDoCorpo(newRecord) {
+      if (memoCorpo.rec === newRecord) return memoCorpo.v;
+      var pedidos = [];
+      for (var i = 0; i < LISTAS_DO_CORPO.length; i++) {
+        var campo = fpFields.id(LISTAS_DO_CORPO[i][0]);
+        var id = campo && newRecord.getValue({ fieldId: campo });
+        pedidos.push({ grupo: LISTAS_DO_CORPO[i][0], tabela: fpFields.registro(LISTAS_DO_CORPO[i][1]),
+          colId: 'id', colTxt: 'name', ids: id ? [String(id)] : [] });
+      }
+      var r = resolverListas(pedidos), v = {};
+      for (var j = 0; j < pedidos.length; j++) {
+        var g = pedidos[j].grupo;
+        v[g] = pedidos[j].ids.length ? (r[g][pedidos[j].ids[0]] || null) : null;
+      }
+      memoCorpo = { rec: newRecord, v: v };
+      return v;
+    }
+
+    /** `{ UNIDADE, LINHA_NATUREZA, LINHA_HIPOTESE_ST, LINHA_CRED_ZFM }`, cada um `{ id: nome }`. */
+    function listasDasLinhas(newRecord, total) {
+      if (memoLinhas.rec === newRecord) return memoLinhas.v;
+      var col = function (chave) { var c = fpFields.idLinha(chave); return c ? colunaDaLinha(newRecord, total, c) : []; };
+      var v = resolverListas([
+        { grupo: 'UNIDADE', tabela: 'unitstypeuom', colId: 'internalid', colTxt: 'abbreviation',
+          ids: colunaDaLinha(newRecord, total, 'units') },
+        { grupo: 'LINHA_NATUREZA', tabela: fpFields.registro('NATUREZA_OPERACAO'), colId: 'id', colTxt: 'name',
+          ids: col('LINHA_NATUREZA') },
+        { grupo: 'LINHA_HIPOTESE_ST', tabela: fpFields.registro('LISTA_HIPOTESE_ST'), colId: 'id', colTxt: 'name',
+          ids: col('LINHA_HIPOTESE_ST') },
+        { grupo: 'LINHA_CRED_ZFM', tabela: fpFields.registro('LISTA_CRED_ZFM'), colId: 'id', colTxt: 'name',
+          ids: col('LINHA_CRED_ZFM') }
+      ]);
+      memoLinhas = { rec: newRecord, v: v };
+      return v;
     }
 
     /**
@@ -1603,23 +1638,14 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     }
 
     /**
-     * O NOME do valor de um campo SELECT de corpo, por SuiteQL — nunca `getText`.
+     * O NOME do valor de um campo SELECT de corpo — nunca `getText`, e nunca uma consulta por campo.
      *
      * ⚠ MEDIDO em 2026-09-30 (vendor bill 2733, criada por REST): no `beforeSubmit`, `getText` de
-     * campo posto por `setValue` na mesma requisição LANÇA `SSS_INVALID_API_USAGE` — "You must use
-     * getValue to return the value set with setValue". A guarda 1 engolia, e o save passava sem
-     * simular. O id do `getValue` responde em todo contexto; o nome sai do registro da lista.
+     * campo posto por `setValue` na mesma requisição LANÇA `SSS_INVALID_API_USAGE`. O id do
+     * `getValue` responde em todo contexto, e o nome de TODOS os campos sai de `listasDoCorpo`.
      */
-    function textoDaLista(newRecord, chaveCampo, chaveRegistro) {
-      var campo = fpFields.id(chaveCampo);
-      var registro = fpFields.registro(chaveRegistro);
-      var id = campo && newRecord.getValue({ fieldId: campo });
-      if (!id || !registro) return null;
-      var r = query.runSuiteQL({
-        query: 'SELECT name AS txt FROM ' + registro + ' WHERE id = ?', params: [id]
-      }).asMappedResults();
-      return r.length ? texto(r[0].txt) || null : null;
-    
+    function textoDaLista(newRecord, chaveCampo) {
+      return listasDoCorpo(newRecord)[chaveCampo] || null;
     }
 
     function lookup(tipo, id, colunas) {
@@ -1713,10 +1739,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     function montarReclassificar(newRecord) {
       var total = contarLinhas(newRecord);
       var campoNat = fpFields.idLinha('LINHA_NATUREZA');
-      var naturezas = campoNat
-        ? resolverTextos(colunaDaLinha(newRecord, total, campoNat),
-            'SELECT id AS id, name AS txt FROM ' + fpFields.registro('NATUREZA_OPERACAO'), 'id')
-        : {};
+      var naturezas = listasDasLinhas(newRecord, total).LINHA_NATUREZA;
       var porItem = [];
       for (var i = 0; i < total; i++) {
         if (!numero(valorLinha(newRecord, 'rate', i)) && !numero(valorLinha(newRecord, 'amount', i))) continue;
