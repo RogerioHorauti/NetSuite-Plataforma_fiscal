@@ -1148,7 +1148,7 @@ Entidade da prestação: tentado default pelo `entity` da transação e revertid
 ### 13.7 Payload de EMISSÃO — 4 cenários, 2026-09-30
 
 > Método: Suitelet chamado pela URL externa (deployment com *Available Without Login*, ligado pelo
-> Rogerio na UI — **não está no XML**, o próximo deploy o desliga), POST com `tipo`/`id`/`acao` na
+> Rogerio na UI — **não está no XML, e o deploy NÃO o desliga**: `isonline` seguiu T depois do deploy do `c24e526`), POST com `tipo`/`id`/`acao` na
 > query e `{"texto":""}` no corpo, como o `fp_cs_transacao`. Arquivo lido por **SOAP `get` de
 > `file` com o mesmo token TBA** — o REST não expõe `file`, o SOAP sim, e devolve o conteúdo em
 > base64. `fp_client.emitir` chumbado: nada transmitido, e a resposta sem chave não persistiu nada.
@@ -1177,3 +1177,5 @@ propósito — isento/PF). Records Browser 2026.1 (`2026_1_Schema_and_Records_Br
 o endereço nativo só tem `addr1-3`, `city`, `state`, `zip`, `country` e o `addrtext` montado — número
 não é campo nativo; o vendor tem `vatregnumber` e `taxidnum` nativos, **vazios no fornecedor 11**
 junto com o `custentity_fp_cnpj_cpf`, então não há outra fonte a ler.
+
+Depois do deploy do `c24e526`: 2233 re-emitida (chumbada) e o log trouxe "transportador 11 vai SEM CNPJ/CPF (custentity_fp_cnpj_cpf), município, UF..." junto do corte do 6º reboque.
