@@ -842,6 +842,13 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
             'SELECT id AS id, name AS txt FROM ' + fpFields.registro('NATUREZA_OPERACAO'), 'id')
         : {};
 
+      // As outras colunas SELECT da linha, pelo mesmo caminho da natureza: o id do valor vira o
+      // NOME da lista numa consulta por lista, e é do nome ("PARTILHA - ...") que o código sai.
+      var listas = {
+        hipotese: textosDaLista(newRecord, total, 'LINHA_HIPOTESE_ST', 'LISTA_HIPOTESE_ST'),
+        zfm: textosDaLista(newRecord, total, 'LINHA_CRED_ZFM', 'LISTA_CRED_ZFM')
+      };
+
       var linhas = [];
       for (i = 0; i < total; i++) {
         var item = valorLinha(newRecord, 'item', i);
@@ -881,7 +888,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         var natLinha = campoNat && naturezas[String(valorLinha(newRecord, campoNat, i))];
         if (natLinha) linha.naturezaOperacaoId = natLinha;
 
-        acrescentarDaLinha(newRecord, i, linha);
+        acrescentarDaLinha(newRecord, i, linha, listas);
         if (prestacao) copiarPara(linha, prestacao);
 
         // A LINHA escolhe a DI, e leva a SUA adição dentro dela. Duas linhas podem apontar a
@@ -978,8 +985,17 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         params: ids
       }).asMappedResults();
 
+      // ⚠ MEDIDO em 2026-09-30: o SuiteQL devolve o alias em MINÚSCULAS (`AS NDI` volta `ndi`). O
+      // `montarDi` lê `r.NDI`, achava tudo vazio e descartava a DI — sem erro, e as linhas saíam
+      // sem `di` com as despesas aduaneiras no lugar. Normaliza aqui, uma vez.
       var out = {};
-      for (var n = 0; n < linhas.length; n++) out[String(linhas[n].id)] = montarDi(linhas[n]);
+      for (var n = 0; n < linhas.length; n++) {
+        var r = {};
+        for (var col in linhas[n]) {
+          if (Object.prototype.hasOwnProperty.call(linhas[n], col)) r[col.toUpperCase()] = linhas[n][col];
+        }
+        out[String(linhas[n].id)] = montarDi(r);
+      }
       return out;
     }
 
@@ -1159,7 +1175,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
      * quantidade — e é o perfil que separa os dois. Aqui vai o segundo grupo: o que muda a cada
      * venda do mesmo produto.
      */
-    function acrescentarDaLinha(newRecord, i, linha) {
+    function acrescentarDaLinha(newRecord, i, linha, listas) {
       var info = textoLinha(newRecord, fpFields.idLinha('LINHA_INFO_ADICIONAL'), i);
       if (info) linha.infoAdicional = info;
 
@@ -1201,7 +1217,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       valorSeTiver(newRecord, i, linha, 'LINHA_QTD_TRIB', 'quantidadeTributavel');
       valorSeTiver(newRecord, i, linha, 'LINHA_VUNIT_TRIB', 'valorUnitarioTrib');
 
-      var hipotese = codigoDaLista(textoLinha(newRecord, fpFields.idLinha('LINHA_HIPOTESE_ST'), i));
+      var hipotese = codigoDaLista(textoDaLinha(newRecord, 'LINHA_HIPOTESE_ST', i, listas.hipotese));
       if (hipotese) linha.hipoteseStInterestadual = hipotese;
 
       // Mesmo desenho do `indDoacao`: o DTO aceita APENAS 1, e a ausência é o "não".
@@ -1210,8 +1226,24 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
 
       // ZFM: o "0" é um valor de verdade — "sem crédito presumido" —, e não a ausência. Por isso
       // aqui não se testa o número e sim se a lista foi escolhida.
-      var zfm = codigoDaLista(textoLinha(newRecord, fpFields.idLinha('LINHA_CRED_ZFM'), i));
+      var zfm = codigoDaLista(textoDaLinha(newRecord, 'LINHA_CRED_ZFM', i, listas.zfm));
       if (zfm !== '') linha.tpCredPresIbsZfm = zfm;
+    }
+
+    /** `{ id: nome }` dos valores de uma coluna SELECT da linha, numa consulta. Vazio sem lista. */
+    function textosDaLista(newRecord, total, chaveCampo, chaveLista) {
+      var campo = fpFields.idLinha(chaveCampo);
+      var lista = fpFields.registro(chaveLista);
+      if (!campo || !lista) return {};
+      return resolverTextos(colunaDaLinha(newRecord, total, campo),
+        'SELECT id AS id, name AS txt FROM ' + lista, 'id');
+    }
+
+    /** O NOME do valor escolhido na coluna SELECT, pelo mapa de `textosDaLista`. */
+    function textoDaLinha(newRecord, chaveCampo, i, mapa) {
+      var campo = fpFields.idLinha(chaveCampo);
+      var id = campo && valorLinha(newRecord, campo, i);
+      return id ? (mapa[String(id)] || '') : '';
     }
 
     /** Número que vale a pena mandar. Zero é ausência em todos estes campos. */

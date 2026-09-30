@@ -351,7 +351,15 @@ define([], function () {
       "VOLUME": "customrecord_fp_volume",
       "DI": "customrecord_fp_di",
       "PAGAMENTO": "customrecord_fp_pagamento",
-      "PAIS": "customrecord_fp_pais"
+      "PAIS": "customrecord_fp_pais",
+      "_nota_listas": [
+        "Listas das colunas SELECT da LINHA. No sublist `item` o getSublistValue devolve o ID do",
+        "valor (\"1\"), e o getSublistText e evitado no mapeador (devolve undefined em parte dos",
+        "contextos): o codigo sai do NOME, resolvido por SuiteQL nesta tabela. MEDIDO em 2026-09-30",
+        "-- sem isto hipoteseStInterestadual e tpCredPresIbsZfm nunca chegavam ao payload."
+      ],
+      "LISTA_HIPOTESE_ST": "customlist_fp_hipotese_st",
+      "LISTA_CRED_ZFM": "customlist_fp_cred_zfm"
     },
   
     "valores": {

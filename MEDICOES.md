@@ -1110,3 +1110,29 @@ Cenários (os de S02–S04 da §13.1 ficam valendo só para resultado/consumo):
 ISO). O mapeador lê o id e manda o ISO alfa-2 do registro (`78` → `US`), que é o que o DTO pede.
 Validate 0 erros. ⚠ Duas transações têm texto no campo (2239 `AR`, 2241 `us`); o que o deploy faz
 com texto num campo que vira SELECT **não foi medido**.
+
+### 13.6 Primeira rodada de payload real — 12 cenários, 2026-09-30
+
+> Método: PATCH por REST em cada transação (EDIT em `RWS` simula — §13) e leitura do payload no
+> **Execution Log**: o `anexarRastro` loga o rastro inteiro (`title = 'json'`) e o `scriptnote` é
+> legível pelo token. O detalhe corta em ~3.960 chars, mas o `payload` vem antes da resposta e
+> cabe. Hora do log no fuso da conta (07:14 = 11:14 local).
+
+| fato | como se sabe |
+|---|---|
+| ⚠ `file.lastmodifieddate` **não muda** quando o File Cabinet substitui o arquivo — não serve para saber quando foi a última simulação | 2241 simulou às 11:13:49 (log `anexar` file 58438) e o arquivo seguiu com 11:04:55 |
+| ⚠ O deploy que trocou `custbody_fp_pais_resultado` de TEXT para SELECT **apagou em silêncio** o texto das duas transações (2239 `AR`, 2241 `us`) | SELECT antes × depois |
+| Guarda 4 funcionando: PATCH sem mudança relevante → "nada fiscalmente relevante mudou" | log das 2233 e 2240 |
+
+Contra o gabarito (§13.1–13.4): **9 de 12 batem** — S02, S03, S04, S05, S07, S08, S10, S11, S12.
+Três defeitos do mapeador, todos silenciosos:
+
+| cen. | defeito | causa medida | correção |
+|---|---|---|---|
+| S06 2235 | nenhuma linha leva `di` | **SuiteQL devolve alias em minúsculas** (`AS NDI` → `ndi`); `montarDi` lia `r.NDI`, achava vazio e descartava | chaves normalizadas para maiúsculas antes do `montarDi` |
+| S09 2238 | nenhuma linha leva `tpCredPresIbsZfm` | coluna SELECT do sublist `item` lida com `getSublistValue` → id `"1"`; `codigoDaLista` não acha código | `textosDaLista`: nome do valor por SuiteQL na lista, uma consulta por nota; listas em `registros` do perfil |
+| S01 2233 | falta `hipoteseStInterestadual` (e o ZFM) | idem | idem |
+
+Harness com as respostas REAIS do SuiteQL: DI nas 4 linhas (clone por linha, `nSeqAdic` 1 por
+omissão, DI sem adição, datas `2026-09-10`, os dois avisos da DI-A), ZFM `1`/`4`/`0`/ausente,
+hipótese `PARTILHA`/`REPASSE`. Validate 0 erros. **Falta o deploy para medir na conta.**
