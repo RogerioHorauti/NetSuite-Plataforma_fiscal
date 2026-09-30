@@ -1292,3 +1292,14 @@ Nenhum par de evento sobrescreveu o `-emissao-*`.
 cStat/xMotivo da transação ficam os da autorização. Com a plataforma real, o que ela devolver em
 `transaction` entra inteiro. ⚠ Depois da inutilização a nota segue REJEITADA, então o botão
 Inutilizar continua aparecendo; repetir é seguro (a plataforma responde `jaRegistrado`).
+
+### 15.1 Pré-teste do autorizador antes de emitir
+
+`GET /fiscal/emitir/status-sefaz?cnpjEmpresa=` (`emissao.controller.ts:172`) devolve `{cStat,
+xMotivo, emOperacao, tMed?, dhRetorno?, xObs?, deCache}` (`nfe-autorizacao.client.ts:969`); a
+própria rota diz que existe para "saber se o autorizador está no ar ANTES de tentar emitir". Sem o
+pré-teste, SEFAZ parada só aparece DEPOIS de o número ser reservado.
+
+`fp_sl_emissao.decidirPreEmissao` — só NF-e/NFC-e, só sem contingência (com ela a plataforma sonda
+a SVC, guarda anti-570), fail-open se a consulta falhar, barra com o texto da SEFAZ se
+`emOperacao` for falso. Os 7 ramos testados fora da conta com a função real. Chumbado responde 107.

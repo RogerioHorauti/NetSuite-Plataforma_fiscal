@@ -254,11 +254,52 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
 
       opcoes.payload = payload;
 
+      // ANTES do número: com o autorizador parado, a emissão reservaria o número e morreria na
+      // transmissão, deixando a nota em limbo. Recusar aqui não gasta nada.
+      var status = payload.contingencia ? null : fpClient.statusSefaz(payload.cnpjEmpresa, opcoes);
+      var barrado = decidirPreEmissao(payload, status);
+      if (barrado) return { ok: false, code: 0, body: barrado };
+
       log.audit('fp_sl_emissao.emitir',
         'EMITINDO idExterno=' + payload.idExterno + ' série=' + payload.serie +
         ' tipo=' + payload.tipoDocumento + ' — consome numeração');
 
       return fpClient.emitir(payload, opcoes);
+    }
+
+    /**
+     * PRÉ-TESTE DO AUTORIZADOR. Devolve o corpo da recusa, ou `null` para seguir.
+     *
+     *   · só NF-e e NFC-e: a NFS-e não vai à SEFAZ, e o `status-sefaz` sonda a SEFAZ;
+     *   · com contingência declarada não se consulta — quem sonda a SVC é a plataforma (guarda
+     *     anti-570 do `nfe-transmissao.service.ts`), e o operador já decidiu;
+     *   · consulta que FALHA não barra (fail-open, o mesmo da plataforma): status é subsidiário, e
+     *     quem decide se a nota sai é a emissão;
+     *   · `emOperacao` falso barra, com o texto da SEFAZ inteiro e a contingência como saída.
+     *
+     * Função pura: os dois ramos se testam sem rede.
+     */
+    function decidirPreEmissao(payload, status) {
+      var tipo = String(payload.tipoDocumento || '').toUpperCase();
+      if (payload.contingencia || (tipo !== 'NFE' && tipo !== 'NFCE')) return null;
+
+      if (!status || !status.ok || !status.body) {
+        log.audit('fp_sl_emissao.preEmissao', 'status-sefaz indisponível (HTTP ' +
+          (status && status.code) + ') — segue para a emissão, que é quem decide.');
+        return null;
+      }
+
+      var s = status.body;
+      if (s.emOperacao !== false) return null;
+
+      return {
+        erro: 'SEFAZ fora de operação — a nota NÃO foi emitida e nenhum número foi reservado. ' +
+          'cStat ' + s.cStat + ': ' + s.xMotivo +
+          (s.xObs ? ' · ' + s.xObs : '') +
+          (s.dhRetorno ? ' · retorno previsto: ' + s.dhRetorno : '') +
+          '. Para emitir agora, preencha Via e Justificativa da Contingência e emita de novo.',
+        cStat: s.cStat, xMotivo: s.xMotivo
+      };
     }
 
     /**

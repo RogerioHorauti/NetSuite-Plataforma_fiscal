@@ -408,6 +408,19 @@ define([
     return null;
   }
 
+  /**
+   * `GET /fiscal/emitir/status-sefaz` — o autorizador da UF está no ar? Read-only, cache de 60 s
+   * por filial do lado da plataforma. Devolve `{ cStat, xMotivo, emOperacao, tMed?, dhRetorno?,
+   * xObs?, deCache }` (`nfe-autorizacao.client.ts:969`).
+   */
+  function statusSefaz(cnpjEmpresa, opcoes) {
+    var caminho = '/fiscal/emitir/status-sefaz?cnpjEmpresa=' + encodeURIComponent(String(cnpjEmpresa || ''));
+    // return obter(caminho, opcoes);
+    log.audit('fp_client.statusSefaz', 'RESPOSTA CHUMBADA — nada foi à rede. ' + caminho);
+    return { ok: true, code: 200, durationMs: 0,
+      body: { cStat: '107', xMotivo: 'Servico em Operacao (CHUMBADO)', emOperacao: true, deCache: false } };
+  }
+
   /** `POST /transacoes/reclassificar`. Endereça o documento pela chave de acesso. */
   function reclassificar(payload, opcoes) {
     return chamar('POST', '/transacoes/reclassificar', payload, opcoes);
@@ -690,6 +703,7 @@ define([
   return {
     simularNota: simularNota,
     emitir: emitir,
+    statusSefaz: statusSefaz,
     reclassificar: reclassificar,
     obter: obter,
     baixar: baixar,
