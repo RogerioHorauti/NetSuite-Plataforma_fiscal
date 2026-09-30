@@ -445,7 +445,7 @@ define([
     var idexternodoc = fpFields.id('DOC_IDEXTERNO');
     var xmldoc = fpFields.id('DOC_XML');
     var danfedoc = fpFields.id('DOC_DANFE');
-    var uuiddoc = fpFields.id('DOC_UUID');
+    
 
     scriptContext.form.getField(chavedoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
     scriptContext.form.getField(numerodoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
@@ -457,7 +457,7 @@ define([
     scriptContext.form.getField(idexternodoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
     scriptContext.form.getField(xmldoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
     scriptContext.form.getField(danfedoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
-    scriptContext.form.getField(uuiddoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
+    
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
