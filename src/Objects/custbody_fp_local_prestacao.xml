@@ -21,7 +21,7 @@
   <bodyprintflag>F</bodyprintflag>
   <bodyprintpackingslip>F</bodyprintpackingslip>
   <bodyprintstatement>F</bodyprintstatement>
-  <bodypurchase>F</bodypurchase>
+  <bodypurchase>T</bodypurchase>
   <bodysale>T</bodysale>
   <bodystore>F</bodystore>
   <bodytransferorder>F</bodytransferorder>

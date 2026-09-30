@@ -1143,8 +1143,4 @@ DI-C sem adição e com `vAFRMM` 1234.56) e S09 (ZFM `1`/`4`/`0`/ausente, `valor
 ⚠ `scriptnote.internalid` **não cresce na ordem do horário** — ordenar por `date` perdia entradas;
 a leitura certa é por `internalid` dentro de uma janela de horário.
 
-Entidade da prestação: `sourcelist` = `STDBODYENTITY` (mesmo padrão `sourcelist` + `sourcefrom`
-vazio que o `custbody_fp_local_prestacao` já usa), e os dois campos com `bodypurchase` F — na
-compra a NFS-e é do fornecedor e o UE nem roda em vendor bill. Validate 0 erros. **Não medido:** se
-o sourcing reescreve a entidade num EDIT em que o `entity` não mudou (2239 e 2240 têm entidade ≠
-cliente de propósito).
+Entidade da prestação: tentado default pelo `entity` da transação e revertido a pedido do Rogerio — o campo fica como ele o importou. ⚠ Medido na tentativa: **`<sourcelist>STDBODYENTITY</sourcelist>` com `<sourcefrom>` vazio PASSA no `validate --server` e é RECUSADO no deploy** ("Please specify a field to source"): sourcing copia um CAMPO do registro escolhido. No `custbody_fp_local_prestacao` o mesmo par é FILTRO (`sourcefilterby`).
