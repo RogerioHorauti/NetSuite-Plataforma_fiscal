@@ -56,8 +56,11 @@ define([
   './fp_form',
   './fp_client',
   './fp_md_map_simular',
-  './fp_entrada'
-], function (serverWidget, record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular, fpEntrada) {
+  './fp_entrada',
+  './fp_governanca',
+  'N/query'
+], function (serverWidget, record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular, fpEntrada,
+  fpGovernanca, query) {
   /** Tipos de transação em que a simulação roda. Fora desta lista, o script não faz nada. */
   var TIPOS = [
     'invoice',
@@ -462,11 +465,24 @@ define([
     var total = novoRegistro.getLineCount({ sublistId: 'mediaitem' });
     if (total <= 0) return 0;
 
+    // Os ids de TODOS os anexos, os nomes numa consulta, e só então a remoção — sem
+    // `getSublistText`, que lança em registro criado por REST (MEDICOES §18).
+    var ids = [];
+    for (var j = 0; j < total; j++) {
+      var idArq = novoRegistro.getSublistValue({ sublistId: 'mediaitem', fieldId: 'mediaitem', line: j });
+      if (idArq) ids.push(String(idArq));
+    }
+    if (!ids.length) return 0;
+    var nomes = {};
+    var r = query.runSuiteQL({
+      query: 'SELECT id, name FROM file WHERE id IN (' + ids.map(function () { return '?'; }).join(',') + ')',
+      params: ids
+    }).asMappedResults();
+    for (var k = 0; k < r.length; k++) nomes[String(r[k].id)] = String(r[k].name || '');
+
     var removidos = 0;
     for (var i = total - 1; i >= 0; i--) {
-      var nome = String(novoRegistro.getSublistText({
-        sublistId: 'mediaitem', fieldId: 'mediaitem', line: i
-      }) || '');
+      var nome = nomes[String(novoRegistro.getSublistValue({ sublistId: 'mediaitem', fieldId: 'mediaitem', line: i }))] || '';
 
       if (NOSSO_ANEXO.test(nome)) {
         novoRegistro.removeLine({ sublistId: 'mediaitem', line: i });
@@ -806,9 +822,10 @@ define([
     return v;
   }
 
+  // A GOVERNANÇA É MEDIDA NO FIM DE TODA EXECUÇÃO — `fp_governanca` no Execution Log.
   return {
-    beforeLoad: beforeLoad,
-    beforeSubmit: beforeSubmit,
-    afterSubmit: afterSubmit
+    beforeLoad: function (c) { return fpGovernanca.medir('fp_ue_simular.beforeLoad ' + c.type, function () { return beforeLoad(c); }); },
+    beforeSubmit: function (c) { return fpGovernanca.medir('fp_ue_simular.beforeSubmit ' + c.type, function () { return beforeSubmit(c); }); },
+    afterSubmit: function (c) { return fpGovernanca.medir('fp_ue_simular.afterSubmit ' + c.type, function () { return afterSubmit(c); }); }
   };
 });

@@ -37,8 +37,8 @@
  * de onde o usuário clicou.
  */
 define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
-  './fp_fields', './fp_client', './fp_md_map_simular', './fp_persist'],
-  function (record, file, query, runtime, log, fpFields, fpClient, fpMap, fpPersist) {
+  './fp_fields', './fp_client', './fp_md_map_simular', './fp_persist', './fp_governanca'],
+  function (record, file, query, runtime, log, fpFields, fpClient, fpMap, fpPersist, fpGovernanca) {
 
     var ACOES = {
       EMITIR: 'emitir',
@@ -437,5 +437,12 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
       return campo ? (rec.getValue({ fieldId: campo }) || '') : '';
     }
 
-    return { onRequest: onRequest };
+    // A GOVERNANÇA É MEDIDA NO FIM DE TODA EXECUÇÃO — `fp_governanca` no Execution Log.
+    return {
+      onRequest: function (c) {
+        var p = c.request.parameters || {};
+        return fpGovernanca.medir('fp_sl_emissao ' + (p.acao || 'emitir') + ' ' + (p.tipo || '') + ' ' + (p.id || ''),
+          function () { return onRequest(c); });
+      }
+    };
   });

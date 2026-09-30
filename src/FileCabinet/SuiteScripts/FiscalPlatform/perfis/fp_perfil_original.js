@@ -393,7 +393,10 @@ define([], function () {
       "LISTA_TIPODOC": "customlist_fp_tipodoc",
       "LISTA_IND_PRES": "customlist_fp_ind_pres",
       "LISTA_MOD_FRETE": "customlist_fp_mod_frete",
-      "LISTA_CONT_VIA": "customlist_fp_cont_via"
+      "LISTA_CONT_VIA": "customlist_fp_cont_via",
+      "LISTA_FORMA_PAGTO": "customlist_fp_forma_pagto",
+      "LISTA_IND_PAG": "customlist_fp_ind_pag",
+      "LISTA_TP_INTEGRA": "customlist_fp_tp_integra"
     },
   
     "valores": {
@@ -404,7 +407,7 @@ define([], function () {
         "",
         "EXCECAO NOSSA, e a mesma armadilha do lado de casa: TIPODOC e custbody_fp_tipodoc, que e",
         "SELECT para customlist_fp_tipodoc. Campo SELECT devolve o INTERNAL ID do valor no getValue,",
-        "nao o texto. O mapeador tem de usar getText({fieldId}) para obter o codigo (NFE, NFCE, ...)",
+        "nao o texto. O mapeador busca o NOME pela lista (registros LISTA_*), numa consulta so -- NUNCA getText, que lanca no beforeSubmit de registro criado por REST -- para obter o codigo (NFE, NFCE, ...)",
         "que o EmitirNotaDto espera - ou fazer o de-para pelo abbreviation. Ler o internal id e",
         "manda-lo como tipoDocumento faria o motor receber algo como \"7\" e recusar."
       ]

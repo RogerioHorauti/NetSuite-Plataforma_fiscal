@@ -21,8 +21,8 @@
  * Não há `beforeSubmit` nem `afterSubmit` aqui, e não é omissão: emitir é ato explícito, fora do
  * save. Um User Event que emitisse no save queimaria um número por clique em "Salvar".
  */
-define(['N/url', 'N/runtime', 'N/log', './fp_fields'],
-  function (url, runtime, log, fpFields) {
+define(['N/url', 'N/runtime', 'N/log', 'N/query', './fp_fields', './fp_governanca'],
+  function (url, runtime, log, query, fpFields, fpGovernanca) {
 
     /**
      * Onde EXISTE documento fiscal a emitir.
@@ -116,9 +116,13 @@ define(['N/url', 'N/runtime', 'N/log', './fp_fields'],
      * payload — o que sai tem de ser exatamente o que o catálogo conhece.
      */
     function tipoDeclarado(novoRegistro) {
+      // O id pelo getValue e o NOME pela lista — sem getText (MEDICOES §18).
       var campo = fpFields.id('TIPODOC');
-      if (!campo) return 'documento fiscal';
-      return String(novoRegistro.getText({ fieldId: campo }) || '').trim() || 'documento fiscal';
+      var lista = fpFields.registro('LISTA_TIPODOC');
+      var id = campo && novoRegistro.getValue({ fieldId: campo });
+      if (!id || !lista) return 'documento fiscal';
+      var r = query.runSuiteQL({ query: 'SELECT name FROM ' + lista + ' WHERE id = ?', params: [id] }).asMappedResults();
+      return String((r.length && r[0].name) || '').trim() || 'documento fiscal';
     }
 
     /**
@@ -144,5 +148,8 @@ define(['N/url', 'N/runtime', 'N/log', './fp_fields'],
       });
     }
 
-    return { beforeLoad: beforeLoad };
+    // A GOVERNANÇA É MEDIDA NO FIM DE TODA EXECUÇÃO — `fp_governanca` no Execution Log.
+    return {
+      beforeLoad: function (c) { return fpGovernanca.medir('fp_ue_emissao.beforeLoad ' + c.type, function () { return beforeLoad(c); }); }
+    };
   });

@@ -351,8 +351,11 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var out = [];
       var total = contarSublist(newRecord, sublist);
 
+      // As três listas do pagamento, de TODAS as linhas, numa consulta — e o laço só preenche.
+      var nomes = listasDoPagamento(newRecord, sublist, total);
+
       for (var i = 0; i < total; i++) {
-        var forma = codigoDaLista(textoDeSublist(newRecord, sublist, fpFields.idPagamento('FORMA'), i));
+        var forma = codigoDaLista(textoDoPagamento(newRecord, sublist, 'FORMA', i, nomes));
         var valor = numero(valorDeSublist(newRecord, sublist, fpFields.idPagamento('VALOR'), i));
 
         if (!forma) continue;
@@ -370,10 +373,10 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
             'motivo 441 -- o "99" existe para o que a tabela nao nomeia, e o nome vai na descricao.');
         }
 
-        var indPag = codigoDaLista(textoDeSublist(newRecord, sublist, fpFields.idPagamento('IND_PAG'), i));
+        var indPag = codigoDaLista(textoDoPagamento(newRecord, sublist, 'IND_PAG', i, nomes));
         if (indPag) pag.indPag = indPag;
 
-        if (forma === '03' || forma === '04') acrescentarCartao(newRecord, sublist, i, pag);
+        if (forma === '03' || forma === '04') acrescentarCartao(newRecord, sublist, i, pag, nomes);
 
         out.push(pag);
       }
@@ -457,8 +460,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     }
 
     /** Grupo `card`: só existe em cartão de crédito (03) e débito (04). */
-    function acrescentarCartao(newRecord, sublist, i, pag) {
-      var tpIntegra = codigoDaLista(textoDeSublist(newRecord, sublist, fpFields.idPagamento('TP_INTEGRA'), i));
+    function acrescentarCartao(newRecord, sublist, i, pag, nomes) {
+      var tpIntegra = codigoDaLista(textoDoPagamento(newRecord, sublist, 'TP_INTEGRA', i, nomes));
       if (tpIntegra) {
         pag.tpIntegra = tpIntegra;
       } else {
@@ -477,17 +480,35 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       if (cAut) pag.cAut = cAut;
     }
 
+    /** As listas do pagamento e o registro de cada uma. */
+    var LISTAS_DO_PAGAMENTO = [['FORMA', 'LISTA_FORMA_PAGTO'], ['IND_PAG', 'LISTA_IND_PAG'], ['TP_INTEGRA', 'LISTA_TP_INTEGRA']];
+
     /**
-     * O TEXTO de um campo List/Record do sublist, que é de onde o código sai.
+     * `{ FORMA, IND_PAG, TP_INTEGRA }`, cada um `{ id: nome }`, de todas as linhas — UMA consulta.
      *
-     * `getSublistValue` num SELECT devolve o internal id do valor da lista, não o código — e é o
-     * código que o motor conhece. `getSublistText` é o par certo aqui; o motivo de ele estar
-     * proibido no resto do módulo é o sublist `item`, em que ele devolve `undefined` sem erro.
-     * Em sublist de custom record ele responde.
+     * Sem `getSublistText`: ele lança no `beforeSubmit` de registro criado por REST (MEDICOES §18) e
+     * devolve `undefined` sem erro em parte dos contextos; o id do `getSublistValue` responde em todos.
      */
-    function textoDeSublist(newRecord, sublist, campo, linha) {
-      if (!campo) return '';
-      return newRecord.getSublistText({ sublistId: sublist, fieldId: campo, line: linha }) || '';
+    function listasDoPagamento(newRecord, sublist, total) {
+      var pedidos = [];
+      for (var k = 0; k < LISTAS_DO_PAGAMENTO.length; k++) {
+        var campo = fpFields.idPagamento(LISTAS_DO_PAGAMENTO[k][0]);
+        var ids = [], vistos = {};
+        for (var i = 0; campo && i < total; i++) {
+          var v = valorDeSublist(newRecord, sublist, campo, i);
+          if (v && !vistos[String(v)]) { vistos[String(v)] = true; ids.push(String(v)); }
+        }
+        pedidos.push({ grupo: LISTAS_DO_PAGAMENTO[k][0], tabela: fpFields.registro(LISTAS_DO_PAGAMENTO[k][1]),
+          colId: 'id', colTxt: 'name', ids: ids });
+      }
+      return resolverListas(pedidos);
+    }
+
+    /** O NOME do valor escolhido na linha do pagamento, pelo mapa de `listasDoPagamento`. */
+    function textoDoPagamento(newRecord, sublist, chave, linha, nomes) {
+      var campo = fpFields.idPagamento(chave);
+      var id = campo && valorDeSublist(newRecord, sublist, campo, linha);
+      return id ? (nomes[chave][String(id)] || '') : '';
     }
 
     /**

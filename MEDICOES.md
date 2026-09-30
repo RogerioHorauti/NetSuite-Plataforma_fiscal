@@ -1392,3 +1392,18 @@ token: custom record e lista custom na mesma consulta, cada linha marcada pelo g
 listas **9 → 2**; compra (`montar` + `montarReclassificar`) **7 → 2**. Seguem à parte, uma por nota e
 só quando há dado: endereço do fornecedor, país (cPais e ISO), DIs em lote, local da prestação,
 itens em lote.
+
+### 18.2 Nenhum `getText` no bundle, e governança medida no fim de toda execução
+
+Os três que restavam, trocados pelo mesmo padrão (ids pelo `getValue`, UMA busca, depois preenche):
+pagamentos (forma, indicador e integração de todas as linhas — `listasDoPagamento`, listas em
+`registros`), rótulo do botão (`fp_ue_emissao.tipoDeclarado`), e os nomes dos anexos na cópia
+(`removerAnexosDoBundle`: ids de todos, uma consulta em `file`). `grep` de `.getText(` e
+`.getSublistText(` no bundle: **zero**. Harness com `getSublistText` lançando: pagamentos inteiros,
+2 consultas de lista (corpo + pagamentos).
+
+`fp_governanca.medir(rotulo, fn)` envolve `fp_ue_simular` (beforeLoad, beforeSubmit, afterSubmit),
+`fp_ue_emissao.beforeLoad` e `fp_sl_emissao.onRequest`: no `finally` — também no retorno cedo e na
+exceção —, AUDIT `fp_governanca` com "usou N · restam M (entrou com K)". ⚠ O GL plug-in fica FORA:
+ele só importa `N/query`/`N/log`, roda síncrono no save, e a §8.8 registra como não medido se
+exceção nele derruba o save — pôr `N/runtime` ali sem medir arrisca o lançamento.
