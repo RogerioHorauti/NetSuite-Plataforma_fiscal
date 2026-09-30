@@ -114,7 +114,21 @@ define([], function () {
       ],
       "IND_PRES": "custbody_fp_ind_pres",
       "INFADIC_FISCO": "custbody_fp_infadic_fisco",
-      "INFADIC_CONTRIB": "custbody_fp_infadic_contrib"
+      "INFADIC_CONTRIB": "custbody_fp_infadic_contrib",
+      "EXP_LOCAL": "custbody_fp_exp_local",
+      "EXP_UF": "custbody_fp_exp_uf",
+      "EXP_DESPACHO": "custbody_fp_exp_despacho",
+      "CONT_VIA": "custbody_fp_cont_via",
+      "CONT_JUSTIFICATIVA": "custbody_fp_cont_justificativa",
+
+      "_grupo_datas": [
+        "Datas que so o ERP sabe, e que vao TAMBEM no /simular (sao do SimulacaoNotaInputDto).",
+        "DATA_SAIDA NAO e o shipdate nativo: aquele e a data PREVISTA e o NetSuite o preenche",
+        "sozinho (na 2233, trandate + 2). O fato gerador do ICMS/IPI e a saida real."
+      ],
+      "DATA_SAIDA": "custbody_fp_data_saida",
+      "COMPETENCIA_ORIGINAL": "custbody_fp_competencia_original",
+      "DATA_REAJUSTE": "custbody_fp_data_reajuste"
   
     },
   
@@ -170,6 +184,7 @@ define([], function () {
       "ITEM_NBS": "custitem_fp_nbs",
       "ITEM_NFCI": "custitem_fp_nfci",
       "ITEM_EAN_TRIB": "custitem_fp_ean_trib",
+      "ITEM_CNAE": "custitem_fp_cnae",
       "_nota": [
         "NCM e CEST são CADASTRO, não régua: eles descrevem a mercadoria, não decidem tributo.",
         "O motor tem cadastro próprio de item (/api/v1/item); qual das duas pontas é a fonte é",
@@ -190,7 +205,8 @@ define([], function () {
       "RAZAO_SOCIAL": "custentity_fp_razao_social",
       "IE": "custentity_fp_ie",
       "IND_IE_DEST": "custentity_fp_ind_ie_dest",
-      "REGIME_TRIB": "custentity_fp_regime_trib"
+      "REGIME_TRIB": "custentity_fp_regime_trib",
+      "QUALIFICACAO": "custentity_fp_qualificacao"
     },
 
     "pais": {

@@ -1179,3 +1179,31 @@ não é campo nativo; o vendor tem `vatregnumber` e `taxidnum` nativos, **vazios
 junto com o `custentity_fp_cnpj_cpf`, então não há outra fonte a ler.
 
 Depois do deploy do `c24e526`: 2233 re-emitida (chumbada) e o log trouxe "transportador 11 vai SEM CNPJ/CPF (custentity_fp_cnpj_cpf), município, UF..." junto do corte do 6º reboque.
+
+## 14. O resto do EmitirNotaDto — 2026-09-30
+
+Diff propriedade a propriedade (DTO × `fp_md_map_simular.js`). Implementado agora:
+
+| DTO | NetSuite | nota |
+|---|---|---|
+| `dataSaidaEntrada` | `custbody_fp_data_saida` (DATE) | **não** o `shipdate`: é a data PREVISTA e o NetSuite a preenche sozinho (2233: trandate + 2) |
+| `competenciaOriginal`, `dataReajuste` | `custbody_fp_competencia_original`, `custbody_fp_data_reajuste` | vão no `/simular` também |
+| `destinatario.qualificacao` | `custentity_fp_qualificacao` → `customlist_fp_qualificacao` | os 3 valores de `QUALIFICACOES_DESTINATARIO` (`resolver-icms.ts:143`) |
+| `linhas[].codigoBarras` (cEAN) | `upccode` **nativo** do item | ausente → a plataforma emite "SEM GTIN" |
+| `linhas[].codigoCnae` | `custitem_fp_cnae` (só item de serviço) | é da ATIVIDADE, não do estabelecimento — o `custrecord_fp_cnae` da location não serve |
+| `exportacao` | `custbody_fp_exp_local` / `_exp_uf` / `_exp_despacho` | porta: `xLocExporta` |
+| `contingencia` | `custbody_fp_cont_via` → `customlist_fp_cont_via`, `custbody_fp_cont_justificativa` | porta: `xJust`; `dhCont` fica no default (instante da emissão) |
+
+Fica de fora de propósito: `branchId`/`companyId` (UUID), `indFinal` (derivado da natureza),
+`municipioPrestacao`/`destinatario.codigoIbge` (a plataforma resolve), `fatura.valorLiquido`
+(derivado), `linhas[].impostos` (só com motivo). Fora do escopo NF-e: `participantes`, `prestacao`,
+`manifesto`, `guiaValores`, `substituicao`.
+
+⚠ `customlist.name` tem no máximo **30** caracteres (validate). ⚠ `custitem_fp_nbs` tem
+`appliestoservice` F — a NBS é do serviço e hoje não se preenche em item de serviço.
+⚠ O DTO diz de `linhas[].impostos`: "Se presentes, o emitir NÃO recalcula pelo motor" — o CLAUDE.md
+diz override por tributo. Contrato a conferir do lado da plataforma.
+
+Harness (mapeador e perfil reais): datas `2026-10-01`/`2026-07-10`/`2026-08-01`, qualificação
+`ORGAO_PUBLICO_ESTADUAL`, GTIN, CNAE `6209-1/00` → `6209100`, `exportacao` e `contingencia` só na
+emissão (via `EPEC`), grupo ausente sem a porta. Validate 0 erros. **Falta o deploy para medir.**

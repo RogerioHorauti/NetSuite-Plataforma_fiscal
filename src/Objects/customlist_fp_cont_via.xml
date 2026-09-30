@@ -1,0 +1,10 @@
+<customlist scriptid="customlist_fp_cont_via">
+  <description>contingencia.via do EmitirNotaDto. O codigo antes do hifen e o que vai no payload.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Via da Contingencia</name>
+  <customvalues>
+    <customvalue scriptid="val_cont_svc"><isinactive>F</isinactive><value>SVC - Virtual de Contingencia</value></customvalue>
+    <customvalue scriptid="val_cont_epec"><isinactive>F</isinactive><value>EPEC - Evento Previo de Emissao em Contingencia</value></customvalue>
+  </customvalues>
+</customlist>

@@ -1,0 +1,11 @@
+<customlist scriptid="customlist_fp_qualificacao">
+  <description>destinatario.qualificacao. Os tres valores sao os de QUALIFICACOES_DESTINATARIO do motor (resolver-icms.ts). O codigo antes do hifen e o que vai no payload.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Qualificacao do Destinatario</name>
+  <customvalues>
+    <customvalue scriptid="val_qualif_federal"><isinactive>F</isinactive><value>ORGAO_PUBLICO_FEDERAL - Orgao publico federal</value></customvalue>
+    <customvalue scriptid="val_qualif_estadual"><isinactive>F</isinactive><value>ORGAO_PUBLICO_ESTADUAL - Orgao publico estadual</value></customvalue>
+    <customvalue scriptid="val_qualif_municipal"><isinactive>F</isinactive><value>ORGAO_PUBLICO_MUNICIPAL - Orgao publico municipal</value></customvalue>
+  </customvalues>
+</customlist>

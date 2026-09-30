@@ -114,6 +114,12 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var data = dataIso(newRecord, fpFields.padrao('TRANDATE'));
       if (data) payload.dataEmissao = data;
 
+      // Datas que só o ERP sabe. A de saída é o fato gerador do ICMS/IPI; as duas outras só
+      // existem no complemento — a plataforma deriva a competência quando a original é dela.
+      dataSeTiver(newRecord, payload, 'DATA_SAIDA', 'dataSaidaEntrada');
+      dataSeTiver(newRecord, payload, 'COMPETENCIA_ORIGINAL', 'competenciaOriginal');
+      dataSeTiver(newRecord, payload, 'DATA_REAJUSTE', 'dataReajuste');
+
       var dest = montarDestinatario(newRecord);
       if (dest) payload.destinatario = dest;
 
@@ -185,6 +191,12 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var contrib = valorTexto(newRecord, fpFields.id('INFADIC_CONTRIB'));
       if (contrib) payload.infAdicContrib = contrib;
 
+      var exportacao = montarExportacao(newRecord);
+      if (exportacao) payload.exportacao = exportacao;
+
+      var contingencia = montarContingencia(newRecord);
+      if (contingencia) payload.contingencia = contingencia;
+
       return payload;
     }
 
@@ -249,7 +261,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         razao: fpFields.idCliente('RAZAO_SOCIAL'),
         ie: fpFields.idCliente('IE'),
         ind: fpFields.idCliente('IND_IE_DEST'),
-        regime: fpFields.idCliente('REGIME_TRIB')
+        regime: fpFields.idCliente('REGIME_TRIB'),
+        qualif: fpFields.idCliente('QUALIFICACAO')
       };
 
       var colunas = ['companyname', 'entityid', 'email', 'phone'];
@@ -282,6 +295,11 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         // a linha sai com imposto cheio — o erro que não vira glosa. Não inventar default aqui.
         var regime = C.regime && codigoDaLista(cad[C.regime]);
         if (regime) dest.regimeTributario = regime;
+
+        // "Que tipo de entidade é" — órgão público e a esfera. Não se deriva do `indIeDest`: o 9
+        // cobre órgão público e pessoa física igualmente, e a norma trata os dois de modo oposto.
+        var qualif = C.qualif && codigoDaLista(cad[C.qualif]);
+        if (qualif) dest.qualificacao = qualif;
       }
 
       var end = endereco(newRecord);
@@ -352,6 +370,38 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         out.push(pag);
       }
       return out;
+    }
+
+    /**
+     * O GRUPO ZA — local de saída do país. `xLocExporta` é o único obrigatório, e por isso é a
+     * porta: sem ele o grupo não vai. A plataforma o ignora fora da exportação (idDest ≠ 3), então
+     * mandá-lo numa venda interna não muda nada — quem decide se é exportação é a natureza.
+     */
+    function montarExportacao(newRecord) {
+      var local = valorTexto(newRecord, fpFields.id('EXP_LOCAL'));
+      if (!local) return null;
+
+      var e = { xLocExporta: texto(local) };
+      var uf = valorTexto(newRecord, fpFields.id('EXP_UF'));
+      if (uf) e.ufSaidaPais = texto(uf).toUpperCase().substring(0, 2);
+      var despacho = valorTexto(newRecord, fpFields.id('EXP_DESPACHO'));
+      if (despacho) e.xLocDespacho = texto(despacho);
+      return e;
+    }
+
+    /**
+     * CONTINGÊNCIA — a justificativa é a porta (15 a 256, conferido pela plataforma). `via` em
+     * branco: a plataforma usa SVC. `dhCont` não vai: o default dele é o instante da emissão, que é
+     * o que se quer quando o operador declara a contingência na hora de emitir.
+     */
+    function montarContingencia(newRecord) {
+      var just = valorTexto(newRecord, fpFields.id('CONT_JUSTIFICATIVA'));
+      if (!just) return null;
+
+      var c = { xJust: texto(just) };
+      var via = codigoDaLista(valorTexto(newRecord, fpFields.id('CONT_VIA')));
+      if (via) c.via = via;
+      return c;
     }
 
     /**
@@ -931,6 +981,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
           if (cad.nbs) linha.nbs = cad.nbs;
           if (cad.nFci) linha.nFci = cad.nFci;
           if (cad.codigoBarrasTrib) linha.codigoBarrasTrib = cad.codigoBarrasTrib;
+          if (cad.codigoBarras) linha.codigoBarras = cad.codigoBarras;
+          if (cad.codigoCnae) linha.codigoCnae = cad.codigoCnae;
           if (!linha.descricao && cad.descricao) linha.descricao = cad.descricao;
 
           // A unidade tributável e o fator andam juntos: sem a unidade não há o que converter, e
@@ -1299,7 +1351,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       }
       if (!lista.length) return {};
 
-      var colunas = ['itemid', 'displayname'];
+      // `upccode` é NATIVO (Records Browser 2026.1, inventoryitem) e é o GTIN do produto: o `cEAN`.
+      // Sem ele a plataforma emite o literal "SEM GTIN", que é o certo para quem não tem código.
+      var colunas = ['itemid', 'displayname', 'upccode'];
       // Mercadoria leva NCM; serviço leva o subitem da LC 116. O motor recusa a linha que não
       // traga um dos dois, e os campos são excludentes por construção: os de mercadoria não
       // aplicam em item de serviço, e o de serviço não aplica em mercadoria.
@@ -1309,7 +1363,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
                       fatorConversao: 'ITEM_FATOR_CONV', naturezaReceita: 'ITEM_NAT_RECEITA',
                       codigoServicoMunicipal: 'ITEM_SERVICO_MUNICIPAL',
                       desdobramentoTribNac: 'ITEM_DESDOBRAMENTO', nbs: 'ITEM_NBS',
-                      nFci: 'ITEM_NFCI', codigoBarrasTrib: 'ITEM_EAN_TRIB' };
+                      nFci: 'ITEM_NFCI', codigoBarrasTrib: 'ITEM_EAN_TRIB',
+                      codigoCnae: 'ITEM_CNAE' };
       var mapa = {};
 
       // `origem` é List/Record; as outras são texto. O prefixo diz ao SuiteQL qual precisa de
@@ -1370,7 +1425,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         var r = linhas[n];
         var reg = {
           codigo: texto(r[idx.itemid]),
-          descricao: texto(r[idx.displayname])
+          descricao: texto(r[idx.displayname]),
+          codigoBarras: digitos(r[idx.upccode])
         };
         for (var m in mapa) {
           if (!Object.prototype.hasOwnProperty.call(mapa, m)) continue;
@@ -1382,6 +1438,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         if (reg.origem) reg.origem = codigoDaOrigem(reg.origem);
         if (reg.tipoItem) reg.tipoItem = codigoDaLista(reg.tipoItem);
         if (reg.fatorConversao) reg.fatorConversao = numero(reg.fatorConversao);
+        if (reg.codigoCnae) reg.codigoCnae = digitos(reg.codigoCnae);
         if (reg.servicoLc116) reg.servicoLc116 = texto(reg.servicoLc116).trim().replace(',', '.');
         out[String(r.id)] = reg;
       }
@@ -1541,6 +1598,12 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     /** `YYYY-MM-DD`. O motor recebe a data como string; a hora do NetSuite não lhe interessa. */
     function dataIso(newRecord, campo) {
       return dataIsoDe(newRecord.getValue({ fieldId: campo }));
+    }
+
+    function dataSeTiver(newRecord, alvo, chave, destino) {
+      var campo = fpFields.id(chave);
+      var d = campo && dataIso(newRecord, campo);
+      if (d) alvo[destino] = d;
     }
 
     /** O mesmo, a partir do valor — o vencimento da parcela vem de sublist, não de campo. */
