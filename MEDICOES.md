@@ -1144,3 +1144,30 @@ DI-C sem adição e com `vAFRMM` 1234.56) e S09 (ZFM `1`/`4`/`0`/ausente, `valor
 a leitura certa é por `internalid` dentro de uma janela de horário.
 
 Entidade da prestação: tentado default pelo `entity` da transação e revertido a pedido do Rogerio — o campo fica como ele o importou. ⚠ Medido na tentativa: **`<sourcelist>STDBODYENTITY</sourcelist>` com `<sourcefrom>` vazio PASSA no `validate --server` e é RECUSADO no deploy** ("Please specify a field to source"): sourcing copia um CAMPO do registro escolhido. No `custbody_fp_local_prestacao` o mesmo par é FILTRO (`sourcefilterby`).
+
+### 13.7 Payload de EMISSÃO — 4 cenários, 2026-09-30
+
+> Método: Suitelet chamado pela URL externa (deployment com *Available Without Login*, ligado pelo
+> Rogerio na UI — **não está no XML**, o próximo deploy o desliga), POST com `tipo`/`id`/`acao` na
+> query e `{"texto":""}` no corpo, como o `fp_cs_transacao`. Arquivo lido por **SOAP `get` de
+> `file` com o mesmo token TBA** — o REST não expõe `file`, o SOAP sim, e devolve o conteúdo em
+> base64. `fp_client.emitir` chumbado: nada transmitido, e a resposta sem chave não persistiu nada.
+
+| fato | como se sabe |
+|---|---|
+| POST na URL externa com o User-Agent do `curl` → **405 na borda (Akamai)**; com User-Agent de navegador → 200 | mesma requisição, só o `-A` muda |
+| Sem `ns-at` → 500; GET com `ns-at` → "Esta tela só responde a POST" (o Suitelet é alcançado) | curl |
+| `linhas`, `destinatario`, `naturezaOperacaoId`, `dataEmissao`, `cnpjEmpresa` do `-emissao-payload.json` são **idênticos** aos do `-payload.json` do último `/simular` nas 4 | comparação campo a campo |
+
+Contra o gabarito (§13.1–13.2): **todos os grupos da emissão batem** — `indPres` 1/9, `infAdicFisco`,
+`modFrete` 0/9, `retencaoIcms` com os 6 (`pICMSRet` 12 — o `getValue` devolve 12, não 0.12), veículo
+`ABC1D23`/`SP`, **5 reboques** (o 6º cortado, com o log), vagão/balsa, volumes com
+`lacres:["L1","L2","L3"]` e o vazio pulado, pagamento `03` com o grupo de cartão, `01` sem
+`tBand`/`cAut`, `99` com `Permuta`; na 2237 os avisos de retTransp incompleto, cartão sem
+`tpIntegra` e 99 sem descrição, e o pagamento sem forma pulado; `cobranca` da 2333
+(`682`/999.99, 500 + 499.99 em ordem) e da 2334 (uma duplicata no `duedate`).
+
+⚠ **A transportadora sai sem `municipio`, `uf`, `cnpjCpf` e `ie`**, calada: o fornecedor 11 não tem
+`custentity_fp_cnpj_cpf`/`_ie` e o endereço dele tem cidade/UF só no `addrtext` (§13.4) — o número
+`1231` também está só lá. É cadastro; o mapeador avisa quando não há endereço, mas não quando ele
+vem sem cidade/UF.
