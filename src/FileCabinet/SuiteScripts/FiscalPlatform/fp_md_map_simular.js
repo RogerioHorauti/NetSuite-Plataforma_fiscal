@@ -812,7 +812,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       if (end.city && end.state) return end;
 
       log.audit('fp_md_map_simular.endereco',
-        'destinatário sem município ou UF, e a SEFAZ vai recusar. ' +
+        'contraparte sem município ou UF no endereço da transação. ' +
         'subrecord: city="' + ler(sub, 'city') + '" state="' + ler(sub, 'state') +
         '" dropdownstate="' + ler(sub, 'dropdownstate') + '" · ' +
         'billaddresslist=' + idCadastro);

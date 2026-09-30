@@ -1349,3 +1349,21 @@ o `aplicar` grava sem adaptar). `GET /transacoes/chave/:chave/existe?entradaSaid
 Harness: corpo do reclassificar (chave sem máscara, `COMPRA`, `2026-10-02`, `COMPRA_ATIVO` no item 2
 com a linha de valor zero pulada), sem chave → nada; comparação com diferença de valor, tributo só no
 documento e só na simulação. Chumbado para `existe` e `reclassificar`. Validate 0 erros.
+
+**Medido na conta depois do deploy do `74c7836`** — vendor bill **2733** (fornecedor 11, item de
+serviço de compra 33, COMPRA no cabeçalho e COMPRA_ATIVO na linha 2, chave de 44 com DV, data de
+entrada 16/11/2023; COMPRA e COMPRA_ATIVO liberadas para Bill — id **17** no multiselect de tipo):
+
+| o quê | resultado |
+|---|---|
+| `existe` e `reclassificar` | chamados (chumbados), log "natureza declarada" |
+| corpo do reclassificar | `{chaveAcesso, naturezaOperacao:"COMPRA", dataEntrada:"2023-11-16", linhas:[{numeroItem:2, naturezaOperacao:"COMPRA_ATIVO"}]}` |
+| `/simular` junto | `naturezaOperacaoId:"COMPRA"`, `contraparte` = fornecedor 11, linha 2 com COMPRA_ATIVO |
+| sublista de impostos | o DOCUMENTO (ICMS/PIS/COFINS por linha, com natureza contábil) |
+| anexos | `-payload`, `-retorno`, `-reclassificar-payload`, `-reclassificar-retorno`, `-comparacao` |
+| comparação | 14 entradas — número sem sentido fiscal enquanto a simulação é o chumbado fixo de importação |
+
+⚠ **CORRIGE a §13:** o CREATE por REST NÃO é barrado pela guarda 3. O `beforeSubmit` roda e LANÇA
+`SSS_INVALID_API_USAGE` ("You must use getValue to return the value set with setValue") no `getText`
+da natureza — campo posto por `setValue` na mesma requisição não responde a `getText`. A guarda 1
+engole e o save passa; por isso "criação por REST não simulava".
