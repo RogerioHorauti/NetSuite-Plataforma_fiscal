@@ -270,6 +270,46 @@ deve ser recusada — é o que o RFC manda, e evita ambiguidade sobre qual valeu
 
 ---
 
+## 10. O `reclassificar` devolver o VEREDITO da nota do fornecedor contra a régua
+
+**O que:** `POST /transacoes/reclassificar` já reprocessa a nota capturada pelo motor atual, a partir
+do XML guardado, com a natureza que o ERP declarou. Falta ele **escrever e devolver as
+`divergencias`** — o que o fornecedor destacou × o que a régua espera para a mesma operação.
+
+**Por quê:** a coluna existe (`transaction.entity.ts:394`, `divergencias jsonb`) e **não tem quem a
+escreva** — o próprio fonte diz isso em `emissao.service.ts:6663`. O bundle hoje compara a nota
+com o `/simular` de compra e mostra os dois lados **sem veredito** (MEDICOES §17): decidir o que é
+incoerência — tolerância, quais tributos contam, CST × CSOSN — é régua, e régua não entra no ERP.
+
+**Como conferir:** reclassificar uma nota de fornecedor do Simples com ICMS destacado acima do
+permitido devolve `divergencias[]` nomeando o tributo, o destacado, o esperado e a norma.
+
+## 11. Perna contábil no documento reprocessado
+
+**O que:** `TransactionTaxDetail` não tem `sentidoDaPernaFixa` nem `geraLancamento` — só o
+resultado do `/simular` tem (`simulacao-nota-result.dto.ts:108-118`).
+
+**Por quê:** na ENTRADA a sublista de impostos do NetSuite recebe o documento do `reclassificar`, e
+o GL plug-in lê dela a perna para lançar. Sem os dois campos, a entrada fica sem lançamento — e o
+bundle não pode inventar a perna, que é decisão da plataforma.
+
+**Como conferir:** `linhas[].impostos[]` do retorno do `reclassificar` traz os dois campos, com o
+mesmo significado do `/simular`.
+
+## 12. `linhas[].impostos` na emissão: override por tributo ou desliga o motor?
+
+**O que:** a descrição do campo no `SimulacaoLinhaDto` diz *"Tributos destacados pelo ERP (emissão).
+Se presentes, o emitir NÃO recalcula pelo motor"*. O contrato combinado (CLAUDE.md do bundle) é
+**override por tributo**: o declarado sobrepõe o homônimo e o motor continua calculando os outros.
+
+**Por quê:** as duas leituras produzem notas diferentes quando o ERP declara um tributo só. O bundle
+hoje não manda `impostos` e não é afetado — mas o dia em que mandar, precisa saber qual vale.
+
+**Como conferir:** emitir com `impostos` declarando só o ICMS devolve a nota com PIS/COFINS
+calculados pelo motor (override) — ou a descrição é corrigida para dizer o que o serviço faz.
+
+---
+
 ## Fora de escopo deste handoff
 
 Nada aqui pede régua nova, CST, alíquota, cBenef ou fórmula de base. O conector **traduz e
