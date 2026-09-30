@@ -91,7 +91,10 @@
  * possui classificador contábil nem sublist de impostos por linha —, então não há de-para a fazer:
  * em qualquer perfil eles resolveriam para si mesmos pelo overlay parcial.
  */
-define(['N/query', 'N/log', './fp_fields'], function (query, log, fpFields) {
+// `fp_governanca` usa N/runtime: o manual o admite no plug-in ("You can also access the runtime.User
+// object with the N/runtime Module", CustomGLLinesPlugIn.pdf, referência do classId, p.71-72), e o
+// arquivo tem 1000 unidades (p.11-12).
+define(['N/query', 'N/log', './fp_fields', './fp_governanca'], function (query, log, fpFields, fpGovernanca) {
   /**
    * Ids pela camada de compatibilidade, resolvidos UMA vez por execução.
    *
@@ -873,7 +876,10 @@ function lancar(customLines, grupo, ctx) {
     return arredondar(Math.abs(v)).toFixed(2);
   }
 
+  // A GOVERNANÇA É MEDIDA NO FIM DE TODA EXECUÇÃO — `fp_governanca` no Execution Log.
   return {
-    customizeGlImpact: customizeGlImpact
+    customizeGlImpact: function (context) {
+      return fpGovernanca.medir('fp_gl_lines_plugin', function () { return customizeGlImpact(context); });
+    }
   };
 });

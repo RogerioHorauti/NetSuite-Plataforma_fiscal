@@ -1404,9 +1404,7 @@ pagamentos (forma, indicador e integração de todas as linhas — `listasDoPaga
 
 `fp_governanca.medir(rotulo, fn)` envolve `fp_ue_simular` (beforeLoad, beforeSubmit, afterSubmit),
 `fp_ue_emissao.beforeLoad` e `fp_sl_emissao.onRequest`: no `finally` — também no retorno cedo e na
-exceção —, AUDIT `fp_governanca` com "usou N · restam M (entrou com K)". ⚠ O GL plug-in fica FORA:
-ele só importa `N/query`/`N/log`, roda síncrono no save, e a §8.8 registra como não medido se
-exceção nele derruba o save — pôr `N/runtime` ali sem medir arrisca o lançamento.
+exceção —, AUDIT `fp_governanca` com "usou N · restam M (entrou com K)". O GL plug-in entrou depois: o manual admite N/runtime no plug-in ("You can also access the runtime.User object with the N/runtime Module", referência do `classId`, p.71-72) e dá 1000 unidades ao arquivo (p.11-12).
 
 **Governança medida na conta depois do deploy do `769cc4f`** (linhas `fp_governanca` do log):
 
