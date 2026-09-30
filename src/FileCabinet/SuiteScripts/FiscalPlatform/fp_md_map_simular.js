@@ -504,6 +504,21 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         if (end.uf) t.uf = end.uf;
       }
 
+      // ⚠ MEDIDO em 2026-09-30 (fornecedor 11): cadastro sem CNPJ em campo nenhum (`vatregnumber`,
+      // `taxidnum` e o nosso, vazios) e endereço com cidade/UF SÓ no `addrtext`. O grupo saía com
+      // nome e logradouro, calado. A IE fica fora do aviso de propósito: transportador isento ou
+      // pessoa física não tem, e avisar ali seria ruído.
+      var faltam = [];
+      if (!t.cnpjCpf) faltam.push('CNPJ/CPF (' + (cnpj || 'sem campo no perfil') + ')');
+      if (!t.municipio) faltam.push('município');
+      if (!t.uf) faltam.push('UF');
+      if (faltam.length) {
+        log.audit('fp_md_map_simular.montarTransportadora',
+          'transportador ' + id + ' vai SEM ' + faltam.join(', ') + '. É cadastro: preencha no ' +
+          'fornecedor e, no endereço de cobrança padrão dele, cidade e estado nos campos (não só ' +
+          'no texto do endereço).');
+      }
+
       return temAlgo(t) ? t : null;
     }
 

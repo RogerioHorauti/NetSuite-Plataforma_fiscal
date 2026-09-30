@@ -1171,3 +1171,9 @@ Contra o gabarito (§13.1–13.2): **todos os grupos da emissão batem** — `in
 `custentity_fp_cnpj_cpf`/`_ie` e o endereço dele tem cidade/UF só no `addrtext` (§13.4) — o número
 `1231` também está só lá. É cadastro; o mapeador avisa quando não há endereço, mas não quando ele
 vem sem cidade/UF.
+
+**Transportadora sem documento ou local agora avisa** no log (CNPJ/CPF, município, UF; IE fora de
+propósito — isento/PF). Records Browser 2026.1 (`2026_1_Schema_and_Records_Browser/`, fora do git):
+o endereço nativo só tem `addr1-3`, `city`, `state`, `zip`, `country` e o `addrtext` montado — número
+não é campo nativo; o vendor tem `vatregnumber` e `taxidnum` nativos, **vazios no fornecedor 11**
+junto com o `custentity_fp_cnpj_cpf`, então não há outra fonte a ler.
