@@ -375,6 +375,9 @@ incompleto.
 
 ### 7.1.1 `<cobr>` — fatura e duplicatas (parcelamento)
 
+> ✅ **FECHADO em 2026-09-30.** A plataforma ganhou o grupo Y (`7f6b1a5b`) e o bundle o monta da
+> sublist `installment` — medido na conta, MEDICOES §13.2/§13.7. O texto abaixo é o histórico.
+
 **Estado medido em 25/09/2026:** não existe `cobranca`, `duplicatas`, `nDup`, `dVenc` nem `vDup` em
 DTO nenhum do FiscalPlatform, e o `nfe-builder.ts:5` lista `<cobr>` entre os grupos que "entram nas
 etapas seguintes".
@@ -401,6 +404,10 @@ nota coerente na tela e incoerente no XML.
 **Ordem:** DTO + builder na plataforma → só então o mapeador aqui.
 
 ### 7.1.2 Grupos do `EmitirNotaDto` ainda não mapeados pelo bundle
+
+> ✅ **NF-e FECHADA em 2026-09-30:** `contingencia`, `exportacao`, datas, qualificação, GTIN e CNAE
+> mapeados e medidos na conta (MEDICOES §14). Seguem abertos só os grupos de OUTROS modelos
+> (`participantes`, `prestacao`, `manifesto`, `guiaValores`) e a `substituicao` de NFS-e.
 
 Estes existem no contrato e o bundle simplesmente não os monta — são frentes, não pendências de
 medição: `contingencia`, `exportacao`, `substituicao`, e os de outros modelos (`participantes` e
