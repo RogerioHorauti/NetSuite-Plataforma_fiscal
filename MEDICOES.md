@@ -1254,3 +1254,22 @@ gravou** o NBS (campo que não se aplica ao tipo é descartado calado pelo REST)
 emitida leva `nbs`, `codigoServicoMunicipal`, `desdobramentoTribNac`, `tipoItem:"09"` e `codigoCnae`
 na linha, igual nos dois payloads. A URL externa do Suitelet seguiu respondendo depois do deploy —
 a audiência agora está no XML.
+
+## 15. Fase 3 — eventos do documento emitido, com resposta chumbada (2026-09-30)
+
+Rotas e corpos do bundle conferidos contra `emissao.controller.ts`: `emitir/:chaveOuId/consultar`,
+`nfe/:chave/reconciliar`, `emitir/:chaveOuId/cancelar` `{justificativa}`,
+`emitir/:chaveOuId/carta-correcao` `{correcao}`, `emitir/:chaveOuId/inutilizar` `{justificativa}` —
+a chave entra pelo `EnderecoDoDocumentoPipe`. **Batem.** O que não batia era a RESPOSTA:
+
+| defeito | causa lida no fonte | correção |
+|---|---|---|
+| depois de CANCELAR, a transação seguia AUTORIZADA | `cancelar` e `carta-correcao` devolvem `{ transaction, evento }`; o persist lia `status` na raiz | `documentoDaResposta` por ação, no Suitelet |
+| desfecho da reconciliação nunca gravado | `ResultadoReconciliacao` traz `statusNovo`, não `status` (ausente = nada mudou) | idem; ausente não toca o status |
+| inutilização poria o 102 da INUTILIZAÇÃO nos campos da NOTA | o retorno é `{sucesso, cStat, xMotivo, nProt, id}` e a plataforma não muda o status da nota | nada vai aos campos DOC_; o rastro vai |
+| evento sem rastro, e com rastro sobrescreveria a emissão | Suitelet não passava o corpo; nome fixo `FP-…-emissao-*` | corpo do evento no rastro; um par por ação (`FP-<tipo>-<id>-<acao>-*`) |
+| ⚠ nenhuma nota chegava a AUTORIZADA | o `emitir` chumbado devolvia o `chumbado()` do SIMULAR, e o comentário dizia o contrário | emissão chumbada na forma de `TransactionComLinks`, derivada do payload |
+
+Emissão chumbada: chave de 44 com DV módulo 11 (conferido contra a chave real da 2232: DV 4 = 4),
+número 900.000.000 + `idExterno`, idempotente. Cada rota de evento tem a forma do fonte.
+Validate 0 erros. **Falta o deploy para medir.**

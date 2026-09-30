@@ -199,19 +199,29 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
         };
       }
 
-      var doc = resposta.body;
+      // O RETORNO INTEIRO vai para o rastro; na transação entra só o que descreve o DOCUMENTO.
+      opcoes.acao = acao;
+      opcoes.bruto = resposta.body;
+      var doc = documentoDaResposta(acao, resposta.body);
       var gravado = fpPersist.aplicar(tipo, id, doc, opcoes);
+      doc = doc || {};
+
+      // O que a TELA mostra é o desfecho da AÇÃO: no evento, o `evento`; na inutilização, o
+      // retorno dela. Os campos DOC_ da transação continuam só com o que descreve a nota.
+      var bruto = resposta.body || {};
+      var desfecho = bruto.evento || (acao === ACOES.INUTILIZAR ? bruto : doc);
 
       return {
         ok: true,
-        titulo: titulo(acao) + ': ' + (doc.status || 'sem status'),
+        titulo: titulo(acao) + ': ' + (doc.status || (desfecho.sucesso ? 'registrado' : 'sem status')),
         status: doc.status || '',
-        cStat: doc.cStat || '',
-        xMotivo: doc.xMotivo || '',
+        cStat: desfecho.cStat || doc.cStat || '',
+        xMotivo: desfecho.xMotivo || doc.xMotivo || '',
         chaveAcesso: doc.chaveAcesso || '',
         numero: doc.numero || '',
         serie: doc.serie || '',
-        protocolo: doc.nProt || '',
+        protocolo: desfecho.nProt || doc.nProt || '',
+        nSeqEvento: (bruto.evento && bruto.evento.nSeqEvento) || '',
         ambiente: doc.ambiente || '',
         arquivos: (gravado && gravado.arquivos) || []
       };
@@ -249,6 +259,32 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
         ' tipo=' + payload.tipoDocumento + ' — consome numeração');
 
       return fpClient.emitir(payload, opcoes);
+    }
+
+    /**
+     * O QUE DA RESPOSTA DESCREVE O DOCUMENTO — cada rota devolve uma forma, lida no fonte:
+     *
+     *   emitir, consultar  → a transação solta (`TransactionComLinks`)
+     *   cancelar, carta    → `{ transaction, evento }` — o documento está em `transaction`
+     *   reconciliar        → `{ chaveAcesso, statusNovo?, cStat, xMotivo, nProt? }`; `statusNovo`
+     *                        AUSENTE quer dizer "nada mudou", e aí o status não se toca
+     *   inutilizar         → o retorno é da INUTILIZAÇÃO, não da nota, e a plataforma não muda o
+     *                        status dela (`nfe-transmissao.inutilizarPorNota`). Gravar o 102 nos
+     *                        campos DOC_ poria o protocolo de um documento no lugar do de outro.
+     *
+     * ⚠ Até 2026-09-30 a resposta ia inteira para o persist: depois de CANCELAR, a transação
+     * continuava AUTORIZADA, porque `status` estava dentro de `transaction` (MEDICOES §15).
+     */
+    function documentoDaResposta(acao, corpo) {
+      if (!corpo || typeof corpo !== 'object') return null;
+      if (acao === ACOES.CANCELAR || acao === ACOES.CARTA) return corpo.transaction || null;
+      if (acao === ACOES.INUTILIZAR) return null;
+      if (acao === ACOES.RECONCILIAR) {
+        var d = { chaveAcesso: corpo.chaveAcesso, cStat: corpo.cStat, xMotivo: corpo.xMotivo, nProt: corpo.nProt };
+        if (corpo.statusNovo) d.status = corpo.statusNovo;
+        return d;
+      }
+      return corpo;
     }
 
     /**
@@ -296,6 +332,9 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
         corpo = montarCorpo(cfg.campo, texto);
       }
 
+      // O corpo do evento é o "payload enviado" dele — sem ele o rastro fica pela metade.
+      opcoes.payload = corpo || {};
+
       log.audit('fp_sl_emissao.evento', acao + ' · chave ' + chave);
       return fpClient.postar(cfg.caminho.replace('{chave}', chave), corpo, opcoes);
     }
@@ -338,9 +377,7 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
     }
 
     function titulo(acao) {
-      if (acao === ACOES.CONSULTAR) return 'Consultar desfecho na SEFAZ';
-      if (acao === ACOES.RECONCILIAR) return 'Reconciliar pela chave';
-      return 'Emitir documento fiscal';
+      return (EVENTOS[acao] && EVENTOS[acao].rotulo) || 'Emitir documento fiscal';
     }
     function json(contexto, dado) {
       contexto.response.setHeader({ name: 'Content-Type', value: 'application/json' });

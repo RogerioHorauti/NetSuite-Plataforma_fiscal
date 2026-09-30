@@ -309,13 +309,103 @@ define([
   function emitir(payload, opcoes) {
     // return chamar('POST', '/fiscal/emitir', payload, opcoes);
     //
-    // CHUMBADO, mesma resposta do simular: ela veio de uma emissão autorizada de verdade, então
-    // traz chave, número, série, protocolo e cStat 100 — é o que a persistência e o botão
-    // precisam para serem exercitados. O payload ENVIADO continua sendo montado e gravado: é ele
-    // que se confere hoje, não a resposta.
+    // CHUMBADO. ⚠ Até 2026-09-30 esta linha devolvia o `chumbado()` do SIMULAR — sem chave, sem
+    // status —, e o comentário dizia o contrário. Nenhuma transação chegava a AUTORIZADA, e a
+    // gravação do retorno da emissão nunca rodou (MEDICOES §15). Agora é a forma de
+    // `TransactionComLinks`, que é o que o `POST /fiscal/emitir` devolve.
     log.audit('fp_client.emitir', 'RESPOSTA CHUMBADA — nada foi transmitido à SEFAZ. ' +
       'idExterno=' + (payload && payload.idExterno));
-    return { ok: true, code: 200, body: chumbado(), durationMs: 0 };
+    return { ok: true, code: 200, body: emissaoChumbada(payload), durationMs: 0 };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // CHUMBADO — enquanto a plataforma não está no ar
+  // ─────────────────────────────────────────────────────────────────────────────
+  //
+  // Cada resposta tem a FORMA que a rota real devolve, lida no fonte (emissao.controller.ts,
+  // emissao.service.ts, nfe-transmissao.service.ts, nfe-reconciliacao.service.ts). É a forma que
+  // se exercita aqui — o persist e o Suitelet —, não o conteúdo fiscal. Tudo sai no log como
+  // "RESPOSTA CHUMBADA", e nada vai à rede.
+  //
+  // Para voltar ao real: `emitir` e `postar` chamam `chamar`, e as funções abaixo saem.
+
+  /**
+   * Nota AUTORIZADA derivada do payload. Idempotente como a rota real: o mesmo `idExterno` dá o
+   * mesmo número e a mesma chave. cUF 35 fixo — a filial desta conta é SP. Número na faixa
+   * 900.000.000+, que nenhuma série real alcança, para não se confundir com número de verdade.
+   */
+  function emissaoChumbada(p) {
+    p = p || {};
+    var numero = 900000000 + (parseInt(p.idExterno, 10) || 0);
+    var serie = String(p.serie || '1');
+    var d = String(p.dataEmissao || '2026-01-01');
+    var chave = chaveDeAcesso('35', d.substring(2, 4) + d.substring(5, 7), p.cnpjEmpresa, '55',
+      serie, numero, '1', String(p.idExterno || 0));
+    return {
+      chaveAcesso: chave,
+      numero: numero,
+      serie: serie,
+      status: 'AUTORIZADA',
+      cStat: '100',
+      xMotivo: 'Autorizado o uso da NF-e (CHUMBADO)',
+      nProt: '1' + chave.substring(25, 39),
+      ambiente: '2',
+      idExterno: p.idExterno || null
+    };
+  }
+
+  /** 44 dígitos: cUF AAMM CNPJ mod série(3) nNF(9) tpEmis cNF(8) DV — DV módulo 11, pesos 2..9. */
+  function chaveDeAcesso(cUF, aamm, cnpj, mod, serie, nNF, tpEmis, semente) {
+    var zeros = function (v, n) { v = String(v).replace(/\D/g, ''); while (v.length < n) v = '0' + v; return v.slice(-n); };
+    var base = zeros(cUF, 2) + zeros(aamm, 4) + zeros(cnpj, 14) + zeros(mod, 2) + zeros(serie, 3) +
+      zeros(nNF, 9) + zeros(tpEmis, 1) + zeros(semente, 8);
+    var soma = 0, peso = 2;
+    for (var i = base.length - 1; i >= 0; i--) { soma += Number(base.charAt(i)) * peso; peso = peso === 9 ? 2 : peso + 1; }
+    var resto = soma % 11;
+    return base + (resto < 2 ? 0 : 11 - resto);
+  }
+
+  /**
+   * A resposta de cada rota de evento, na forma dela:
+   *   consultar     → TransactionComLinks (a transação solta, como o emitir)
+   *   reconciliar   → ResultadoReconciliacao { chaveAcesso, statusAnterior, desfecho, statusNovo?, cStat, xMotivo, nProt? }
+   *   cancelar      → { transaction, evento }
+   *   carta-correcao→ { transaction, evento }
+   *   inutilizar    → { sucesso, cStat, xMotivo, nProt, dhRecbto, id } — da INUTILIZAÇÃO, não da nota
+   */
+  function eventoChumbado(caminho, payload) {
+    var m = /\/(?:emitir|nfe)\/([^/]+)\/([a-z-]+)$/.exec(caminho) || [];
+    var chave = m[1] || '';
+    var acao = m[2] || '';
+    var prot = '1' + String(chave).substring(25, 39);
+
+    if (acao === 'consultar') {
+      return { chaveAcesso: chave, status: 'AUTORIZADA', cStat: '100',
+        xMotivo: 'Autorizado o uso da NF-e (CHUMBADO)', nProt: prot };
+    }
+    if (acao === 'reconciliar') {
+      return { chaveAcesso: chave, statusAnterior: 'PROCESSANDO', desfecho: 'AUTORIZADA',
+        statusNovo: 'AUTORIZADA', cStat: '100', xMotivo: 'Autorizado o uso da NF-e (CHUMBADO)', nProt: prot };
+    }
+    if (acao === 'cancelar') {
+      return {
+        transaction: { chaveAcesso: chave, status: 'CANCELADA' },
+        evento: { sucesso: true, cStat: '135', xMotivo: 'Evento registrado e vinculado a NF-e (CHUMBADO)',
+          nProt: '2' + String(chave).substring(25, 39), nSeqEvento: 1, xmlUrl: null }
+      };
+    }
+    if (acao === 'carta-correcao') {
+      return {
+        transaction: { chaveAcesso: chave, status: 'AUTORIZADA' },
+        evento: { sucesso: true, cStat: '135', xMotivo: 'Evento registrado e vinculado a NF-e (CHUMBADO)',
+          nProt: '3' + String(chave).substring(25, 39), nSeqEvento: 1, xmlUrl: null }
+      };
+    }
+    if (acao === 'inutilizar') {
+      return { sucesso: true, cStat: '102', xMotivo: 'Inutilizacao de numero homologado (CHUMBADO)',
+        nProt: '4' + String(chave).substring(25, 39), dhRecbto: null, id: null };
+    }
+    return null;
   }
 
   /** `POST /transacoes/reclassificar`. Endereça o documento pela chave de acesso. */
@@ -330,7 +420,11 @@ define([
 
   /** POST genérico, para os endpoints de evento (`/fiscal/emitir/{id}/cancelar` etc.). */
   function postar(caminho, payload, opcoes) {
-    return chamar('POST', caminho, payload, opcoes);
+    // return chamar('POST', caminho, payload, opcoes);
+    var corpo = eventoChumbado(caminho, payload);
+    if (!corpo) return chamar('POST', caminho, payload, opcoes);
+    log.audit('fp_client.postar', 'RESPOSTA CHUMBADA — nada foi à rede. ' + caminho);
+    return { ok: true, code: 200, body: corpo, durationMs: 0 };
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

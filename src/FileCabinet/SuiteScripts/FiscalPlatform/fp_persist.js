@@ -54,17 +54,19 @@ define(['N/record', 'N/file', 'N/url', 'N/log', './fp_fields'],
      */
     function aplicar(tipo, id, doc, opcoes) {
       opcoes = opcoes || {};
-      if (!doc) return null;
 
-      gravarNaTransacao(tipo, id, doc);
+      // `doc` nulo é resposta que não descreve a nota — a inutilização. A transação não se toca,
+      // mas o rastro vai: é a prova de que o número foi fechado.
+      if (doc) gravarNaTransacao(tipo, id, doc);
 
-      var arquivos = anexarRastro(tipo, id, doc, opcoes);
+      var retorno = opcoes.bruto !== undefined ? opcoes.bruto : doc;
+      var arquivos = anexarRastro(tipo, id, retorno, opcoes);
 
-      log.audit('fp_persist.aplicar',
-        'documento ' + (doc.status || '?') + ' · chave ' + (doc.chaveAcesso || '(sem chave)') +
+      log.audit('fp_persist.aplicar', (opcoes.acao || 'emitir') + ' · documento ' +
+        ((doc && doc.status) || '?') + ' · chave ' + ((doc && doc.chaveAcesso) || '(sem chave)') +
         ' · ' + arquivos.length + ' arquivo(s)');
 
-      return { chave: texto(doc.chaveAcesso), status: texto(doc.status), arquivos: arquivos };
+      return { chave: texto(doc && doc.chaveAcesso), status: texto(doc && doc.status), arquivos: arquivos };
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -151,7 +153,9 @@ define(['N/record', 'N/file', 'N/url', 'N/log', './fp_fields'],
         return [];
       }
 
-      var base = 'FP-' + tipo + '-' + id + '-emissao-';
+      // UM PAR POR AÇÃO. Com o nome fixo `-emissao-`, cancelar sobrescrevia a prova da emissão.
+      // Repetir a MESMA ação substitui o par dela; a CC-e, que é repetível, guarda a última.
+      var base = 'FP-' + tipo + '-' + id + '-' + (opcoes.acao && opcoes.acao !== 'emitir' ? opcoes.acao : 'emissao') + '-';
       return [
         gravarJson(base + 'payload.json', opcoes.payload, tipo, id, opcoes.pasta),
         gravarJson(base + 'retorno.json', doc, tipo, id, opcoes.pasta)
