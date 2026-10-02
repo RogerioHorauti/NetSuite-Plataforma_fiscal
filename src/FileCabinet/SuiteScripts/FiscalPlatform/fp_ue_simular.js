@@ -46,6 +46,7 @@
  *   LANÇA só para falha de transporte (DNS, TLS, timeout)
  */
 define([
+  'N/ui/serverWidget',
   'N/record',
   'N/file',
   'N/runtime',
@@ -59,7 +60,7 @@ define([
   './fp_governanca',
   'N/query',
   './fp_chave'
-], function (record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular, fpEntrada,
+], function (serverWidget, record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular, fpEntrada,
   fpGovernanca, query, fpChave) {
   /** Tipos de transação em que a simulação roda. Fora desta lista, o script não faz nada. */
   var TIPOS = [
@@ -552,11 +553,12 @@ define([
     // A organização vem do OBJETO: subabas ANINHADAS (`<parent>` no XML do subtab) e o `<subtab>`
     // de cada campo. Quem monta é o NetSuite, e não quebra.
 
-    // A EXIBIÇÃO DOS CAMPOS NÃO É TRATADA AQUI. Forçar INLINE nos `DOC_*` em CREATE/EDIT escondia
-    // os vazios (o NetSuite não desenha campo inline sem valor) e travava o que devia abrir. Quem
-    // diz como o campo aparece é o objeto SDF.
-    //
-    // Na compra, só o validador da chave na tela (fp_cs_entrada, portado do AVLR_AccessKeyValidation_CS).
+    // XML e DANFE são links do retorno: INLINE sempre. A chave de acesso fica editável (NORMAL do
+    // objeto). O resto dos `DOC_*` não é tratado aqui.
+    fpForm.exibicaoSeExistir(scriptContext.form, [fpFields.id('DOC_XML'), fpFields.id('DOC_DANFE')],
+      serverWidget.FieldDisplayType.INLINE);
+
+    // Na compra, o validador da chave na tela (fp_cs_entrada, portado do AVLR_AccessKeyValidation_CS).
     if (!fpMapSimular.ehCompra(scriptContext.newRecord.type)) return;
     var T = scriptContext.UserEventType;
     if (scriptContext.type === T.CREATE || scriptContext.type === T.EDIT || scriptContext.type === T.COPY) {
