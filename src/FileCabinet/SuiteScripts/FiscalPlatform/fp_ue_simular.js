@@ -59,9 +59,10 @@ define([
   './fp_entrada',
   './fp_governanca',
   'N/query',
-  './fp_chave'
+  './fp_chave',
+  'N/error'
 ], function (serverWidget, record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular, fpEntrada,
-  fpGovernanca, query, fpChave) {
+  fpGovernanca, query, fpChave, error) {
   /** Tipos de transação em que a simulação roda. Fora desta lista, o script não faz nada. */
   var TIPOS = [
     'invoice',
@@ -236,6 +237,11 @@ define([
   }
 
   function beforeSubmit(scriptContext) {
+    // A CHAVE DA COMPRA BLOQUEIA O SAVE, e por isso vem FORA do try/catch: lá dentro o erro seria
+    // engolido e o registro salvaria. É o mesmo `fp_chave` do Client Script — vale também para
+    // o que não passa pela tela (REST, CSV).
+    var chaveValidada = validarChaveOuRecusar(scriptContext);
+
     // PRIMEIRA LINHA, e a ordem importa: o id de correlação tem de existir antes de qualquer
     // coisa que possa lançar. É a correção do defeito do AVLR — ver o docblock de `fp_msg.js`.
     var corrId;
@@ -273,7 +279,7 @@ define([
         transacao: scriptContext.newRecord.id,
         corrId: corrId
       };
-      var entrada = rodarEntrada(scriptContext.newRecord, payload, resposta, opcoesRede);
+      var entrada = rodarEntrada(scriptContext.newRecord, payload, resposta, opcoesRede, chaveValidada);
       if (entrada && entrada.aplicada) {
         guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada.rastro });
         fpMsg.sucesso(corrId, '');
@@ -346,16 +352,16 @@ define([
    *
    * A comparação não tem veredito (ver `fp_entrada`): mostra os dois valores onde diferem.
    */
-  function rodarEntrada(newRecord, payloadSim, respostaSim, opcoes) {
+  function rodarEntrada(newRecord, payloadSim, respostaSim, opcoes, validada) {
     var reclass = fpMapSimular.montarReclassificar(newRecord);
     if (!reclass) return null;
 
     var r = { aplicada: false, avisos: [], erro: null, diferentes: 0, rastro: { payload: reclass } };
 
-    // A CHAVE ANTES DA REDE (`fp_chave`, o mesmo validador da tela). Aqui não se bloqueia o save —
-    // guarda 1 —, mas chave inválida ou duplicada NÃO vai à plataforma. Sem tipo de documento de
-    // TERCEIRO com modelo, não é nota de fornecedor, e a entrada não roda.
-    var v = fpChave.validar(newRecord);
+    // A CHAVE ANTES DA REDE. Inválida já recusou o save em `validarChaveOuRecusar`; o resultado
+    // vem de lá para não consultar duas vezes. Sem tipo de documento de TERCEIRO com modelo, não é
+    // nota de fornecedor, e a entrada não roda.
+    var v = validada || fpChave.validar(newRecord);
     r.rastro.validacao = v;
     if (!v.aplica) {
       r.avisos.push('Chave de acesso informada, mas o tipo de documento não é de terceiro com modelo (NF-e ou CT-e de ' +
@@ -516,6 +522,27 @@ define([
     return removidos;
   }
 
+  /**
+   * Compra em CREATE/EDIT: chave reprovada no `fp_chave` lança, e o NetSuite não salva. XEDIT fica
+   * de fora — o `newRecord` dele só traz o campo alterado, e tipo e chave viriam vazios.
+   * Devolve o resultado para o `rodarEntrada` não validar de novo.
+   */
+  function validarChaveOuRecusar(scriptContext) {
+    var T = scriptContext.UserEventType;
+    if (scriptContext.type !== T.CREATE && scriptContext.type !== T.EDIT) return null;
+    if (!fpMapSimular.ehCompra(scriptContext.newRecord.type)) return null;
+
+    var v = fpChave.validar(scriptContext.newRecord);
+    if (v.aplica && !v.podeSalvar) {
+      throw error.create({
+        name: 'FP_CHAVE_INVALIDA',
+        message: '[CHAVE DE ACESSO] Registro NÃO pode ser salvo: ' + v.erros.concat(v.avisos).join(' · '),
+        notifyOff: true
+      });
+    }
+    return v;
+  }
+
   function organizarFormulario(scriptContext) {
     if (runtime.executionContext !== runtime.ContextType.USER_INTERFACE) return;
     if (TIPOS.indexOf(scriptContext.newRecord.type) === -1) return;
@@ -558,16 +585,10 @@ define([
       serverWidget.FieldDisplayType.INLINE);
 
     // A CHAVE ABRE NA COMPRA: quem lança digita a chave da nota do fornecedor. No resto ela é
-    // retorno da emissão, e fica travada.
+    // retorno da emissão, e fica travada. O validador da tela é o Client Script
+    // `customscript_fp_cs_entrada` (objeto próprio: o `clientScriptModulePath` não funcionou aqui).
     if (!fpMapSimular.ehCompra(scriptContext.newRecord.type)) {
       fpForm.exibicaoSeExistir(scriptContext.form, [fpFields.id('DOC_CHAVE')], serverWidget.FieldDisplayType.INLINE);
-      return;
-    }
-
-    // Na compra, o validador da chave na tela (fp_cs_entrada, portado do AVLR_AccessKeyValidation_CS).
-    var T = scriptContext.UserEventType;
-    if (scriptContext.type === T.CREATE || scriptContext.type === T.EDIT || scriptContext.type === T.COPY) {
-      scriptContext.form.clientScriptModulePath = './fp_cs_entrada.js';
     }
   }
 

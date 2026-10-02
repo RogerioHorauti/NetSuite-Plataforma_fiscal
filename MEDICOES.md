@@ -1533,3 +1533,9 @@ não há data do documento própria no bundle.
 
 Harness: 11 casos (válida; sem chave; 43 dígitos; DV; modelo 57 em NF-e; data fora do mês; CNPJ de
 outro emitente; emissão própria; NFS-e tomada; sem tipo; duplicidade) — todos certos, 1 consulta cada.
+
+**2026-10-02 (Rogerio): validador da chave sai do `clientScriptModulePath`.** Anexado pelo
+`beforeLoad` não funcionou na tela; vira o objeto `customscript_fp_cs_entrada` (PURCHASEORDER,
+VENDORBILL, VENDORCREDIT). E o save com chave reprovada passou: o `beforeSubmit` do `fp_ue_simular`
+agora chama `validarChaveOuRecusar` FORA do try/catch e lança `FP_CHAVE_INVALIDA` (compra, CREATE/EDIT;
+XEDIT fora porque o `newRecord` não traz tipo e chave).

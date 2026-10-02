@@ -9,7 +9,8 @@
  *   ao salvar           → `fp_chave.validar`: erro mostra a mensagem e NÃO salva; aviso mostra e salva
  *
  * A regra mora no `fp_chave`, que o servidor também usa — o cliente só pinta e bloqueia.
- * Anexado por `form.clientScriptModulePath` no `beforeLoad` do `fp_ue_simular`, só em compra.
+ * Objeto próprio, `customscript_fp_cs_entrada`, implantado nas compras. O servidor repete a validação
+ * no `beforeSubmit` do `fp_ue_simular` e recusa o save.
  */
 define(['N/ui/message', './fp_fields', './fp_chave'], function (message, fpFields, fpChave) {
 
