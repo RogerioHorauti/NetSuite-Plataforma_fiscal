@@ -310,6 +310,24 @@ calculados pelo motor (override) — ou a descrição é corrigida para dizer o 
 
 ---
 
+## 13. Substituição de NFS-e: a plataforma resolver o `rpsSubstituido` pela chave
+
+**O que:** quando o `substituicao` chega só com `chaveSubstituida` + `codigoMotivo`, a plataforma
+preencher `substRpsNumero`/`Serie`/`Tipo` a partir da transação que ELA emitiu com aquela chave
+(`emissao.service.ts:897-916` hoje grava só o que o ERP mandou, e a CHECK
+`chk_subst_rps_grupo_inteiro` cobra os três juntos).
+
+**Por quê:** o docblock do DTO diz que o ERP declara o RPS "porque é dele o RPS", mas quem
+reservou o número, escolheu a série e definiu o `tsTipoRps` foi a plataforma — e o tipo varia por
+padrão municipal (`montar-lote-elotech.ts:65` `1|2|3|4`, `montar-lote-abrasf1.ts:34` `1|2|3`,
+`rps-builder.ts:164` default `RPS`). O bundle tem número e série no `DOC_NUMERO`/`DOC_SERIE`, mas
+o TIPO ele teria de chutar. Mandar `1` fixo funcionaria até o primeiro município que use outro.
+
+**Como conferir:** emitir uma NFS-e ABRASF com `substituicao: { chaveSubstituida, codigoMotivo }`
+e ler `subst_rps_numero/serie/tipo` da nota nova iguais aos da substituída.
+
+---
+
 ## Fora de escopo deste handoff
 
 Nada aqui pede régua nova, CST, alíquota, cBenef ou fórmula de base. O conector **traduz e

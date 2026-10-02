@@ -120,6 +120,9 @@ define([], function () {
       "EXP_DESPACHO": "custbody_fp_exp_despacho",
       "CONT_VIA": "custbody_fp_cont_via",
       "CONT_JUSTIFICATIVA": "custbody_fp_cont_justificativa",
+      "SUBST_TRANSACAO": "custbody_fp_subst_transacao",
+      "SUBST_MOTIVO": "custbody_fp_subst_motivo",
+      "SUBST_DESCRICAO": "custbody_fp_subst_descricao",
 
       "_grupo_datas": [
         "Datas que so o ERP sabe, e que vao TAMBEM no /simular (sao do SimulacaoNotaInputDto).",
@@ -405,7 +408,8 @@ define([], function () {
       "LISTA_CONT_VIA": "customlist_fp_cont_via",
       "LISTA_FORMA_PAGTO": "customlist_fp_forma_pagto",
       "LISTA_IND_PAG": "customlist_fp_ind_pag",
-      "LISTA_TP_INTEGRA": "customlist_fp_tp_integra"
+      "LISTA_TP_INTEGRA": "customlist_fp_tp_integra",
+      "LISTA_MOTIVO_SUBST": "customlist_fp_motivo_subst"
     },
   
     "valores": {

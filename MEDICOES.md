@@ -1589,3 +1589,19 @@ id na criação (CustomGLLinesPlugIn.pdf p.17, p.64).
 **Ainda NÃO medido:** (b) a ordem cache gravado no `beforeSubmit` → plug-in lê no mesmo save, por CSV; (c) ⚠
 reexecução do plug-in por atualização de custo (p.4, p.94) depois do TTL: em CSV/webservice, sem
 sublista gravada, não acha nada e a custom line some.
+
+## 22. Substituição de NFS-e no payload de emissão (2026-10-02)
+
+Contrato lido no fonte da plataforma: `EmitirNotaDto.substituicao` = `{ chaveSubstituida (50),
+codigoMotivo (TSCodJustSubst 01–05/99), descricaoMotivo?, rpsSubstituido? {numero, serie, tipo} }`,
+persistido em `emissao.service.ts:897-916`; 99 sem descrição recusado antes da numeração
+(`dps-builder.ts`, `MOTIVO_SUBSTITUICAO_OUTROS`, E0078). `DOC_NUMERO` do bundle = `tx.numero` (o da
+DPS/RPS); o número da prefeitura é `nfseNumero` (`emissao.service.ts:3497`).
+
+| peça | o quê |
+|---|---|
+| `custbody_fp_subst_transacao` (SELECT transação), `custbody_fp_subst_motivo` (`customlist_fp_motivo_subst`, 6 valores), `custbody_fp_subst_descricao` (TEXT 255) | venda, subaba FiscalPlatform |
+| `montarSubstituicao` no `montarEmissao` | chave = `DOC_CHAVE` da transação apontada (uma consulta); motivo pelo código da lista; descrição se houver. Apontada sem chave LANÇA |
+| `rpsSubstituido` | NÃO vai: o tipo do RPS varia por padrão municipal e é da plataforma — HANDOFF item 13 |
+
+Validate 0 erros. **Falta deploy e um payload de emissão de NFS-e com substituição para medir.**

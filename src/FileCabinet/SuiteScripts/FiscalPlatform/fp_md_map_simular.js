@@ -200,6 +200,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var contingencia = montarContingencia(newRecord);
       if (contingencia) payload.contingencia = contingencia;
 
+      var substituicao = montarSubstituicao(newRecord);
+      if (substituicao) payload.substituicao = substituicao;
+
       return payload;
     }
 
@@ -413,6 +416,41 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var via = codigoDaLista(textoDaLista(newRecord, 'CONT_VIA'));
       if (via) c.via = via;
       return c;
+    }
+
+    /**
+     * SUBSTITUIÇÃO DE NFS-e (grupo `<subst>` da DPS nacional) — o ERP diz QUAL nota esta substitui
+     * e POR QUÊ; o resto não é dele.
+     *
+     * A chave da substituída sai do `DOC_CHAVE` da transação apontada, numa consulta. O
+     * `rpsSubstituido` do ABRASF NÃO vai: número, série e TIPO do RPS são da emissão que a
+     * plataforma fez, e o tipo varia por padrão municipal — só ela sabe (HANDOFF item 13). O 99
+     * sem descrição, o padrão paulistano (que não substitui) e a chave de 50 posições quem confere
+     * é a plataforma, antes de reservar número.
+     *
+     * Transação apontada sem chave LANÇA: é documento que não foi emitido, e substituir o que não
+     * existe não é uma emissão que se mande calada.
+     */
+    function montarSubstituicao(newRecord) {
+      var campo = fpFields.id('SUBST_TRANSACAO');
+      var idOriginal = campo && newRecord.getValue({ fieldId: campo });
+      if (!idOriginal) return null;
+
+      var cChave = fpFields.id('DOC_CHAVE');
+      var r = query.runSuiteQL({
+        query: 'SELECT tranid, ' + cChave + ' AS chave FROM transaction WHERE id = ?',
+        params: [idOriginal]
+      }).asMappedResults();
+      var chave = r.length ? texto(r[0].chave).replace(/\D/g, '') : '';
+      if (!chave) {
+        throw new Error('A NFS-e substituída (transação ' + (r.length ? r[0].tranid : idOriginal) +
+          ') não tem chave de acesso: ela não foi emitida, e não há o que substituir.');
+      }
+
+      var s = { chaveSubstituida: chave, codigoMotivo: codigoDaLista(textoDaLista(newRecord, 'SUBST_MOTIVO')) };
+      var desc = valorTexto(newRecord, fpFields.id('SUBST_DESCRICAO'));
+      if (desc) s.descricaoMotivo = desc;
+      return s;
     }
 
     /**
@@ -1611,7 +1649,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
 
     /** Os campos SELECT de CORPO que o payload lê pelo NOME, e o registro de cada lista. */
     var LISTAS_DO_CORPO = [['NATUREZA', 'NATUREZA_OPERACAO'],
-      ['IND_PRES', 'LISTA_IND_PRES'], ['FRETE_MODALIDADE', 'LISTA_MOD_FRETE'], ['CONT_VIA', 'LISTA_CONT_VIA']];
+      ['IND_PRES', 'LISTA_IND_PRES'], ['FRETE_MODALIDADE', 'LISTA_MOD_FRETE'], ['CONT_VIA', 'LISTA_CONT_VIA'],
+      ['SUBST_MOTIVO', 'LISTA_MOTIVO_SUBST']];
 
     // Memória POR REGISTRO: `montar`, `montarEmissao` e `montarReclassificar` da mesma transação não
     // repetem a busca. Registro diferente é objeto diferente, e aí busca de novo.

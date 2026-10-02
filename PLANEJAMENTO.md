@@ -414,6 +414,7 @@ nota coerente na tela e incoerente no XML.
 > ✅ **NF-e FECHADA em 2026-09-30:** `contingencia`, `exportacao`, datas, qualificação, GTIN e CNAE
 > mapeados e medidos na conta (MEDICOES §14). Seguem abertos só os grupos de OUTROS modelos
 > (`participantes`, `prestacao`, `manifesto`, `guiaValores`) e a `substituicao` de NFS-e.
+> **`substituicao` de NFS-e mapeada em 2026-10-02** (MEDICOES §22; o `rpsSubstituido` depende do HANDOFF item 13).
 
 Estes existem no contrato e o bundle simplesmente não os monta — são frentes, não pendências de
 medição: `contingencia`, `exportacao`, `substituicao`, e os de outros modelos (`participantes` e
