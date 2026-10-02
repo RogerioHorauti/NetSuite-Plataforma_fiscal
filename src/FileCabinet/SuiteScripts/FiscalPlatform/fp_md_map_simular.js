@@ -141,7 +141,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
      * dele, e não montar de novo, é o que garante que o documento emitido é o que foi simulado e
      * conferido — mesmas linhas, mesma natureza, mesmo destinatário. Montar duas vezes abriria a
      * janela para as duas montagens divergirem (cadastro de item alterado entre uma e outra, DI
-     * editada, que a guarda 4 não enxerga).
+     * editada).
      *
      * Aqui só se ACRESCENTA: `serie` e `tipoDocumento` (required no `EmitirNotaDto`) e os grupos que
      * o `SimulacaoNotaInputDto` não tem. Nada do que veio na base é tocado.

@@ -22,12 +22,11 @@
  *    limites são fixos da plataforma, **5 s para negociar a conexão e 45 s para a requisição**
  *    (`SSS_REQUEST_TIME_EXCEEDED`). O `options.timeout` da documentação é do `N/documentCapture`.
  *    Logo: motor INALCANÇÁVEL bloqueia o save por ~5 s, o que é tolerável; motor LENTO A RESPONDER
- *    pode bloquear até 45 s, e isso não tem como encurtar. É risco declarado, não mitigado — e é
- *    o que torna a guarda 4 (short-circuit) a mitigação que realmente sobra.
- * 3. Guarda de `executionContext`. Sem ela, uma carga de 5.000 pedidos por CSV faz 5.000 chamadas
- *    externas, e as gravações do próprio bundle (Suitelet e Map/Reduce) REENTRAM aqui.
- * 4. Short-circuit por mudança relevante. Save que não mexeu em item, valor, frete, desconto,
- *    destinatário, subsidiária ou natureza não paga chamada de rede.
+ *    pode bloquear até 45 s, e isso não tem como encurtar. É risco declarado, não mitigado.
+ * 3. e 4. ⚠ SAÍRAM em 2026-10-02 (Rogerio): a guarda de `executionContext` e o short-circuit por
+ *    "nada mudou". Todo save simula, em todo contexto; só o STATUS para (guarda 6). Motivo: o motor
+ *    pode errar e ser corrigido, e salvar de novo tem de recalcular. O custo assumido é uma
+ *    chamada por save — inclusive 5.000 numa carga CSV de 5.000.
  * 5. `/simular` e não `/emitir` (acima).
  *
  * ── DEPENDÊNCIAS AINDA NÃO ESCRITAS, e o motivo de não estarem ─────────────────────────────────
@@ -116,23 +115,11 @@ define([
   }
 
   /**
-   * Campos de cabeçalho cuja mudança justifica simular de novo (guarda 4).
+   * O QUE O MAPEADOR MANDA — usado SÓ no XEDIT (`deveRodarNoXedit`): edição inline que toca um
+   * destes recalcula; a que só toca `DOC_*` (o `fp_persist` gravando a emissão) não.
    *
-   * NATIVOS por `fpFields.padrao` + o campo de natureza pela camada de compatibilidade. Montado
-   * SOB DEMANDA e não no nível do módulo: `fp_fields` faz `file.load` e `search` para resolver o
-   * perfil, e pagar isso no load de todo script — inclusive nos saves que a guarda 6 vai descartar
-   * — seria custo de governança em troca de nada.
-   */
-  /**
-   * O QUE IMPORTA PARA A SIMULAÇÃO = O QUE O MAPEADOR MANDA.
-   *
-   * ⚠ Estas listas já foram escritas à mão, com sete nomes, e envelheceram na primeira leva de
-   * campos novos: habilitar a guarda daquele jeito faria a simulação PULAR depois de alguém trocar
-   * o CFOP ou a modalidade do frete — a tela mostraria o imposto de antes, sem erro nenhum.
-   *
-   * Agora saem do perfil, pela mesma convenção da limpeza da cópia: tudo em `transacao` que NÃO é
-   * `DOC_*` (resultado do motor) nem `CORRID` (infraestrutura) é declaração, e declaração muda
-   * imposto. Campo novo entra na comparação sozinho.
+   * Saem do perfil, pela convenção da limpeza da cópia: tudo em `transacao` que NÃO é `DOC_*`
+   * (resultado do motor) nem `CORRID` (infraestrutura) é declaração. Campo novo entra sozinho.
    */
   function camposRelevantes(tipo) {
     var l = [
@@ -156,54 +143,6 @@ define([
     // trocá-la muda o que vai ao `reclassificar`, então ela conta como mudança.
     if (fpMapSimular.ehCompra(tipo) && fpFields.id('DOC_CHAVE')) l.push(fpFields.id('DOC_CHAVE'));
     return l;
-  }
-
-  function camposLinhaRelevantes() {
-    var l = ['item', 'quantity', 'rate', 'amount', 'units', fpFields.padrao('LOCATION')];
-
-    var chaves = fpFields.chaves('linha');
-    for (var i = 0; i < chaves.length; i++) {
-      var id = fpFields.idLinha(chaves[i]);
-      if (id) l.push(id);
-    }
-    return l;
-  }
-
-  /**
-   * As sublistas que o payload lê: DI, pagamento, volume e reboque.
-   *
-   * Comparar só a CONTAGEM deixaria passar a edição de uma linha existente — trocar o número da DI
-   * sem acrescentar linha. Por isso a comparação é por VALOR, montando uma assinatura de tudo que
-   * o mapeador leria. É tudo em memória, sem ida ao banco.
-   */
-  function assinaturaDasSublistas(registro) {
-    var GRUPOS = [
-      { secao: 'di', acessor: fpFields.idDi },
-      { secao: 'pagamento', acessor: fpFields.idPagamento },
-      { secao: 'volume', acessor: fpFields.idVolume },
-      { secao: 'reboque', acessor: fpFields.idReboque }
-    ];
-
-    var partes = [];
-    for (var g = 0; g < GRUPOS.length; g++) {
-      var acessor = GRUPOS[g].acessor;
-      var sublist = acessor('SUBLIST');
-      if (!sublist) continue;
-
-      var total = registro.getLineCount({ sublistId: sublist });
-      if (total <= 0) { partes.push(sublist + ':0'); continue; }
-
-      var chaves = fpFields.chaves(GRUPOS[g].secao);
-      for (var i = 0; i < total; i++) {
-        for (var k = 0; k < chaves.length; k++) {
-          if (chaves[k] === 'SUBLIST') continue;
-          var campo = acessor(chaves[k]);
-          if (!campo) continue;
-          partes.push(registro.getSublistValue({ sublistId: sublist, fieldId: campo, line: i }));
-        }
-      }
-    }
-    return partes.join('|');
   }
 
   function beforeSubmit(scriptContext) {
@@ -634,78 +573,10 @@ define([
     // simular de novo.
     if (jaTransmitido(scriptContext.newRecord)) return false;
 
-    // GUARDA 4 — SÓ NO EDIT: no CREATE não há `oldRecord` com que comparar.
-    //
-    // É a economia que mais rende: save que não mexeu em nada fiscal não chama o motor, não gasta
-    // governança e não espera a rede. É o mesmo princípio do `notCalculate` do AvaTax, que lê o
-    // JSON anterior em vez de recalcular — mas comparando os CAMPOS, e não um sinalizador de
-    // cache sobre a tela.
-    //
-    // O que torna isso seguro é a lista vir do perfil: tudo que o mapeador manda é comparado,
-    // inclusive as quatro sublistas. Lista escrita à mão aqui faria a simulação pular uma mudança
-    // de verdade, e o usuário veria o imposto de antes sem erro nenhum.
-    if (scriptContext.type === scriptContext.UserEventType.EDIT &&
-        !mudouAlgoRelevante(scriptContext)) {
-      log.audit('fp_ue_simular', 'nada fiscalmente relevante mudou — sem chamada ao motor.');
-      return false;
-    }
+    // SEM GUARDA DE "NADA MUDOU" (2026-10-02, Rogerio): o motor pode ter errado e sido corrigido
+    // — salvar de novo TEM de recalcular, mesmo sem mudar nada na transação. O EDIT sempre simula.
 
     return true;
-  }
-
-  function mudouAlgoRelevante(scriptContext) {
-    var antigo = scriptContext.oldRecord;
-    var novo = scriptContext.newRecord;
-    if (!antigo) return true;
-
-    var campos = camposRelevantes(novo.type);
-    var camposLinha = camposLinhaRelevantes();
-
-    var i;
-    for (i = 0; i < campos.length; i++) {
-      if (!iguais(valor(antigo, campos[i]), valor(novo, campos[i]))) return true;
-    }
-
-    var linhasAntes = contarLinhas(antigo);
-    var linhasDepois = contarLinhas(novo);
-    if (linhasAntes !== linhasDepois) return true;
-
-    for (i = 0; i < linhasDepois; i++) {
-      for (var j = 0; j < camposLinha.length; j++) {
-        var campo = camposLinha[j];
-        if (!iguais(valorLinha(antigo, campo, i), valorLinha(novo, campo, i))) return true;
-      }
-    }
-
-    return assinaturaDasSublistas(antigo) !== assinaturaDasSublistas(novo);
-  }
-
-  /**
-   * Comparação por texto, deliberadamente.
-   *
-   * Quantidade e valor voltam do NetSuite ora como número, ora como string, dependendo de o
-   * registro ser dinâmico ou não. Comparar com `!==` daria "mudou" em todo save, e a guarda 4
-   * viraria decoração.
-   */
-  function iguais(a, b) {
-    var na = a === null || a === undefined ? '' : String(a);
-    var nb = b === null || b === undefined ? '' : String(b);
-    return na === nb;
-  }
-
-  function valor(registro, campo) {
-    return registro.getValue({ fieldId: campo });
-  
-  }
-
-  function valorLinha(registro, campo, linha) {
-    return registro.getSublistValue({ sublistId: 'item', fieldId: campo, line: linha });
-  
-  }
-
-  function contarLinhas(registro) {
-    return registro.getLineCount({ sublistId: 'item' });
-  
   }
 
   /**
