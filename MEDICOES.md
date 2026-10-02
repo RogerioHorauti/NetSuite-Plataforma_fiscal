@@ -1558,3 +1558,25 @@ a tela fica para quem tem sessão):
 
 A recusa sai pela pilha `validarChaveOuRecusar ← beforeSubmit ← fp_governanca.medir`, fora do
 try/catch, como desenhado. A 2734 ficou com a chave nova (cadastro de teste).
+
+### 8.10 Impostos para o GL plug-in pelo `N/cache` (2026-10-02, Rogerio)
+
+Em CSV e webservice a sublista de registro filho não chega (limitação do NetSuite: *custom sublists
+aren't available in CSV import*), e o plug-in não tinha o que lançar; a guarda 3 nem simulava
+nesses contextos. A Avalara contorna com `afterSubmit` → `https.post` na URL externa de um Suitelet
+que recarrega e salva (`AVLR_SuiteTax_UE.js:459-478`), porque UE não dispara UE. Aqui:
+
+| peça | o quê |
+|---|---|
+| `fp_impostos_cache.js` | `N/cache` PUBLIC `fp_impostos`, chave = `corrId`, TTL 3600 s, linha compacta `[imposto, natureza, valor, compoe, base, aliquota, perna, gera]`, recusa com log acima de 500 KB |
+| `fp_ue_simular` | grava o cache ANTES de cada `aplicar` (simulação e `reclassificar`); CSV, SOAP e REST saem da guarda 3 |
+| `fp_md_map_simular.aplicar` | sublista ausente no contexto → `log.audit` e não grava a sublista |
+| `fp_gl_lines_plugin.lerImpostos` | cache por `custbody_fp_corrid` → sublista → consulta por id; loga de onde leu |
+
+Por que corrId e não id: campo de corpo chega em todo contexto, e o plug-in síncrono não recebe o
+id na criação (CustomGLLinesPlugIn.pdf p.17, p.64).
+
+**Ainda NÃO medido:** (a) `N/cache` funciona dentro do plug-in — o manual não lista o módulo, nem
+contra; (b) a ordem cache gravado no `beforeSubmit` → plug-in lê no mesmo save, por CSV; (c) ⚠
+reexecução do plug-in por atualização de custo (p.4, p.94) depois do TTL: em CSV/webservice, sem
+sublista gravada, não acha nada e a custom line some.

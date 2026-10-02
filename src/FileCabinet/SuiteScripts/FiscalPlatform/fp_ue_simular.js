@@ -60,9 +60,10 @@ define([
   './fp_governanca',
   'N/query',
   './fp_chave',
-  'N/error'
+  'N/error',
+  './fp_impostos_cache'
 ], function (serverWidget, record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular, fpEntrada,
-  fpGovernanca, query, fpChave, error) {
+  fpGovernanca, query, fpChave, error, fpImpostosCache) {
   /** Tipos de transação em que a simulação roda. Fora desta lista, o script não faz nada. */
   var TIPOS = [
     'invoice',
@@ -78,8 +79,10 @@ define([
   /**
    * Contextos em que a simulação NÃO roda (guarda 3).
    *
-   * `CSVIMPORT` e `WEBSERVICES` porque carga em massa não é save de usuário — não tem tela para
-   * receber a mensagem e multiplicaria a chamada externa por milhares.
+   * CSV, SOAP e REST NÃO estão aqui (2026-10-02, Rogerio): transação que entra por eles precisa
+   * de imposto e de GL como a da tela — é o que a Avalara faz, por outro caminho. O resultado vai
+   * ao GL plug-in pelo `fp_impostos_cache`, porque a sublista de registro filho não chega nesses
+   * contextos.
    * `MAP_REDUCE`, `SCHEDULED` e `SUITELET` porque são o PRÓPRIO bundle gravando: o Suitelet de
    * emissão e o Map/Reduce de entrada salvam a transação, e sem esta guarda o save deles reentra
    * aqui e simula de novo o que já foi emitido.
@@ -95,9 +98,6 @@ define([
    */
   function contextosBloqueados() {
     return [
-      runtime.ContextType.CSV_IMPORT,
-      runtime.ContextType.WEBSERVICES,
-      runtime.ContextType.RESTWEBSERVICES,
       runtime.ContextType.MAP_REDUCE,
       runtime.ContextType.SCHEDULED,
       runtime.ContextType.SUITELET,
@@ -303,7 +303,9 @@ define([
       }
 
       // SUCESSO. Os valores do motor são REFLETIDOS, não conferidos: o NetSuite não recalcula para
-      // checar. Divergência se investiga no payload gravado acima.
+      // checar. Divergência se investiga no payload gravado acima. O cache ANTES da sublista: é
+      // ele que o GL plug-in lê, e em CSV/webservice a sublista nem existe.
+      fpImpostosCache.gravar(corrId, resposta.body);
       fpMapSimular.aplicar(scriptContext.newRecord, resposta.body);
 
       guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada && entrada.rastro });
@@ -397,6 +399,7 @@ define([
       return r;
     }
 
+    fpImpostosCache.gravar(opcoes.corrId, resposta.body);
     fpMapSimular.aplicar(newRecord, resposta.body);
     r.aplicada = true;
 

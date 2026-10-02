@@ -1496,6 +1496,13 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     function aplicar(newRecord, json) {
       var CAMPO = camposImposto();
       var SUBLIST = CAMPO.SUBLIST;
+      // Em CSV e webservice a sublista de registro filho não vem no registro. O GL plug-in lê o
+      // `fp_impostos_cache`, gravado antes daqui; a sublista é só o que a tela mostra.
+      if (newRecord.getSublists().indexOf(SUBLIST) === -1) {
+        log.audit('fp_md_map_simular.aplicar', 'sublista ' + SUBLIST + ' indisponível neste contexto — ' +
+          'impostos só no cache do GL plug-in, não na transação.');
+        return;
+      }
       removeImpostos(newRecord, SUBLIST);
       if (!json || !json.linhas) return;
 

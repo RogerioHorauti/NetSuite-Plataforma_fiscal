@@ -94,7 +94,8 @@
 // `fp_governanca` usa N/runtime: o manual o admite no plug-in ("You can also access the runtime.User
 // object with the N/runtime Module", CustomGLLinesPlugIn.pdf, referência do classId, p.71-72), e o
 // arquivo tem 1000 unidades (p.11-12).
-define(['N/query', 'N/log', './fp_fields', './fp_governanca'], function (query, log, fpFields, fpGovernanca) {
+define(['N/query', 'N/log', './fp_fields', './fp_governanca', './fp_impostos_cache'],
+  function (query, log, fpFields, fpGovernanca, fpImpostosCache) {
   /**
    * Ids pela camada de compatibilidade, resolvidos UMA vez por execução.
    *
@@ -277,6 +278,16 @@ define(['N/query', 'N/log', './fp_fields', './fp_governanca'], function (query, 
    * suspeita legítima, não pessimismo decorativo.
    */
   function lerImpostos(tx) {
+    // PRIMEIRO O CACHE, pela chave que o `beforeSubmit` gerou (`custbody_fp_corrid`): campo de
+    // corpo chega em todo contexto, e o cache não depende do id. Sublista e consulta ficam para
+    // quando a chave expirou ou não existe (transação anterior a isto).
+    var corrId = fpFields.id('CORRID') ? texto(tx.getValue({ fieldId: fpFields.id('CORRID') })) : '';
+    var doCache = fpImpostosCache.ler(corrId);
+    if (doCache) {
+      log.debug('fp_gl_lines_plugin.lerImpostos', 'cache · ' + doCache.length + ' linha(s) · corrId=' + corrId);
+      return doCache;
+    }
+
     // De onde veio é a medição 14 (MEDICOES §8.8): a sublista em transação NOVA, ou só a consulta.
     var doSublist = lerImpostosDoSublist(tx);
     if (doSublist.length) {
