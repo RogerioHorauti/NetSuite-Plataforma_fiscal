@@ -363,7 +363,7 @@ define([
     // nota de fornecedor, e a entrada não roda.
     var v = validada || fpChave.validar(newRecord);
     r.rastro.validacao = v;
-    if (!v.aplica) {
+    if (!v.aplica || !v.terceiro) {
       r.avisos.push('Chave de acesso informada, mas o tipo de documento não é de terceiro com modelo (NF-e ou CT-e de ' +
         'terceiro). A natureza NÃO foi declarada à plataforma.');
       return r;

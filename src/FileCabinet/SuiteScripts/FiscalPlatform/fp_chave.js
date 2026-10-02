@@ -14,8 +14,8 @@
  *   CNPJ da filial        subsidiary.taxregistrationnumber → location.CNPJ (custrecord_fp_cnpj_filial)
  *   série / número        custbody_enl_fiscaldoc*          → DOC_SERIE / DOC_NUMERO
  *
- * QUANDO VALIDA: tipo de documento de TERCEIRO com modelo (NF-e, CT-e de terceiro). Aí a chave é
- * obrigatória. Documento próprio (a chave é o retorno da emissão) e NFS-e (sem chave de 44) não.
+ * QUANDO VALIDA: tipo de documento de TERCEIRO com modelo (NF-e, CT-e de terceiro) — aí a chave é
+ * obrigatória —, ou chave preenchida SEM tipo (valida o que dá: 44, DV, data, duplicidade, CNPJ). Documento próprio (a chave é o retorno da emissão) e NFS-e (sem chave de 44) não.
  * O "fornecedor internacional" do original não precisa de regra: importação não tem chave de
  * fornecedor, e o tipo dela não é de terceiro com modelo.
  *
@@ -55,27 +55,33 @@ define(['N/query', './fp_fields'], function (query, fpFields) {
    * Devolve `{ aplica, podeSalvar, erros[], avisos[], serie, numero }`.
    */
   function validar(rec) {
-    var r = { aplica: false, podeSalvar: true, erros: [], avisos: [], serie: null, numero: null };
+    var r = { aplica: false, terceiro: false, podeSalvar: true, erros: [], avisos: [], serie: null, numero: null };
     var campoChave = fpFields.id('DOC_CHAVE'), campoTipo = fpFields.id('TIPODOC');
     var tipoId = campoTipo && rec.getValue({ fieldId: campoTipo });
-    if (!tipoId) return r;
+    var bruta = campoChave && rec.getValue({ fieldId: campoChave });
+    var chave = digitos(bruta);
 
-    var chave = digitos(campoChave && rec.getValue({ fieldId: campoChave }));
+    // CHAVE PREENCHIDA SE VALIDA SEMPRE, com tipo ou sem. Sem tipo, a vendor bill 2734 salvou com
+    // 43 dígitos (MEDICOES §17.1). O tipo só decide se a chave é OBRIGATÓRIA e qual modelo exigir.
+    if (!tipoId && !bruta) return r;
+
     var entity = rec.getValue({ fieldId: fpFields.padrao('ENTITY') });
     var location = rec.getValue({ fieldId: fpFields.padrao('LOCATION') });
     var b = buscar(tipoId, entity, location, chave, rec.id);
 
-    if (b.emissaoPropria || !b.modelo) return r;   // documento próprio, ou sem chave de 44
+    if (tipoId && (b.emissaoPropria || !b.modelo)) return r;   // documento próprio, ou sem chave de 44
     r.aplica = true;
+    r.terceiro = !!tipoId;   // só tipo de TERCEIRO autoriza declarar a natureza na plataforma
+    var nome = b.nome || 'o documento';
 
-    if (!chave) { r.erros.push('[CHAVE] obrigatória para ' + b.nome + '.'); r.podeSalvar = false; return r; }
+    if (!chave) { r.erros.push('[CHAVE] obrigatória para ' + nome + '.'); r.podeSalvar = false; return r; }
     if (chave.length !== 44) { r.erros.push('[CHAVE] deve conter 44 dígitos (tem ' + chave.length + ').'); r.podeSalvar = false; return r; }
     if (!dvValido(chave)) { r.erros.push('[CHAVE] dígito verificador inconsistente.'); r.podeSalvar = false; return r; }
 
     var d = dadosDaChave(chave);
     r.serie = d.serie; r.numero = d.numero;
 
-    if (d.modelo !== b.modelo) {
+    if (b.modelo && d.modelo !== b.modelo) {
       r.erros.push('[MODELO] ' + b.nome + ' é modelo ' + b.modelo + ', a chave é modelo ' + d.modelo + '.');
     }
 
@@ -105,15 +111,18 @@ define(['N/query', './fp_fields'], function (query, fpFields) {
     var tabTipo = fpFields.registro('TIPODOC');
     var cCod = fpFields.idTipoDoc('CODIGO'), cEmi = fpFields.idTipoDoc('EMISSAO_PROPRIA'), cMod = fpFields.idTipoDoc('MODELO');
     var cCnpjForn = fpFields.idCliente('CNPJ_CPF'), cCnpjFil = fpFields.idLocation('CNPJ'), cChave = fpFields.id('DOC_CHAVE');
-    var partes = ["SELECT 'TIPO' AS g, name || '|' || NVL(" + cCod + ", '') || '|' || " + cEmi + " || '|' || NVL(" + cMod + ", '') AS txt FROM " + tabTipo + ' WHERE id = ?'];
-    var params = [tipoId];
+    var partes = [], params = [];
+    if (tipoId) {
+      partes.push("SELECT 'TIPO' AS g, name || '|' || NVL(" + cCod + ", '') || '|' || " + cEmi + " || '|' || NVL(" + cMod + ", '') AS txt FROM " + tabTipo + ' WHERE id = ?');
+      params.push(tipoId);
+    }
     if (entity && cCnpjForn) { partes.push("SELECT 'FORN' AS g, " + cCnpjForn + ' AS txt FROM vendor WHERE id = ?'); params.push(entity); }
     if (location && cCnpjFil) { partes.push("SELECT 'FILIAL' AS g, " + cCnpjFil + ' AS txt FROM location WHERE id = ?'); params.push(location); }
     if (chave.length === 44 && cChave) {
       partes.push("SELECT 'DUP' AS g, tranid AS txt FROM transaction WHERE type = 'VendBill' AND " + cChave + ' = ?' + (idAtual ? ' AND id <> ?' : ''));
       params.push(chave); if (idAtual) params.push(idAtual);
     }
-    var linhas = query.runSuiteQL({ query: partes.join(' UNION ALL '), params: params }).asMappedResults();
+    var linhas = partes.length ? query.runSuiteQL({ query: partes.join(' UNION ALL '), params: params }).asMappedResults() : [];
     var b = { nome: '', codigo: '', emissaoPropria: false, modelo: '', cnpjFornecedor: '', cnpjFilial: '', duplicadas: [] };
     for (var i = 0; i < linhas.length; i++) {
       var g = linhas[i].g, t = linhas[i].txt === null || linhas[i].txt === undefined ? '' : String(linhas[i].txt);

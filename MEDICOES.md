@@ -1539,3 +1539,9 @@ outro emitente; emissão própria; NFS-e tomada; sem tipo; duplicidade) — todo
 VENDORBILL, VENDORCREDIT). E o save com chave reprovada passou: o `beforeSubmit` do `fp_ue_simular`
 agora chama `validarChaveOuRecusar` FORA do try/catch e lança `FP_CHAVE_INVALIDA` (compra, CREATE/EDIT;
 XEDIT fora porque o `newRecord` não traz tipo e chave).
+
+**2026-10-02 — medido: a vendor bill 2734 salvou com chave de 43 dígitos e SEM tipo de documento.**
+O `fp_chave.validar` saía logo sem tipo (`aplica:false`), e nem o cliente nem o `beforeSubmit`
+recusavam. Agora chave preenchida se valida sempre (44, DV, modelo só se o tipo tiver, data,
+duplicidade, CNPJ); o tipo só decide se ela é obrigatória. Sem tipo de terceiro (`terceiro:false`)
+o `rodarEntrada` continua sem declarar a natureza.
