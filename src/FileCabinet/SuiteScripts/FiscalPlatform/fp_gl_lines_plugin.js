@@ -277,12 +277,18 @@ define(['N/query', 'N/log', './fp_fields', './fp_governanca'], function (query, 
    * suspeita legítima, não pessimismo decorativo.
    */
   function lerImpostos(tx) {
+    // De onde veio é a medição 14 (MEDICOES §8.8): a sublista em transação NOVA, ou só a consulta.
     var doSublist = lerImpostosDoSublist(tx);
-    if (doSublist.length) return doSublist;
+    if (doSublist.length) {
+      log.debug('fp_gl_lines_plugin.lerImpostos', 'sublista · ' + doSublist.length + ' linha(s) · id=' + tx.id);
+      return doSublist;
+    }
 
     var id = tx.id;
     if (!id) return [];
-    return lerImpostosPorConsulta(id);
+    var daConsulta = lerImpostosPorConsulta(id);
+    log.debug('fp_gl_lines_plugin.lerImpostos', 'consulta · ' + daConsulta.length + ' linha(s) · id=' + id);
+    return daConsulta;
   }
 
   function lerImpostosDoSublist(tx) {

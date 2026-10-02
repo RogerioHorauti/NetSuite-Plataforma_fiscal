@@ -595,8 +595,8 @@ Ainda **não lida** — registrada aqui porque é a autoridade para vários iten
 | ~~13~~ | ~~`BUILTIN.DF()` sobre campo List/Record~~ | **FECHADO** — ver §8.9 | — |
 | ~~20~~ | ~~`rectype` de `othercustomfield` para Location~~ | **FECHADO** — `-103` é Location, §10.4 | — |
 | 17 | `<defaultselection>` de campo SELECT: qual a sintaxe de referência ao `customvalue`? O texto literal passa no `validate` e **quebra no `deploy`** (medido 2026-09-22, `custrecord_fp_debito_origem_cc`). Hoje o campo vai sem default | tentar `[scriptid=customlist_fp_origem_conta.val_origem_conta_1]` num deploy de teste | conveniência de tela, nada funcional |
-| 14 | O sublist `recmachcustrecord_fp_transacao_imp` é legível de dentro do plug-in (o manual não diz) | salvar uma transação com impostos e ler o Execution Log: "não legível aqui" indica queda no fallback | leitura no save de transação **nova** (sem `id`) |
-| 15 | Exceção no plug-in síncrono derruba o save? | forçar erro num ambiente de teste | tamanho real da guarda 4 |
+| 14 | O sublist `recmachcustrecord_fp_transacao_imp` é legível de dentro do plug-in (o manual não diz). **Desde 2026-10-02** o `lerImpostos` loga `sublista · N` ou `consulta · N`: criar pela TELA uma invoice com simulação (por REST a guarda 3 não simula CREATE) e ler o log | salvar uma transação com impostos e ler o Execution Log: "não legível aqui" indica queda no fallback | leitura no save de transação **nova** (sem `id`) |
+| ~~15~~ | ~~Exceção no plug-in síncrono derruba o save?~~ | **FECHADO pelo código (2026-10-02)** — `customizeGlImpact` envolve todo o `executar` em try/catch (`fp_gl_lines_plugin.js`, guarda 4): exceção vira `log.error` e o save segue sem as custom lines. Erro de carga do módulo ficaria de fora, e esse o `validate` pega | — |
 | 16 | IPI e ICMS-ST entram no `amount` da linha da Vendor Bill, ou como linha separada? | medir um payload de **entrada** real | se `CUSTO` e `RECUPERAVEL_INTEGRAL` lançam ou são nulos |
 
 ### 8.9 Medido contra a conta por SuiteTalk REST — 2026-09-22
