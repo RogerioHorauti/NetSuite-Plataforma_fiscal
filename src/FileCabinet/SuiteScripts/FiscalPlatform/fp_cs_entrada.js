@@ -12,7 +12,7 @@
  * Objeto próprio, `customscript_fp_cs_entrada`, implantado nas compras. O servidor repete a validação
  * no `beforeSubmit` do `fp_ue_simular` e recusa o save.
  */
-define(['N/ui/message', './fp_fields', './fp_chave'], function (message, fpFields, fpChave) {
+define(['./fp_fields', './fp_chave'], function (fpFields, fpChave) {
 
   function fieldChanged(ctx) {
     var campoChave = fpFields.id('DOC_CHAVE');
@@ -28,18 +28,18 @@ define(['N/ui/message', './fp_fields', './fp_chave'], function (message, fpField
     if (cNumero) rec.setValue({ fieldId: cNumero, value: d.numero, ignoreFieldChange: true });
   }
 
+  /**
+   * `alert` e não `N/ui/message`: a mensagem aparece no topo da página, e quem salva pelo botão de
+   * baixo não a vê. `alert` é síncrono, que é o que o `saveRecord` precisa para devolver false.
+   */
   function saveRecord(ctx) {
     var r = fpChave.validar(ctx.currentRecord);
     if (!r.aplica) return true;
     if (!r.podeSalvar) {
-      message.create({ type: message.Type.ERROR, title: '[CHAVE DE ACESSO] Registro NÃO pode ser salvo',
-        message: r.erros.concat(r.avisos).join('<br>'), duration: 30000 }).show();
+      alert('[CHAVE DE ACESSO] Registro NÃO pode ser salvo\n\n' + r.erros.concat(r.avisos).join('\n'));
       return false;
     }
-    if (r.avisos.length) {
-      message.create({ type: message.Type.WARNING, title: '[CHAVE DE ACESSO] Validações',
-        message: r.avisos.join('<br>'), duration: 30000 }).show();
-    }
+    if (r.avisos.length) alert('[CHAVE DE ACESSO] Validações\n\n' + r.avisos.join('\n'));
     return true;
   }
 
