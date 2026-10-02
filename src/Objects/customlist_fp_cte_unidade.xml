@@ -1,0 +1,14 @@
+<customlist scriptid="customlist_fp_cte_unidade">
+  <description>cUnid da infQ do CT-e. O CODIGO abre o valor.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Unidade de Medida do CT-e</name>
+  <customvalues>
+    <customvalue scriptid="val_fp_cte_unidade_00"><isinactive>F</isinactive><value>00 - M3</value></customvalue>
+    <customvalue scriptid="val_fp_cte_unidade_01"><isinactive>F</isinactive><value>01 - KG</value></customvalue>
+    <customvalue scriptid="val_fp_cte_unidade_02"><isinactive>F</isinactive><value>02 - TON</value></customvalue>
+    <customvalue scriptid="val_fp_cte_unidade_03"><isinactive>F</isinactive><value>03 - UNIDADE</value></customvalue>
+    <customvalue scriptid="val_fp_cte_unidade_04"><isinactive>F</isinactive><value>04 - LITROS</value></customvalue>
+    <customvalue scriptid="val_fp_cte_unidade_05"><isinactive>F</isinactive><value>05 - MMBTU</value></customvalue>
+  </customvalues>
+</customlist>

@@ -203,6 +203,10 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var substituicao = montarSubstituicao(newRecord);
       if (substituicao) payload.substituicao = substituicao;
 
+      // CT-e: a invoice de frete vira `participantes` + `prestacao`, e as linhas viram componentes
+      // do valor — o CT-e não tem item. Rota por tipo de DOCUMENTO, não regra tributária.
+      if (tipoDoc === 'CTE') aplicarCte(newRecord, payload);
+
       return payload;
     }
 
@@ -451,6 +455,152 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       var desc = valorTexto(newRecord, fpFields.id('SUBST_DESCRICAO'));
       if (desc) s.descricaoMotivo = desc;
       return s;
+    }
+
+    /**
+     * CT-e A PARTIR DA INVOICE DE FRETE (subaba CT-e).
+     *
+     *   tomador        o CLIENTE da invoice — quem paga o frete. `papel` quando ele é um dos quatro
+     *                  participantes; senão vai como `participante` (toma4)
+     *   destinatário   a `contraparte` do payload (o DTO não o repete em `participantes`). Vazio no
+     *                  campo = o próprio cliente
+     *   início / fim   endereço do EXPEDIDOR (senão do remetente) / do RECEBEDOR (senão do
+     *                  destinatário) — é o leiaute: expedidor entrega a carga ao transportador,
+     *                  recebedor a recebe dele. Nome + UF; o IBGE a plataforma resolve (HANDOFF 15)
+     *   valor          as linhas de serviço viram `componentes` (descrição, valor); o total é a soma
+     *
+     * NÃO vão `icms` nem `cfop`: o motor resolve pela régua (HANDOFF 14). Declarar CST aqui seria a
+     * régua duplicada que este bundle não pode ter.
+     *
+     * Participantes numa consulta só (cliente UNION ALL fornecedor), pelo cadastro e pelo endereço
+     * de cobrança padrão.
+     */
+    function aplicarCte(newRecord, payload) {
+      var PAPEIS = { REMETENTE: 'CTE_REMETENTE', EXPEDIDOR: 'CTE_EXPEDIDOR', RECEBEDOR: 'CTE_RECEBEDOR',
+        DESTINATARIO: 'CTE_DESTINATARIO' };
+      var cliente = String(newRecord.getValue({ fieldId: fpFields.padrao('ENTITY') }) || '');
+      var ids = {};
+      Object.keys(PAPEIS).forEach(function (papel) {
+        var c = fpFields.id(PAPEIS[papel]);
+        var v = c && newRecord.getValue({ fieldId: c });
+        if (v) ids[papel] = String(v);
+      });
+      if (!ids.DESTINATARIO) ids.DESTINATARIO = cliente;
+
+      var unicos = {};
+      Object.keys(ids).forEach(function (k) { unicos[ids[k]] = true; });
+      unicos[cliente] = true;
+      var cad = participantesDoCadastro(Object.keys(unicos));
+
+      var participantes = {};
+      ['REMETENTE', 'EXPEDIDOR', 'RECEBEDOR'].forEach(function (papel) {
+        if (ids[papel] && cad[ids[papel]]) participantes[papel.toLowerCase()] = cad[ids[papel]];
+      });
+
+      // O indIe do cliente veio na contraparte do payload simulado — antes de ela virar o destinatário.
+      var indIeToma = payload.contraparte && payload.contraparte.indIe;
+      if (cad[ids.DESTINATARIO]) payload.contraparte = cad[ids.DESTINATARIO];
+
+      var tomador = {};
+      var papelDoCliente = null;
+      ['REMETENTE', 'EXPEDIDOR', 'RECEBEDOR', 'DESTINATARIO'].forEach(function (papel) {
+        if (!papelDoCliente && ids[papel] === cliente) papelDoCliente = papel;
+      });
+      if (papelDoCliente) tomador.papel = papelDoCliente;
+      else tomador.participante = cad[cliente];
+      if (indIeToma) tomador.indIeToma = String(indIeToma);
+      participantes.tomador = tomador;
+      payload.participantes = participantes;
+
+      var origem = cad[ids.EXPEDIDOR] || cad[ids.REMETENTE];
+      var destino = cad[ids.RECEBEDOR] || cad[ids.DESTINATARIO];
+
+      var componentes = [], total = 0;
+      (payload.linhas || []).forEach(function (l) {
+        var v = Number(l.valorTotal) || 0;
+        total += v;
+        componentes.push({ nome: texto(l.descricao), valor: v });
+      });
+      delete payload.linhas;
+
+      var p = {
+        naturezaOperacao: texto(naturezaDeclarada(newRecord)).replace(/^\s*[A-Z0-9_]+\s*-\s*/, ''),
+        inicioPrestacao: municipioDo(origem),
+        fimPrestacao: municipioDo(destino),
+        valorTotal: Math.round(total * 100) / 100,
+        componentes: componentes,
+        carga: montarCarga(newRecord)
+      };
+      var modal = codigoDaLista(textoDaLista(newRecord, 'CTE_MODAL'));
+      if (modal) p.modal = modal;
+      var serv = codigoDaLista(textoDaLista(newRecord, 'CTE_TIPO_SERVICO'));
+      if (serv) p.tipoServico = serv;
+      var chaves = texto(valorTexto(newRecord, fpFields.id('CTE_CHAVES_NFE'))).replace(/[^0-9]+/g, ' ').match(/\d{44}/g);
+      if (chaves) p.chavesNFe = chaves;
+      var rntrc = valorTexto(newRecord, fpFields.id('VEICULO_RNTC'));
+      if (rntrc) p.rntrc = rntrc;
+      payload.prestacao = p;
+    }
+
+    /** `{nome, uf}` do endereço do participante — sem IBGE, que a plataforma resolve (HANDOFF 15). */
+    function municipioDo(participante) {
+      if (!participante) return null;
+      return { nome: participante.municipio || '', uf: participante.uf || '' };
+    }
+
+    function montarCarga(newRecord) {
+      var c = { produtoPredominante: texto(valorTexto(newRecord, fpFields.id('CTE_PROD_PRED'))), medidas: [] };
+      var valor = valorTexto(newRecord, fpFields.id('CTE_VALOR_CARGA'));
+      if (valor) c.valor = Number(valor);
+      var unidade = codigoDaLista(textoDaLista(newRecord, 'CTE_CARGA_UNIDADE'));
+      var qtd = valorTexto(newRecord, fpFields.id('CTE_CARGA_QTD'));
+      if (unidade || qtd) {
+        c.medidas.push({ unidade: unidade, tipoMedida: texto(valorTexto(newRecord, fpFields.id('CTE_CARGA_TIPO'))),
+          quantidade: Number(qtd) || 0 });
+      }
+      return c;
+    }
+
+    /**
+     * `{ id: ParticipanteCteDto }` de clientes e fornecedores, UMA consulta. Endereço = o de cobrança
+     * padrão do cadastro. Os campos fiscais pelo perfil do cliente (os ids do fornecedor são os
+     * mesmos `custentity_*`).
+     */
+    function participantesDoCadastro(ids) {
+      if (!ids.length) return {};
+      var C = { cnpj: fpFields.idCliente('CNPJ_CPF'), razao: fpFields.idCliente('RAZAO_SOCIAL'), ie: fpFields.idCliente('IE') };
+      var cNum = fpFields.idEndereco('END_NUMERO');
+      var col = function (t, c) { return c ? t + '.' + c : 'NULL'; };
+      var marca = ids.map(function () { return '?'; }).join(',');
+      var sel = function (tabela) {
+        return 'SELECT e.id, e.entityid, e.companyname, e.email, e.phone, ' + col('e', C.razao) + ' AS razao, ' +
+          col('e', C.cnpj) + ' AS cnpj, ' + col('e', C.ie) + ' AS ie, a.addr1, a.addr2, a.addr3, a.city, a.state, ' +
+          'a.dropdownstate, a.zip, a.country, ' + col('a', cNum) + ' AS numero FROM ' + tabela + ' e ' +
+          'LEFT JOIN entityaddress a ON a.nkey = e.defaultbillingaddress WHERE e.id IN (' + marca + ')';
+      };
+      var r = query.runSuiteQL({ query: sel('customer') + ' UNION ALL ' + sel('vendor'), params: ids.concat(ids) }).asMappedResults();
+      var out = {};
+      r.forEach(function (x) {
+        var p = {};
+        var nome = texto(x.razao) || texto(x.companyname) || texto(x.entityid);
+        if (nome) p.nome = nome;
+        if (digitos(x.cnpj)) p.cnpjCpf = digitos(x.cnpj);
+        if (digitos(x.ie)) p.ie = digitos(x.ie);
+        if (x.email) p.email = texto(x.email);
+        if (x.phone) p.fone = texto(x.phone);
+        if (x.addr1) p.logradouro = texto(x.addr1);
+        if (x.numero) p.numero = texto(x.numero);
+        if (x.addr2) p.complemento = texto(x.addr2);
+        if (x.addr3) p.bairro = texto(x.addr3);
+        if (x.city) p.municipio = texto(x.city);
+        var uf = texto(x.dropdownstate) || texto(x.state);
+        if (uf) p.uf = uf.toUpperCase().substring(0, 2);
+        if (x.zip) p.cep = digitos(x.zip);
+        var pais = codigoDoPais(x.country);
+        if (pais) p.pais = pais;
+        out[String(x.id)] = p;
+      });
+      return out;
     }
 
     /**
@@ -1650,7 +1800,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     /** Os campos SELECT de CORPO que o payload lê pelo NOME, e o registro de cada lista. */
     var LISTAS_DO_CORPO = [['NATUREZA', 'NATUREZA_OPERACAO'],
       ['IND_PRES', 'LISTA_IND_PRES'], ['FRETE_MODALIDADE', 'LISTA_MOD_FRETE'], ['CONT_VIA', 'LISTA_CONT_VIA'],
-      ['SUBST_MOTIVO', 'LISTA_MOTIVO_SUBST']];
+      ['SUBST_MOTIVO', 'LISTA_MOTIVO_SUBST'], ['CTE_MODAL', 'LISTA_CTE_MODAL'],
+      ['CTE_TIPO_SERVICO', 'LISTA_CTE_TIPO_SERVICO'], ['CTE_CARGA_UNIDADE', 'LISTA_CTE_UNIDADE']];
 
     // Memória POR REGISTRO: `montar`, `montarEmissao` e `montarReclassificar` da mesma transação não
     // repetem a busca. Registro diferente é objeto diferente, e aí busca de novo.

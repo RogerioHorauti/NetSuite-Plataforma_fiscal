@@ -1,0 +1,13 @@
+<customlist scriptid="customlist_fp_cte_tipo_servico">
+  <description>tpServ do CT-e. O CODIGO abre o valor.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Tipo de Servico do CT-e</name>
+  <customvalues>
+    <customvalue scriptid="val_fp_cte_tipo_servico_0"><isinactive>F</isinactive><value>0 - Normal</value></customvalue>
+    <customvalue scriptid="val_fp_cte_tipo_servico_1"><isinactive>F</isinactive><value>1 - Subcontratacao</value></customvalue>
+    <customvalue scriptid="val_fp_cte_tipo_servico_2"><isinactive>F</isinactive><value>2 - Redespacho</value></customvalue>
+    <customvalue scriptid="val_fp_cte_tipo_servico_3"><isinactive>F</isinactive><value>3 - Redespacho intermediario</value></customvalue>
+    <customvalue scriptid="val_fp_cte_tipo_servico_4"><isinactive>F</isinactive><value>4 - Vinculado a multimodal</value></customvalue>
+  </customvalues>
+</customlist>

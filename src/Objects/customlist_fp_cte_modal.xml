@@ -1,0 +1,14 @@
+<customlist scriptid="customlist_fp_cte_modal">
+  <description>modal do CT-e. O CODIGO abre o valor e e o que vai no payload.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Modal do CT-e</name>
+  <customvalues>
+    <customvalue scriptid="val_fp_cte_modal_01"><isinactive>F</isinactive><value>01 - Rodoviario</value></customvalue>
+    <customvalue scriptid="val_fp_cte_modal_02"><isinactive>F</isinactive><value>02 - Aereo</value></customvalue>
+    <customvalue scriptid="val_fp_cte_modal_03"><isinactive>F</isinactive><value>03 - Aquaviario</value></customvalue>
+    <customvalue scriptid="val_fp_cte_modal_04"><isinactive>F</isinactive><value>04 - Ferroviario</value></customvalue>
+    <customvalue scriptid="val_fp_cte_modal_05"><isinactive>F</isinactive><value>05 - Dutoviario</value></customvalue>
+    <customvalue scriptid="val_fp_cte_modal_06"><isinactive>F</isinactive><value>06 - Multimodal</value></customvalue>
+  </customvalues>
+</customlist>

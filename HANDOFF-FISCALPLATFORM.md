@@ -328,6 +328,42 @@ e ler `subst_rps_numero/serie/tipo` da nota nova iguais aos da substituída.
 
 ---
 
+## 14. ICMS da prestação do CT-e pela régua do motor (e o CFOP pelo resolvedor)
+
+**O que:** o `prestacao.icms` deixa de ser obrigatório. O motor resolve `grupo`, `cst`,
+`baseCalculo` e `valor` (a alíquota já resolve: `resolverAliquotaDaPrestacao`,
+`aliquota-do-frete.ts`), e o `icms` do payload vira OVERRIDE, como `linhas[].impostos[]` na NF-e.
+Idem `prestacao.cfop`: o resolvedor de CFOP a partir da natureza + UF de início e fim, com o
+declarado como override.
+
+**Onde:** `cte-emissao.service.ts:213-223` (`icms()` copia `grupo/CST/vBC/vICMS` do payload) e
+`prestacao-cte.dto.ts` (`icms` e `cfop` obrigatórios).
+
+**Por quê:** CST e base vindos do ERP é exatamente a régua duplicada que o bundle não pode ter
+(CLAUDE.md do bundle). O `grupo` é leiaute sobre o CST + contexto (regime da filial → ICMSSN;
+`inicioPrestacao` em UF diferente da do emitente → ICMSOutraUF). Base e valor são conta. Só o CST
+pede régua nova, por UF de início × tipo de serviço × tomador contribuinte × regime — dado em
+tabela, como a `aliquota_interna_transporte`. Sem linha para a UF: RECUSA citando a UF, nunca
+CST 00 por default.
+
+**Como conferir:** emitir um CT-e sem `icms` nem `cfop` devolve o XML com `ICMS00`, CST, vBC e
+vICMS resolvidos; com `icms.cst` declarado, o declarado prevalece.
+
+---
+
+## 15. Município da prestação do CT-e por nome + UF
+
+**O que:** `MunicipioPrestacaoDto` aceitar `{ nome, uf }` sem `codigo` e resolver o IBGE, como a
+NFS-e já faz com `municipioPrestacaoNome` + `ufPrestacao` (recusando nome ambíguo).
+
+**Por quê:** o NetSuite não guarda IBGE no endereço, e o bundle não o digita nota a nota — foi o
+que a NFS-e já resolveu. Hoje `codigo` é `@Length(7, 7)` obrigatório (`prestacao-cte.dto.ts`).
+
+**Como conferir:** CT-e com `inicioPrestacao: { nome: 'SAO PAULO', uf: 'SP' }` sai com `cMunIni`
+3550308.
+
+---
+
 ## Fora de escopo deste handoff
 
 Nada aqui pede régua nova, CST, alíquota, cBenef ou fórmula de base. O conector **traduz e

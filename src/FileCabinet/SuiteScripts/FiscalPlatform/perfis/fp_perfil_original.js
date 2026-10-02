@@ -123,6 +123,18 @@ define([], function () {
       "SUBST_TRANSACAO": "custbody_fp_subst_transacao",
       "SUBST_MOTIVO": "custbody_fp_subst_motivo",
       "SUBST_DESCRICAO": "custbody_fp_subst_descricao",
+      "CTE_REMETENTE": "custbody_fp_cte_remetente",
+      "CTE_EXPEDIDOR": "custbody_fp_cte_expedidor",
+      "CTE_RECEBEDOR": "custbody_fp_cte_recebedor",
+      "CTE_DESTINATARIO": "custbody_fp_cte_destinatario",
+      "CTE_MODAL": "custbody_fp_cte_modal",
+      "CTE_TIPO_SERVICO": "custbody_fp_cte_tipo_servico",
+      "CTE_PROD_PRED": "custbody_fp_cte_prod_pred",
+      "CTE_VALOR_CARGA": "custbody_fp_cte_valor_carga",
+      "CTE_CARGA_UNIDADE": "custbody_fp_cte_carga_unidade",
+      "CTE_CARGA_TIPO": "custbody_fp_cte_carga_tipo",
+      "CTE_CARGA_QTD": "custbody_fp_cte_carga_qtd",
+      "CTE_CHAVES_NFE": "custbody_fp_cte_chaves_nfe",
 
       "_grupo_datas": [
         "Datas que so o ERP sabe, e que vao TAMBEM no /simular (sao do SimulacaoNotaInputDto).",
@@ -409,7 +421,10 @@ define([], function () {
       "LISTA_FORMA_PAGTO": "customlist_fp_forma_pagto",
       "LISTA_IND_PAG": "customlist_fp_ind_pag",
       "LISTA_TP_INTEGRA": "customlist_fp_tp_integra",
-      "LISTA_MOTIVO_SUBST": "customlist_fp_motivo_subst"
+      "LISTA_MOTIVO_SUBST": "customlist_fp_motivo_subst",
+      "LISTA_CTE_MODAL": "customlist_fp_cte_modal",
+      "LISTA_CTE_TIPO_SERVICO": "customlist_fp_cte_tipo_servico",
+      "LISTA_CTE_UNIDADE": "customlist_fp_cte_unidade"
     },
   
     "valores": {

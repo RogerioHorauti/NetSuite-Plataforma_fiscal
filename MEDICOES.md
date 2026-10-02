@@ -1605,3 +1605,20 @@ DPS/RPS); o número da prefeitura é `nfseNumero` (`emissao.service.ts:3497`).
 | `rpsSubstituido` | NÃO vai: o tipo do RPS varia por padrão municipal e é da plataforma — HANDOFF item 13 |
 
 Validate 0 erros. **Falta deploy e um payload de emissão de NFS-e com substituição para medir.**
+
+## 23. CT-e a partir da invoice de frete (2026-10-02)
+
+Contrato lido no fonte: `participantes` (`participantes-cte.dto.ts`; o destinatário é a
+`contraparte`), `prestacao` (`prestacao-cte.dto.ts`), linhas dispensadas quando há `prestacao`.
+Item da invoice é de SERVIÇO (frete) — CT-e não movimenta estoque.
+
+| peça | o quê |
+|---|---|
+| subaba **CT-e** (`custtab_fp_cte`, dentro da FiscalPlatform) | remetente, expedidor, recebedor, destinatário (entidade), modal, tipo de serviço, produto predominante, valor da carga, uma medida (unidade/tipo/quantidade), chaves das NF-e (texto, uma por linha) |
+| listas | `customlist_fp_cte_modal` (01–06), `_tipo_servico` (0–4), `_unidade` (00–05) |
+| `aplicarCte` no `montarEmissao`, só com tipo de documento `CTE` | tomador = cliente (`papel` se for um dos quatro, senão `participante`); destinatário vazio = cliente; início = expedidor‖remetente, fim = recebedor‖destinatário; linhas → `componentes`, soma → `valorTotal`; `linhas` sai do payload |
+| participantes | UMA consulta `customer UNION ALL vendor` + `entityaddress` do endereço de cobrança padrão — rodada na conta |
+| NÃO vão | `icms` e `cfop` (HANDOFF 14 — motor resolve) e o IBGE do município (HANDOFF 15) |
+
+Validate 0 erros. **Até os itens 14 e 15 a plataforma recusa por validação do DTO** — recusa com
+mensagem, que é o esperado. Falta deploy e um payload de emissão de CT-e para medir.
