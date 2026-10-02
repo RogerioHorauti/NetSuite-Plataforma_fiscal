@@ -1600,7 +1600,7 @@ DPS/RPS); o número da prefeitura é `nfseNumero` (`emissao.service.ts:3497`).
 
 | peça | o quê |
 |---|---|
-| `custbody_fp_subst_transacao` (SELECT transação), `custbody_fp_subst_motivo` (`customlist_fp_motivo_subst`, 6 valores), `custbody_fp_subst_descricao` (TEXT 255) | venda, subaba FiscalPlatform |
+| `custbody_fp_subst_transacao` (SELECT transação), `custbody_fp_subst_motivo` (`customlist_fp_motivo_subst`, 6 valores), `custbody_fp_subst_descricao` (TEXT 255) | venda, subaba **Substituicao de NFS-e** (`custtab_fp_subst_nfse`, dentro da FiscalPlatform) |
 | `montarSubstituicao` no `montarEmissao` | chave = `DOC_CHAVE` da transação apontada (uma consulta); motivo pelo código da lista; descrição se houver. Apontada sem chave LANÇA |
 | `rpsSubstituido` | NÃO vai: o tipo do RPS varia por padrão municipal e é da plataforma — HANDOFF item 13 |
 

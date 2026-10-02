@@ -1,0 +1,5 @@
+<subtab scriptid="custtab_fp_subst_nfse">
+  <parent>[scriptid=custtab_fp_fiscal]</parent>
+  <tabtype>TRANSACTION</tabtype>
+  <title>Substituicao de NFS-e</title>
+</subtab>
