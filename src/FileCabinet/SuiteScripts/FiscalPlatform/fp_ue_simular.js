@@ -523,16 +523,19 @@ define([
   }
 
   /**
-   * Compra em CREATE/EDIT: chave reprovada no `fp_chave` lança, e o NetSuite não salva. XEDIT fica
-   * de fora — o `newRecord` dele só traz o campo alterado, e tipo e chave viriam vazios.
+   * Compra: chave reprovada no `fp_chave` lança, e o NetSuite não salva. SEM restrição de contexto
+   * — tela, CSV, SOAP, REST, Suitelet: a chave inválida não entra por porta nenhuma.
+   *
+   * XEDIT (edição inline na lista) também valida. O `newRecord` dele só traz os campos alterados,
+   * então a leitura vem do `registroInteiro`: alterado do `newRecord`, o resto do `oldRecord`.
    * Devolve o resultado para o `rodarEntrada` não validar de novo.
    */
   function validarChaveOuRecusar(scriptContext) {
     var T = scriptContext.UserEventType;
-    if (scriptContext.type !== T.CREATE && scriptContext.type !== T.EDIT) return null;
+    if ([T.CREATE, T.EDIT, T.XEDIT].indexOf(scriptContext.type) === -1) return null;
     if (!fpMapSimular.ehCompra(scriptContext.newRecord.type)) return null;
 
-    var v = fpChave.validar(scriptContext.newRecord);
+    var v = fpChave.validar(registroInteiro(scriptContext));
     if (v.aplica && !v.podeSalvar) {
       throw error.create({
         name: 'FP_CHAVE_INVALIDA',
@@ -541,6 +544,22 @@ define([
       });
     }
     return v;
+  }
+
+  /** No XEDIT, o registro como vai ficar: campo alterado do `newRecord`, o resto do `oldRecord`. */
+  function registroInteiro(scriptContext) {
+    var novo = scriptContext.newRecord;
+    if (scriptContext.type !== scriptContext.UserEventType.XEDIT) return novo;
+    var antigo = scriptContext.oldRecord;
+    var alterados = novo.getFields();
+    return {
+      id: novo.id,
+      type: novo.type,
+      getValue: function (opcoes) {
+        var campo = typeof opcoes === 'string' ? opcoes : opcoes.fieldId;
+        return alterados.indexOf(campo) > -1 ? novo.getValue(opcoes) : antigo.getValue(opcoes);
+      }
+    };
   }
 
   function organizarFormulario(scriptContext) {
