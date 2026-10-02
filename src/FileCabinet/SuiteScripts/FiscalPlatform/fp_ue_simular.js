@@ -83,9 +83,13 @@ define([
    * de imposto e de GL como a da tela — é o que a Avalara faz, por outro caminho. O resultado vai
    * ao GL plug-in pelo `fp_impostos_cache`, porque a sublista de registro filho não chega nesses
    * contextos.
-   * `MAP_REDUCE`, `SCHEDULED` e `SUITELET` porque são o PRÓPRIO bundle gravando: o Suitelet de
-   * emissão e o Map/Reduce de entrada salvam a transação, e sem esta guarda o save deles reentra
-   * aqui e simula de novo o que já foi emitido.
+   * SUITELET, MAP_REDUCE, SCHEDULED e WORKFLOW também saíram (2026-10-02, Rogerio): script do
+   * cliente que salva transação precisa de imposto como qualquer outro save. O que impedia o
+   * bundle de reentrar aqui não é esta lista: o `fp_persist` grava por `submitFields` (XEDIT, que
+   * o `deveRodar` recusa), e nota AUTORIZADA/CANCELADA/DENEGADA para na guarda 6.
+   *
+   * Ficam USEREVENT (o NetSuite não dispara UE a partir de UE — a entrada aqui não acontece) e
+   * BUNDLE_INSTALLATION (instalação não é lançamento).
    */
   /**
    * ⚠ FUNÇÃO, não constante de módulo.
@@ -98,10 +102,6 @@ define([
    */
   function contextosBloqueados() {
     return [
-      runtime.ContextType.MAP_REDUCE,
-      runtime.ContextType.SCHEDULED,
-      runtime.ContextType.SUITELET,
-      runtime.ContextType.WORKFLOW,
       runtime.ContextType.BUNDLE_INSTALLATION,
       runtime.ContextType.USEREVENT
     ];
