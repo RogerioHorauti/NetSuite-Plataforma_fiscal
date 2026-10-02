@@ -1576,7 +1576,16 @@ que recarrega e salva (`AVLR_SuiteTax_UE.js:459-478`), porque UE não dispara UE
 Por que corrId e não id: campo de corpo chega em todo contexto, e o plug-in síncrono não recebe o
 id na criação (CustomGLLinesPlugIn.pdf p.17, p.64).
 
-**Ainda NÃO medido:** (a) `N/cache` funciona dentro do plug-in — o manual não lista o módulo, nem
-contra; (b) a ordem cache gravado no `beforeSubmit` → plug-in lê no mesmo save, por CSV; (c) ⚠
+**Medido em 2026-10-02, depois do deploy** — PATCH por REST na vendor bill 2734 (só
+`custbody_fp_data_entrada`):
+
+| o quê | resultado |
+|---|---|
+| (a) `N/cache` dentro do plug-in | **funciona**: `lerImpostos` → `cache · 6 linha(s) · corrId=0BTpWLSH…`; plug-in usou 11 unidades |
+| ordem no save | `beforeSubmit` (53 un.) → `afterSubmit` (160 un., 5 anexos) → **plug-in depois do `afterSubmit`** |
+| conteúdo | as 6 linhas do cache = as 6 do `customrecord_fp_impostos` (ICMS 12, PIS 1,45, COFINS 6,69 × 2 itens) |
+| lançamento | nenhum, e certo: as 6 com `geraLancamento = F` — o `reclassificar` chumbado não traz o campo, e a guarda 2 descarta |
+
+**Ainda NÃO medido:** (b) a ordem cache gravado no `beforeSubmit` → plug-in lê no mesmo save, por CSV; (c) ⚠
 reexecução do plug-in por atualização de custo (p.4, p.94) depois do TTL: em CSV/webservice, sem
 sublista gravada, não acha nada e a custom line some.
