@@ -1545,3 +1545,16 @@ O `fp_chave.validar` saía logo sem tipo (`aplica:false`), e nem o cliente nem o
 recusavam. Agora chave preenchida se valida sempre (44, DV, modelo só se o tipo tiver, data,
 duplicidade, CNPJ); o tipo só decide se ela é obrigatória. Sem tipo de terceiro (`terceiro:false`)
 o `rodarEntrada` continua sem declarar a natureza.
+
+**Medido na conta depois do deploy de 2026-10-02** (PATCH por REST na vendor bill 2734, servidor;
+a tela fica para quem tem sessão):
+
+| caso | resultado |
+|---|---|
+| 2734 como estava (43 dígitos, sem tipo), PATCH só no memo | **recusa** `FP_CHAVE_INVALIDA`: "deve conter 44 dígitos (tem 43)" |
+| tipo NF-e de Terceiro + chave da 2733 | **recusa**: "lançamento em duplicidade: NF-4321" + aviso de CNPJ do emitente |
+| tipo NF-e de Terceiro, chave vazia | **recusa**: "obrigatória para NF-e de Terceiro" |
+| tipo NF-e de Terceiro + chave nova válida (nº 4322, DV 7), série e número zerados | **salva**; o servidor grava série `1` e número `4322`; `existe` → `reclassificar` (chumbados) → "natureza declarada · 14 diferença(s)"; 5 anexos `FP-vendorbill-2734-*` |
+
+A recusa sai pela pilha `validarChaveOuRecusar ← beforeSubmit ← fp_governanca.medir`, fora do
+try/catch, como desenhado. A 2734 ficou com a chave nova (cadastro de teste).
