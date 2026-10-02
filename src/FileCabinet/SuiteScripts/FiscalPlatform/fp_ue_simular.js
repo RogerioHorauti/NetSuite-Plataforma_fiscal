@@ -76,36 +76,6 @@ define([
     'transferorder'
   ];
 
-  /**
-   * Contextos em que a simulação NÃO roda (guarda 3).
-   *
-   * CSV, SOAP e REST NÃO estão aqui (2026-10-02, Rogerio): transação que entra por eles precisa
-   * de imposto e de GL como a da tela — é o que a Avalara faz, por outro caminho. O resultado vai
-   * ao GL plug-in pelo `fp_impostos_cache`, porque a sublista de registro filho não chega nesses
-   * contextos.
-   * SUITELET, MAP_REDUCE, SCHEDULED e WORKFLOW também saíram (2026-10-02, Rogerio): script do
-   * cliente que salva transação precisa de imposto como qualquer outro save. O que impedia o
-   * bundle de reentrar aqui não é esta lista: o `fp_persist` grava por `submitFields` (XEDIT, que
-   * o `deveRodar` recusa), e nota AUTORIZADA/CANCELADA/DENEGADA para na guarda 6.
-   *
-   * Ficam USEREVENT (o NetSuite não dispara UE a partir de UE — a entrada aqui não acontece) e
-   * BUNDLE_INSTALLATION (instalação não é lançamento).
-   */
-  /**
-   * ⚠ FUNÇÃO, não constante de módulo.
-   *
-   * MEDIDO no deploy de 2026-09-23: ler `runtime.ContextType.*` no corpo do `define` derruba o
-   * script inteiro com `SUITESCRIPT_API_UNAVAILABLE_IN_DEFINE — All SuiteScript API Modules are
-   * unavailable while executing your define callback`. O módulo é injetado, mas **tocá-lo antes
-   * de o callback terminar é proibido**, mesmo para ler um enum. Vale para qualquer `N/*` no
-   * bundle: nada de API no escopo do módulo.
-   */
-  function contextosBloqueados() {
-    return [
-      runtime.ContextType.BUNDLE_INSTALLATION,
-      runtime.ContextType.USEREVENT
-    ];
-  }
 
   /**
    * Organiza o formulário e pinta o que o save deixou na sessão.
@@ -150,7 +120,7 @@ define([
    *
    * NATIVOS por `fpFields.padrao` + o campo de natureza pela camada de compatibilidade. Montado
    * SOB DEMANDA e não no nível do módulo: `fp_fields` faz `file.load` e `search` para resolver o
-   * perfil, e pagar isso no load de todo script — inclusive nos saves que a guarda 3 vai descartar
+   * perfil, e pagar isso no load de todo script — inclusive nos saves que a guarda 6 vai descartar
    * — seria custo de governança em troca de nada.
    */
   /**
@@ -250,78 +220,7 @@ define([
       corrId = fpMsg.garantirCorrId(scriptContext.newRecord);
 
       if (!deveRodar(scriptContext)) return;
-
-      var payload = fpMapSimular.montar(scriptContext.newRecord);
-
-      // O mapeador devolve null quando falta dado de identidade (sem entity, sem linha, sem
-      // subsidiária mapeada para filial). Não é erro: é transação que ainda não tem o que simular.
-      if (!payload) return;
-
-      var resposta = fpClient.simularNota(payload, {
-        subsidiaria: scriptContext.newRecord.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') }),
-        transacao: scriptContext.newRecord.id,
-        corrId: corrId
-      });
-      log.debug('resposta', resposta)
-      // GUARDAR O PAYLOAD ENVIADO, sempre, e ANTES de olhar o resultado. Sem ele, "o motor errou"
-      // e "eu mandei errado" são indistinguíveis — e a segunda é a hipótese mais frequente.
-      //
-      // Vai para ARQUIVO, não para campo: nota de centenas de linhas produz um payload de dezenas
-      // de milhares de caracteres, e campo texto trunca em silêncio — o pior jeito de perder
-      // justamente a prova do que foi enviado. O anexo acontece no `afterSubmit`, porque na
-      // CRIAÇÃO a transação ainda não tem id e `record.attach` não teria a que anexar.
-      guardarRastro(corrId, { payload: payload, resposta: null });
-
-      // ENTRADA — compra com chave de acesso declarada. Roda antes de olhar a simulação: a
-      // recusa da simulação não impede declarar a natureza da nota que existe.
-      var opcoesRede = {
-        subsidiaria: scriptContext.newRecord.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') }),
-        transacao: scriptContext.newRecord.id,
-        corrId: corrId
-      };
-      var entrada = rodarEntrada(scriptContext.newRecord, payload, resposta, opcoesRede, chaveValidada);
-      if (entrada && entrada.aplicada) {
-        guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada.rastro });
-        fpMsg.sucesso(corrId, '');
-        if (entrada.avisos.length) fpMsg.aviso(corrId, entrada.avisos);
-        log.audit('fp_ue_simular.entrada', 'natureza declarada · ' + entrada.diferentes + ' diferença(s) documento × simulação');
-        return;
-      }
-      if (entrada) {
-        guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada.rastro });
-        if (entrada.erro) fpMsg.erro(corrId, fpMsg.ORIGEM.FISCALPLATFORM, entrada.erro.code, entrada.erro.mensagens);
-        if (entrada.avisos.length) fpMsg.aviso(corrId, entrada.avisos);
-      }
-
-      if (!resposta.ok) {
-        // RECUSA DO MOTOR. O texto dele vai INTEIRO para a tela — sem traduzir, sem resumir.
-        guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada && entrada.rastro });
-
-        fpMsg.erro(corrId, fpMsg.ORIGEM.FISCALPLATFORM, resposta.code, mensagensDaRecusa(resposta.body));
-        log.error('fp_ue_simular.recusa', { code: resposta.code, body: resposta.body });
-        return;
-      }
-
-      // SUCESSO. Os valores do motor são REFLETIDOS, não conferidos: o NetSuite não recalcula para
-      // checar. Divergência se investiga no payload gravado acima. O cache ANTES da sublista: é
-      // ele que o GL plug-in lê, e em CSV/webservice a sublista nem existe.
-      fpImpostosCache.gravar(corrId, resposta.body);
-      fpMapSimular.aplicar(scriptContext.newRecord, resposta.body);
-
-      guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada && entrada.rastro });
-
-      // Sem resumo: o que foi apurado está no sublist, linha por linha. Contar linha na
-      // mensagem é ruído que cresce junto com a nota.
-      fpMsg.sucesso(corrId, '');
-
-      // O `avisos[]` do motor é canal dele, e ausência é significativa: `undefined` quer dizer
-      // "esta resposta não avaliou avisos", não "não há aviso". Só pinta quando veio com conteúdo.
-      if (resposta.body && resposta.body.avisos && resposta.body.avisos.length) {
-        fpMsg.aviso(corrId, resposta.body.avisos);
-      }
-
-      // A governança da execução sai no fim, pelo `fp_governanca`.
-      log.audit('fp_ue_simular', 'ok em ' + resposta.durationMs + 'ms');
+      simularRegistro(scriptContext.newRecord, corrId, chaveValidada);
     } catch (e) {
       // GUARDA 1 — o save NÃO cai. Nem falha de rede, nem defeito do mapeador, nem governança.
       log.error('fp_ue_simular.beforeSubmit', { name: e.name, message: e.message, stack: e.stack });
@@ -340,6 +239,85 @@ define([
       if (corrId) fpMsg.excecao(corrId, e);
 
     }
+  }
+
+  /**
+   * A SIMULAÇÃO DE UM REGISTRO — o `newRecord` do `beforeSubmit`, ou a transação CARREGADA no
+   * `afterSubmit` do XEDIT. Quem chama decide se roda (`deveRodar`/`deveRodarNoXedit`) e protege o
+   * save com o try/catch; aqui só se simula, declara a entrada e aplica.
+   */
+  function simularRegistro(rec, corrId, validada) {
+    var payload = fpMapSimular.montar(rec);
+
+    // O mapeador devolve null quando falta dado de identidade (sem entity, sem linha, sem
+    // subsidiária mapeada para filial). Não é erro: é transação que ainda não tem o que simular.
+    if (!payload) return;
+
+    var resposta = fpClient.simularNota(payload, {
+      subsidiaria: rec.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') }),
+      transacao: rec.id,
+      corrId: corrId
+    });
+    log.debug('resposta', resposta)
+    // GUARDAR O PAYLOAD ENVIADO, sempre, e ANTES de olhar o resultado. Sem ele, "o motor errou"
+    // e "eu mandei errado" são indistinguíveis — e a segunda é a hipótese mais frequente.
+    //
+    // Vai para ARQUIVO, não para campo: nota de centenas de linhas produz um payload de dezenas
+    // de milhares de caracteres, e campo texto trunca em silêncio — o pior jeito de perder
+    // justamente a prova do que foi enviado. O anexo acontece no `afterSubmit`, porque na
+    // CRIAÇÃO a transação ainda não tem id e `record.attach` não teria a que anexar.
+    guardarRastro(corrId, { payload: payload, resposta: null });
+
+    // ENTRADA — compra com chave de acesso declarada. Roda antes de olhar a simulação: a
+    // recusa da simulação não impede declarar a natureza da nota que existe.
+    var opcoesRede = {
+      subsidiaria: rec.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') }),
+      transacao: rec.id,
+      corrId: corrId
+    };
+    var entrada = rodarEntrada(rec, payload, resposta, opcoesRede, validada);
+    if (entrada && entrada.aplicada) {
+      guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada.rastro });
+      fpMsg.sucesso(corrId, '');
+      if (entrada.avisos.length) fpMsg.aviso(corrId, entrada.avisos);
+      log.audit('fp_ue_simular.entrada', 'natureza declarada · ' + entrada.diferentes + ' diferença(s) documento × simulação');
+      return;
+    }
+    if (entrada) {
+      guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada.rastro });
+      if (entrada.erro) fpMsg.erro(corrId, fpMsg.ORIGEM.FISCALPLATFORM, entrada.erro.code, entrada.erro.mensagens);
+      if (entrada.avisos.length) fpMsg.aviso(corrId, entrada.avisos);
+    }
+
+    if (!resposta.ok) {
+      // RECUSA DO MOTOR. O texto dele vai INTEIRO para a tela — sem traduzir, sem resumir.
+      guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada && entrada.rastro });
+
+      fpMsg.erro(corrId, fpMsg.ORIGEM.FISCALPLATFORM, resposta.code, mensagensDaRecusa(resposta.body));
+      log.error('fp_ue_simular.recusa', { code: resposta.code, body: resposta.body });
+      return;
+    }
+
+    // SUCESSO. Os valores do motor são REFLETIDOS, não conferidos: o NetSuite não recalcula para
+    // checar. Divergência se investiga no payload gravado acima. O cache ANTES da sublista: é
+    // ele que o GL plug-in lê, e em CSV/webservice a sublista nem existe.
+    fpImpostosCache.gravar(corrId, resposta.body);
+    fpMapSimular.aplicar(rec, resposta.body);
+
+    guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada && entrada.rastro });
+
+    // Sem resumo: o que foi apurado está no sublist, linha por linha. Contar linha na
+    // mensagem é ruído que cresce junto com a nota.
+    fpMsg.sucesso(corrId, '');
+
+    // O `avisos[]` do motor é canal dele, e ausência é significativa: `undefined` quer dizer
+    // "esta resposta não avaliou avisos", não "não há aviso". Só pinta quando veio com conteúdo.
+    if (resposta.body && resposta.body.avisos && resposta.body.avisos.length) {
+      fpMsg.aviso(corrId, resposta.body.avisos);
+    }
+
+    // A governança da execução sai no fim, pelo `fp_governanca`.
+    log.audit('fp_ue_simular', 'ok em ' + resposta.durationMs + 'ms');
   }
 
   /**
@@ -638,11 +616,10 @@ define([
     if (scriptContext.type !== scriptContext.UserEventType.CREATE &&
         scriptContext.type !== scriptContext.UserEventType.EDIT) return false;
 
-    // GUARDA 3
-    if (contextosBloqueados().indexOf(runtime.executionContext) > -1) {
-      log.debug('fp_ue_simular', 'pulado em ' + runtime.executionContext);
-      return false;
-    }
+    // SEM GUARDA DE CONTEXTO (2026-10-02, Rogerio): tela, CSV, SOAP, REST, Suitelet, Map/Reduce,
+    // Scheduled, Workflow — todos simulam. Quem para é o STATUS (guarda 6). O bundle não reentra:
+    // o `fp_persist` grava por `submitFields` (XEDIT, ver `deveRodarNoXedit`), e o NetSuite não
+    // dispara UE a partir de UE. Em CSV/webservice o GL plug-in lê o `fp_impostos_cache`.
 
     // GUARDA 6 — DOCUMENTO JÁ TRANSMITIDO NÃO SIMULA MAIS.
     //
@@ -769,6 +746,7 @@ define([
       corrId = scriptContext.newRecord.getValue({ fieldId: fpFields.id('CORRID') });
 
       var id = scriptContext.newRecord.id;
+      if (deveRodarNoXedit(scriptContext)) simularNoXedit(scriptContext.newRecord.type, id);
       anexarRastro(scriptContext.newRecord, id);
 
       record.submitFields({
@@ -781,6 +759,36 @@ define([
       log.error('fp_ue_simular.afterSubmit', { name: e.name, message: e.message, stack: e.stack });
       if (corrId) fpMsg.excecao(corrId, e);
     }
+  }
+
+  /**
+   * XEDIT — edição inline na lista e `submitFields`. O `newRecord` só traz o que mudou, e não dá
+   * para montar o payload nele: o `afterSubmit` CARREGA a transação inteira, simula e salva. Esse
+   * save não dispara este UE de novo (UE não dispara UE), e o GL plug-in que roda nele lê o cache.
+   *
+   * Só quando mudou campo que o mapeador manda (`camposRelevantes`), e não com nota transmitida.
+   * É o que impede o `fp_persist` (chave, protocolo, status por `submitFields`) de simular a
+   * cada avanço da emissão: nenhum desses campos é `camposRelevantes` — são `DOC_*`.
+   */
+  function deveRodarNoXedit(scriptContext) {
+    if (scriptContext.type !== scriptContext.UserEventType.XEDIT) return false;
+    if (TIPOS.indexOf(scriptContext.newRecord.type) === -1) return false;
+    var alterados = scriptContext.newRecord.getFields();
+    var relevantes = camposRelevantes(scriptContext.newRecord.type);
+    for (var i = 0; i < alterados.length; i++) {
+      if (relevantes.indexOf(alterados[i]) > -1) return true;
+    }
+    return false;
+  }
+
+  function simularNoXedit(tipo, id) {
+    var rec = record.load({ type: tipo, id: id });
+    if (jaTransmitido(rec)) return;
+    var corrId = fpMsg.garantirCorrId(rec);
+    simularRegistro(rec, corrId, null);
+    rec.save({ enableSourcing: false, ignoreMandatoryFields: true });
+    anexarRastro(rec, id);
+    log.audit('fp_ue_simular.xedit', tipo + ' ' + id + ' simulada depois da edição inline');
   }
 
   /** Guarda na sessão. Serializa aqui para o `afterSubmit` só precisar ler e gravar. */
