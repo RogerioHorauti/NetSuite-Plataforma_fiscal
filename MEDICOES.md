@@ -1469,6 +1469,12 @@ vendor bill com a chave do FORNECEDOR digitada e sem status, o botão Emitir apa
 gravaria a NOSSA chave por cima da do fornecedor. Os dois usos não convivem na mesma transação.
 ⚠ A 2733 e a 2734 têm a chave no campo antigo; o campo antigo segue na conta até ser apagado na UI.
 
+**2026-10-02 (Rogerio): sai o tratamento de exibição do `beforeLoad`.** O INLINE forçado nos `DOC_*`
+em CREATE/EDIT escondia os campos vazios no registro novo e a chave aparecia travada na entrada.
+"Não é necessário tratar as visualizações quando é edit ou new record": o `organizarFormulario`
+não muda mais `displayType` de nenhum campo; a exibição é a do objeto SDF. Na compra só anexa o
+`fp_cs_entrada` (CREATE/EDIT/COPY).
+
 Depois do deploy do `2cfa750`: o `custbody_fp_chave_entrada` já não existe na conta (SuiteQL:
 "Unknown identifier") e levou a chave da 2733/2734. Gravada de novo no `custbody_fp_chave` por PATCH
 — a ÚNICA mudança do save —, e nas duas a guarda 4 a enxergou: `reclassificar` com a chave lida do

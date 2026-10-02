@@ -46,7 +46,6 @@
  *   LANÇA só para falha de transporte (DNS, TLS, timeout)
  */
 define([
-  'N/ui/serverWidget',
   'N/record',
   'N/file',
   'N/runtime',
@@ -60,7 +59,7 @@ define([
   './fp_governanca',
   'N/query',
   './fp_chave'
-], function (serverWidget, record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular, fpEntrada,
+], function (record, file, runtime, log, fpMsg, fpFields, fpForm, fpClient, fpMapSimular, fpEntrada,
   fpGovernanca, query, fpChave) {
   /** Tipos de transação em que a simulação roda. Fora desta lista, o script não faz nada. */
   var TIPOS = [
@@ -553,39 +552,16 @@ define([
     // A organização vem do OBJETO: subabas ANINHADAS (`<parent>` no XML do subtab) e o `<subtab>`
     // de cada campo. Quem monta é o NetSuite, e não quebra.
 
-    var chavedoc = fpFields.id('DOC_CHAVE');
-    var numerodoc = fpFields.id('DOC_NUMERO');
-    var seriedoc = fpFields.id('DOC_SERIE');
-    var statusdoc = fpFields.id('DOC_STATUS');
-    var cstatdoc = fpFields.id('DOC_CSTAT');
-    var motivodoc = fpFields.id('DOC_XMOTIVO');
-    var protocolodoc = fpFields.id('DOC_PROTOCOLO');
-    var idexternodoc = fpFields.id('DOC_IDEXTERNO');
-    var xmldoc = fpFields.id('DOC_XML');
-    var danfedoc = fpFields.id('DOC_DANFE');
-    
-
-    // A CHAVE ABRE NA ENTRADA: na compra quem lança digita a chave da nota do fornecedor. No resto
-    // ela é retorno da emissão, e fica travada.
-    if (!fpMapSimular.ehCompra(scriptContext.newRecord.type)) {
-      scriptContext.form.getField(chavedoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
-    } else {
-      // Na compra, o validador da chave na tela (fp_cs_entrada, portado do AVLR_AccessKeyValidation_CS).
-      var T = scriptContext.UserEventType;
-      if (scriptContext.type === T.CREATE || scriptContext.type === T.EDIT || scriptContext.type === T.COPY) {
-        scriptContext.form.clientScriptModulePath = './fp_cs_entrada.js';
-      }
+    // A EXIBIÇÃO DOS CAMPOS NÃO É TRATADA AQUI. Forçar INLINE nos `DOC_*` em CREATE/EDIT escondia
+    // os vazios (o NetSuite não desenha campo inline sem valor) e travava o que devia abrir. Quem
+    // diz como o campo aparece é o objeto SDF.
+    //
+    // Na compra, só o validador da chave na tela (fp_cs_entrada, portado do AVLR_AccessKeyValidation_CS).
+    if (!fpMapSimular.ehCompra(scriptContext.newRecord.type)) return;
+    var T = scriptContext.UserEventType;
+    if (scriptContext.type === T.CREATE || scriptContext.type === T.EDIT || scriptContext.type === T.COPY) {
+      scriptContext.form.clientScriptModulePath = './fp_cs_entrada.js';
     }
-    scriptContext.form.getField(numerodoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
-    scriptContext.form.getField(seriedoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
-    scriptContext.form.getField(statusdoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
-    scriptContext.form.getField(cstatdoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
-    scriptContext.form.getField(motivodoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
-    scriptContext.form.getField(protocolodoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
-    scriptContext.form.getField(idexternodoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
-    scriptContext.form.getField(xmldoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
-    scriptContext.form.getField(danfedoc).updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
-    
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
