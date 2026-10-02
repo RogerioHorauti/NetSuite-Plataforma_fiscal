@@ -1472,8 +1472,8 @@ gravaria a NOSSA chave por cima da do fornecedor. Os dois usos não convivem na 
 **2026-10-02 (Rogerio): sai o tratamento de exibição do `beforeLoad`.** O INLINE forçado nos `DOC_*`
 em CREATE/EDIT escondia os campos vazios no registro novo e a chave aparecia travada na entrada.
 "Não é necessário tratar as visualizações quando é edit ou new record": o `organizarFormulario`
-só põe **XML e DANFE em INLINE** (links do retorno). A **chave de acesso fica editável** em todo
-tipo (NORMAL do objeto). O resto dos `DOC_*` não é tratado. Na compra anexa o `fp_cs_entrada`
+só põe **XML e DANFE em INLINE** (links do retorno). A **chave de acesso fica editável na compra** e
+INLINE no resto. O resto dos `DOC_*` não é tratado. Na compra anexa o `fp_cs_entrada`
 (CREATE/EDIT/COPY).
 
 Depois do deploy do `2cfa750`: o `custbody_fp_chave_entrada` já não existe na conta (SuiteQL:

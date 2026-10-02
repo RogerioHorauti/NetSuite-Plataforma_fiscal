@@ -553,13 +553,18 @@ define([
     // A organização vem do OBJETO: subabas ANINHADAS (`<parent>` no XML do subtab) e o `<subtab>`
     // de cada campo. Quem monta é o NetSuite, e não quebra.
 
-    // XML e DANFE são links do retorno: INLINE sempre. A chave de acesso fica editável (NORMAL do
-    // objeto). O resto dos `DOC_*` não é tratado aqui.
+    // XML e DANFE são links do retorno: INLINE sempre. O resto dos `DOC_*` não é tratado aqui.
     fpForm.exibicaoSeExistir(scriptContext.form, [fpFields.id('DOC_XML'), fpFields.id('DOC_DANFE')],
       serverWidget.FieldDisplayType.INLINE);
 
+    // A CHAVE ABRE NA COMPRA: quem lança digita a chave da nota do fornecedor. No resto ela é
+    // retorno da emissão, e fica travada.
+    if (!fpMapSimular.ehCompra(scriptContext.newRecord.type)) {
+      fpForm.exibicaoSeExistir(scriptContext.form, [fpFields.id('DOC_CHAVE')], serverWidget.FieldDisplayType.INLINE);
+      return;
+    }
+
     // Na compra, o validador da chave na tela (fp_cs_entrada, portado do AVLR_AccessKeyValidation_CS).
-    if (!fpMapSimular.ehCompra(scriptContext.newRecord.type)) return;
     var T = scriptContext.UserEventType;
     if (scriptContext.type === T.CREATE || scriptContext.type === T.EDIT || scriptContext.type === T.COPY) {
       scriptContext.form.clientScriptModulePath = './fp_cs_entrada.js';
