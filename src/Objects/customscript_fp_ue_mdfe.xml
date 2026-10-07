@@ -1,0 +1,26 @@
+<usereventscript scriptid="customscript_fp_ue_mdfe">
+  <description>Botoes do manifesto MDF-e (Emitir, Consultar, Encerrar, Cancelar) pelo status. So beforeLoad em VIEW; quem age e o Suitelet de emissao.</description>
+  <isinactive>F</isinactive>
+  <name>FP Botoes do MDF-e</name>
+  <notifyadmins>F</notifyadmins>
+  <notifyemails></notifyemails>
+  <notifyowner>T</notifyowner>
+  <notifyuser>F</notifyuser>
+  <scriptfile>[/SuiteScripts/FiscalPlatform/fp_ue_mdfe.js]</scriptfile>
+  <scriptdeployments>
+    <scriptdeployment scriptid="customdeploy_fp_ue_mdfe">
+      <allemployees>F</allemployees>
+      <alllocalizationcontexts>T</alllocalizationcontexts>
+      <allpartners>F</allpartners>
+      <allroles>T</allroles>
+      <audslctrole></audslctrole>
+      <eventtype></eventtype>
+      <executioncontext>USERINTERFACE</executioncontext>
+      <isdeployed>T</isdeployed>
+      <loglevel>DEBUG</loglevel>
+      <recordtype>[scriptid=customrecord_fp_mdfe]</recordtype>
+      <runasrole>ADMINISTRATOR</runasrole>
+      <status>RELEASED</status>
+    </scriptdeployment>
+  </scriptdeployments>
+</usereventscript>

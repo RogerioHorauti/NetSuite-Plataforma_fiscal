@@ -330,6 +330,22 @@ e ler `subst_rps_numero/serie/tipo` da nota nova iguais aos da substituída.
 
 ## 14. ICMS da prestação do CT-e pela régua do motor (e o CFOP pelo resolvedor)
 
+> ✅ **FEITO na plataforma (conferido em 2026-10-07):** `prestacao-cte.dto.ts:30-34` — grupo, CST, base, alíquota e valor saem da régua `icms_prestacao_transporte`; `icms` mandado é descartado; `cfop` opcional.
+
+> **Estado em 06/10/2026:** ICMS ✅ ENTREGUE (o `prestacao.icms` saiu do DTO; quem ainda o manda
+> recebe 200 e o campo é descartado; régua das 27 UFs no item 17). **CFOP ✅ ENTREGUE** (plataforma
+> `CT-8`): `prestacao.cfop` é OPCIONAL. Ausente, a plataforma resolve pelo Anexo II do Conv. s/nº/1970:
+> `7358` fim no exterior · `x932` início fora da UF do emitente · `x359` carga dispensada de nota
+> (`prestacao.carga.dispensadaDeNotaFiscal: true`) · `x360` quando a régua do ICMS põe a ST no tomador ·
+> `x351` subcontratação/redespacho (`tipoServico` 1–3) · `352`–`357` pela **classe do tomador**, campo
+> novo `participantes.tomador.classe` (`INDUSTRIAL` · `COMERCIAL` · `COMUNICACAO` · `ENERGIA_ELETRICA` ·
+> `PRODUTOR_RURAL` · `OUTRA`). Tomador contribuinte sem classe → **400 nomeando o campo**; não
+> contribuinte (`indIeToma: '9'`) → 357; produtor rural declarado → 356. Declarado, o CFOP vale e é
+> conferido no 1º dígito (rejeição 519) e no 932 (524/908).
+> **Ação do bundle:** parar de mandar `prestacao.cfop` e mandar `participantes.tomador.classe`.
+> Provado pela API: SC→SP com `INDUSTRIAL` → `6352`; SC interna a não contribuinte → `5357`; BA→SE
+> com ST do tomador (art. 298) → `6360`; SC→SP sem classe → 400; `cfop: '5353'` em SC→SP → 400 (519).
+
 **O que:** o `prestacao.icms` deixa de ser obrigatório. O motor resolve `grupo`, `cst`,
 `baseCalculo` e `valor` (a alíquota já resolve: `resolverAliquotaDaPrestacao`,
 `aliquota-do-frete.ts`), e o `icms` do payload vira OVERRIDE, como `linhas[].impostos[]` na NF-e.
@@ -353,6 +369,8 @@ vICMS resolvidos; com `icms.cst` declarado, o declarado prevalece.
 
 ## 15. Município da prestação do CT-e por nome + UF
 
+> ⚠ **PARCIAL (conferido em 2026-10-07):** o `MunicipioMdfeDto` aceita `{ nome, uf }`; o `MunicipioPrestacaoDto` do CT-e (`prestacao-cte.dto.ts:36-44`) **ainda** exige `codigo` de 7 dígitos e não tem `uf`. O bundle já manda `{ nome, uf }` no CT-e.
+
 **O que:** `MunicipioPrestacaoDto` aceitar `{ nome, uf }` sem `codigo` e resolver o IBGE, como a
 NFS-e já faz com `municipioPrestacaoNome` + `ufPrestacao` (recusando nome ambíguo).
 
@@ -361,6 +379,82 @@ que a NFS-e já resolveu. Hoje `codigo` é `@Length(7, 7)` obrigatório (`presta
 
 **Como conferir:** CT-e com `inicioPrestacao: { nome: 'SAO PAULO', uf: 'SP' }` sai com `cMunIni`
 3550308.
+
+**Estender ao MDF-e:** ✅ **ENTREGUE pela plataforma em 06/10/2026 (commit `2f51405d`).** Em
+`manifesto.municipiosCarrega[]` e `manifesto.municipiosDescarga[]`, o `codigo` ficou opcional: mande
+`{ nome, uf }` (e as `chavesNFe` na descarga) e a plataforma resolve o IBGE; nome sem UF ou fora da
+referência nacional é recusado apontando a posição (`manifesto.municipiosDescarga[1]: …`).
+
+---
+
+## 16. ~~BLOQUEANTE do MDF-e~~ ✅ ENTREGUE em 06/10/2026 — `POST /fiscal/mdfe/:chave/encerrar`
+
+> **Contrato entregue (commit `2f51405d` da plataforma):**
+> - `POST /fiscal/mdfe/:chave/encerrar` — corpo `{ municipio: { codigo } | { nome, uf }, dataEncerramento? }`
+>   (`dataEncerramento` AAAA-MM-DD; ausente = hoje no fuso da filial; futura ou anterior à emissão = 400).
+> - `POST /fiscal/mdfe/:chave/cancelar` — corpo `{ justificativa (15–255), ignorarPrazo? }`; acima de 24 h
+>   da autorização = 400 (K04, rejeição 220), salvo `ignorarPrazo`.
+> - Resposta dos dois: `{ id, chaveAcesso, tpEvento, nSeqEvento, situacao: REGISTRADO|REJEITADO, cStat,
+>   xMotivo, nProt }`. Registrado, o MDF-e passa a `ENCERRADO`/`CANCELADO` e o `GET :chave/situacao`
+>   mostra. O `nProt` da autorização, o `nSeqEvento` e o CNPJ são da plataforma; o A1 é o da filial emitente.
+> - O município é ONDE a viagem terminou (o fato), não o UFFim do manifesto — por isso vem do ERP.
+
+**O que:** expor em HTTP o encerramento do MDF-e, que a plataforma já implementa por dentro
+(`mdfe-encerramento.ts`, `mdfe-eventos.ts`, evento pelo `MDFeRecepcaoEvento`). Hoje o
+`mdfe.controller.ts` só tem `GET :chave/situacao`, `POST reconciliar`, `POST :chave/reconciliar`,
+`POST :chave/reprocessar` e `GET :chave/damdfe` (medido em 06/10/2026).
+
+**Por quê:** o MDF-e precisa ser encerrado no fim da viagem; enquanto não for, fica pendente contra o
+emitente, e a SEFAZ tem um serviço só para cobrar isso (`MDFeConsNaoEnc`, `mdfe-encerramento.ts:5-6`).
+O próprio `mdfe-endpoints.ts:24` diz que a frente vive em pares — emitir e encerrar. Se o NetSuite
+emitir MDF-e sem poder encerrar, cada viagem vira uma pendência que só se resolve fora do ERP. **O
+bundle não começa a emissão de MDF-e antes deste item.**
+
+**Como conferir:** emitir um MDF-e em homologação, chamar o `encerrar` com UF e município de
+encerramento e receber o protocolo do evento; o `GET :chave/situacao` passa a devolver o manifesto
+encerrado.
+
+---
+
+## 17. CT-e — os FATOS da carga que a régua do ICMS pede (contrato medido em 06/10/2026)
+
+**O que:** o CST da prestação sai da régua `icms_prestacao_transporte` (27 UFs, lida contra o
+RICMS de cada uma). Cada linha de desoneração depende de um FATO da carga ou dos participantes. Fato
+ausente não vale "não": a plataforma **recusa com 400 nomeando o campo** e não consome numeração.
+Exemplo real: *"A régua do ICMS da prestação depende de `prestacao.carga.caracteristicas` para
+decidir o CST (RCTE/GO, Anexo IX, art. 6o, CIV, "b")..."*. Uma lista vazia (`[]`) é a declaração
+explícita de "nenhuma" e destrava a linha geral.
+
+**Caminho sem recusa: o bundle manda SEMPRE os campos de `prestacao.carga` abaixo.**
+
+| campo | valores | onde a régua lê (medido na tabela vigente) |
+|---|---|---|
+| `isencaoDaMercadoria` | lista de códigos (`CONV_ICM_26_1975_CALAMIDADE`, `CONV_ICMS_43_2010_DEPEN`, `CONV_ICMS_81_2015_PROSUB`, `CONV_ICMS_15_2021_VACINA_SARS_COV_2`...) ou `[]` | **todas as 27 UFs**: convênio impositivo vale em todas (LC 24/1975, art. 7º) |
+| `exportacao` | `DIRETA` · `FIM_ESPECIFICO` · `NAO` | AC, CE, DF, GO, MG, MT, PI, PR, RN, RO, RS, SC, SE, SP |
+| `destinoExportacao` | `PORTO` · `AEROPORTO` · `PONTO_DE_FRONTEIRA` (quando `exportacao` ≠ `NAO`) | AC, DF, MG, MT, RS, SC, SE, SP |
+| `caracteristicas` | lista (`EMBALAGEM_AGROTOXICO_DO_PRODUTOR_A_CENTRAL`, `EMBALAGEM_AGROTOXICO_DA_CENTRAL_AO_RECICLADOR`, `RESIDUO_ELETRONICO_LOGISTICA_REVERSA`, `DO_DESEMBARQUE_DE_IMPORTACAO`, `TRANSITO_FERROVIARIO_INTERNACIONAL_ATIT`...) ou `[]` | ferroviário (modal `04`): **27 UFs**; interna e interestadual: BA, CE, ES, GO, MG, MS, MT, PI, RN, RO, SC (ES, PI e RN desde 06/10/2026, CT-6: ZPE e embalagem de agrotóxico); só interna: AM, PE, RR |
+| `ncm` | NCM predominante da carga (8 dígitos) | interestadual: BA, MG, PE, RN; interna: AM, AP, MA, PA, PI, PR, RN |
+| `modalidadeFrete` · `stDaMercadoria` | CIF/FOB · se a mercadoria está sob ST | PI, SE; BA (art. 289, §§ 4º e 5º, também depois de 13/05/2026) |
+| `destinacao` · `terminalDestino` · `hidrovia` · `remessaArmazenagem` | ver Swagger | interna de PA/PI · RN · PA · GO |
+
+Nos participantes (`remetente`, `destinatario`, `expedidor`, `recebedor`), a régua de ST e de
+benefício por pessoa lê `regimeTributario`, `produtorRural`, `porte`, `atividades`,
+`credenciamentos` e `emiteNfe`. O mesmo vale aqui: mandar sempre o que o cadastro do NetSuite tem.
+
+**Onde:** `prestacao-cte.dto.ts` (enums exportados de `condicoes-da-regua-do-icms.ts`, que é a
+fonte do vocabulário fechado: valor fora dele dá 400 de validação).
+
+**Como conferir (provado em 06/10/2026 pela API em `dist/main`, tenant de prova):**
+- CE interna com `caracteristicas: ['RESIDUO_ELETRONICO_LOGISTICA_REVERSA']` → `ICMS45/CST 40`;
+- RO com `exportacao: 'DIRETA', destinoExportacao: 'PORTO'` → `CST 41`;
+- GO interestadual com `caracteristicas: []`, `exportacao: 'NAO'` → `ICMS00`, 12 %;
+- GO interestadual sem `caracteristicas` → 400 nomeando o campo.
+
+✅ **MT, MG, MS e PR emitem CT-e** (06/10/2026, plataforma `CT-7`): cada uma vai ao autorizador
+PRÓPRIO, com os endereços da lista oficial do Portal CT-e. Recusas de contrato medidas nessas UFs
+(400, sem numeração): MT e PR sem `carga.exportacao`; MS sem `carga.caracteristicas`; MG interna sem
+o `regimeTributario` do tomador. MG: o item 162 do Anexo X (isenção opcional) só vale com a opção
+declarada na filial (`enquadramentos_transporte` com `MG_ANEXO_X_162_OPCAO_ISENCAO`).
 
 ---
 

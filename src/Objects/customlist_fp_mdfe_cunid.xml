@@ -1,0 +1,10 @@
+<customlist scriptid="customlist_fp_mdfe_cunid">
+  <description>cUnid do MDF-e. O CODIGO abre o valor.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Unidade do Peso do MDF-e</name>
+  <customvalues>
+    <customvalue scriptid="val_fp_mdfe_cunid_01"><isinactive>F</isinactive><value>01 - KG</value></customvalue>
+    <customvalue scriptid="val_fp_mdfe_cunid_02"><isinactive>F</isinactive><value>02 - TON</value></customvalue>
+  </customvalues>
+</customlist>

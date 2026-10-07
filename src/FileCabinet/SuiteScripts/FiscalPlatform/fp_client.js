@@ -339,8 +339,16 @@ define([
     var numero = 900000000 + (parseInt(p.idExterno, 10) || 0);
     var serie = String(p.serie || '1');
     var d = String(p.dataEmissao || '2026-01-01');
-    var chave = chaveDeAcesso('35', d.substring(2, 4) + d.substring(5, 7), p.cnpjEmpresa, '55',
-      serie, numero, '1', String(p.idExterno || 0));
+    var mdfe = p.tipoDocumento === 'MDFE';
+    if (mdfe) numero = 900000000 + (parseInt(String(p.idExterno).replace(/\D/g, ''), 10) || 0);
+    var chave = chaveDeAcesso('35', d.substring(2, 4) + d.substring(5, 7), p.cnpjEmpresa, mdfe ? '58' : '55',
+      serie, numero, '1', String(p.idExterno || 0).replace(/\D/g, '') || '0');
+    // MDF-e: a forma da entidade `Mdfe` (`situacao` masculino, `mdfe.entity.ts:15`).
+    if (mdfe) {
+      return { chaveAcesso: chave, numero: numero, serie: serie, situacao: 'AUTORIZADO', cStat: '100',
+        xMotivo: 'Autorizado o uso do MDF-e (CHUMBADO)', nProt: '1' + chave.substring(25, 39), ambiente: 2,
+        idExterno: p.idExterno || null };
+    }
     return {
       chaveAcesso: chave,
       numero: numero,

@@ -1622,3 +1622,24 @@ Item da invoice é de SERVIÇO (frete) — CT-e não movimenta estoque.
 
 Validate 0 erros. **Até os itens 14 e 15 a plataforma recusa por validação do DTO** — recusa com
 mensagem, que é o esperado. Falta deploy e um payload de emissão de CT-e para medir.
+
+## 24. MDF-e: o manifesto como custom record (2026-10-07)
+
+Contrato lido no fonte (`manifesto-mdfe.dto.ts`, `mdfe.controller.ts`, `mdfe-eventos.service.ts`):
+emissão por `POST /fiscal/emitir` com `tipoDocumento: 'MDFE'` + `manifesto` (sem `linhas`);
+`POST /fiscal/mdfe/:chave/encerrar` `{ municipio: {codigo}|{nome,uf}, dataEncerramento? }`,
+`/cancelar` `{ justificativa }`, `/reconciliar`. Status `situacao`: EM_TRANSMISSAO, AUTORIZADO,
+REJEITADO, ENCERRADO, CANCELADO, NAO_CONSTA; evento REGISTRADO leva a ENCERRADO/CANCELADO (`:180,187`).
+
+| peça | o quê |
+|---|---|
+| `customrecord_fp_mdfe` | filial (Location), tipo de emitente, UF fim, placa, reboques, CPF do condutor, valor e peso da carga, unidade; retorno INLINE (chave, número, série, status, cStat, motivo, protocolo) |
+| `customrecord_fp_mdfe_doc` | sublista: documento (transação) → chave pelo `DOC_CHAVE`, município de descarga pelo endereço de entrega |
+| `fp_mdfe.js` | payload (carregamento = endereço da filial; descarga agrupada por município; `idExterno` = `mdfe-<id>`), eventos, retorno → campos |
+| `fp_sl_emissao.executarMdfe` | mesma porta; rastro anexado ao manifesto |
+| `fp_ue_mdfe` (`customscript_fp_ue_mdfe`) | Emitir / Consultar / Encerrar (MUNICIPIO/UF[/data]) / Cancelar pelo status |
+| `fp_client.emissaoChumbada` | com `tipoDocumento MDFE` devolve a forma da entidade `Mdfe` (`situacao: AUTORIZADO`, modelo 58). Os eventos do MDF-e NÃO têm chumbado: vão à rede |
+
+**NÃO validado nem medido:** CLI e MCP sem sessão em 2026-10-07. Pendentes: `project:validate`,
+os joins `transactionShippingAddress` e `locationMainAddress`, e o `clientScriptModulePath` no
+custom record (o mesmo mecanismo do `fp_ue_emissao`; na compra ele não funcionou — §21).

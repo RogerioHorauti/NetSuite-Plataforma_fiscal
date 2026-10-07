@@ -37,8 +37,8 @@
  * de onde o usuário clicou.
  */
 define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
-  './fp_fields', './fp_client', './fp_md_map_simular', './fp_persist', './fp_governanca'],
-  function (record, file, query, runtime, log, fpFields, fpClient, fpMap, fpPersist, fpGovernanca) {
+  './fp_fields', './fp_client', './fp_md_map_simular', './fp_persist', './fp_governanca', './fp_mdfe'],
+  function (record, file, query, runtime, log, fpFields, fpClient, fpMap, fpPersist, fpGovernanca, fpMdfe) {
 
     var ACOES = {
       EMITIR: 'emitir',
@@ -176,6 +176,7 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
      * de formulário do NetSuite dentro do `responseText`, que não se lê nem se aproveita.
      */
     function executar(tipo, id, acao, texto) {
+      if (tipo === fpMdfe.tipo()) return executarMdfe(tipo, id, acao, texto);
       var rec = record.load({ type: tipo, id: id });
       var subsidiaria = rec.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') });
       var opcoes = { subsidiaria: subsidiaria, transacao: id, pasta: pastaDoAnexo() };
@@ -224,6 +225,60 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
         nSeqEvento: (bruto.evento && bruto.evento.nSeqEvento) || '',
         ambiente: doc.ambiente || '',
         arquivos: (gravado && gravado.arquivos) || []
+      };
+    }
+
+    /**
+     * O MANIFESTO MDF-e — custom record, não transação. Mesma porta e mesmo desenho do `executar`:
+     * o payload e o retorno vão para o rastro anexado, o texto do motor volta inteiro, e o que
+     * descreve o documento vai para os campos do manifesto (`fp_mdfe.gravar`). Sem `/simular`:
+     * MDF-e não tem tributo.
+     */
+    function executarMdfe(tipo, id, acao, texto) {
+      var rec = record.load({ type: tipo, id: id });
+      var opcoes = { subsidiaria: fpMdfe.subsidiaria(rec), transacao: id, pasta: pastaDoAnexo(), acao: acao };
+      var resposta;
+
+      if (acao === ACOES.EMITIR) {
+        var payload = fpMdfe.montar(rec);
+        opcoes.payload = payload;
+        log.audit('fp_sl_emissao.emitirMdfe', 'EMITINDO idExterno=' + payload.idExterno + ' série=' + payload.serie +
+          ' — consome numeração');
+        resposta = fpClient.emitir(payload, opcoes);
+      } else {
+        var ev = fpMdfe.evento(rec, acao, texto);
+        opcoes.payload = ev.corpo || {};
+        log.audit('fp_sl_emissao.eventoMdfe', acao + ' · ' + ev.caminho);
+        resposta = fpClient.postar(ev.caminho, ev.corpo, opcoes);
+      }
+
+      if (!resposta.ok) {
+        log.error('fp_sl_emissao.recusa', { acao: acao, code: resposta.code, body: resposta.body });
+        return {
+          ok: false,
+          titulo: 'Recusado (HTTP ' + resposta.code + ')',
+          mensagem: typeof resposta.body === 'string' ? resposta.body : JSON.stringify(resposta.body, null, 2)
+        };
+      }
+
+      var corpo = resposta.body || {};
+      var doc = fpMdfe.documentoDaResposta(acao, corpo);
+      fpMdfe.gravar(id, doc);
+      var arquivos = fpPersist.anexarRastro(tipo, id, corpo, opcoes);
+      doc = doc || {};
+
+      return {
+        ok: true,
+        titulo: (acao === ACOES.EMITIR ? 'Emissão do MDF-e' : acao) + ': ' + (doc.status || corpo.situacao || 'sem status'),
+        status: doc.status || '',
+        cStat: corpo.cStat || '',
+        xMotivo: corpo.xMotivo || '',
+        chaveAcesso: doc.chaveAcesso || corpo.chaveAcesso || '',
+        numero: doc.numero || '',
+        serie: doc.serie || '',
+        protocolo: corpo.nProt || '',
+        nSeqEvento: corpo.nSeqEvento || '',
+        arquivos: arquivos
       };
     }
 

@@ -311,6 +311,27 @@ define([], function () {
       "RNTC": "custrecord_fp_reb_rntc"
     },
 
+    "mdfe": {
+      "_nota": ["customrecord_fp_mdfe -- a viagem. Os campos de retorno (CHAVE..PROTOCOLO) sao o DOC_* do manifesto."],
+      "LOCATION": "custrecord_fp_mdfe_location",
+      "TP_EMIT": "custrecord_fp_mdfe_tp_emit",
+      "UF_FIM": "custrecord_fp_mdfe_uf_fim",
+      "PLACA": "custrecord_fp_mdfe_placa",
+      "REBOQUES": "custrecord_fp_mdfe_reboques",
+      "CPF_CONDUTOR": "custrecord_fp_mdfe_cpf_condutor",
+      "VCARGA": "custrecord_fp_mdfe_vcarga",
+      "QCARGA": "custrecord_fp_mdfe_qcarga",
+      "CUNID": "custrecord_fp_mdfe_cunid",
+      "CHAVE": "custrecord_fp_mdfe_chave",
+      "NUMERO": "custrecord_fp_mdfe_numero",
+      "SERIE": "custrecord_fp_mdfe_serie",
+      "STATUS": "custrecord_fp_mdfe_status",
+      "CSTAT": "custrecord_fp_mdfe_cstat",
+      "XMOTIVO": "custrecord_fp_mdfe_xmotivo",
+      "PROTOCOLO": "custrecord_fp_mdfe_protocolo",
+      "DOC_MDFE": "custrecord_fp_mdfe_doc_mdfe",
+      "DOC_TRANSACAO": "custrecord_fp_mdfe_doc_transacao"
+    },
     "volume": {
       "_nota": [
         "Sublista customrecord_fp_volume, na MESMA subaba dos reboques -- duas sublistas numa",
@@ -398,6 +419,10 @@ define([], function () {
       "NATUREZA_OPERACAO": "customrecord_fp_natureza_operacao",
       "REBOQUE": "customrecord_fp_reboque",
       "VOLUME": "customrecord_fp_volume",
+      "MDFE": "customrecord_fp_mdfe",
+      "MDFE_DOC": "customrecord_fp_mdfe_doc",
+      "LISTA_MDFE_TP_EMIT": "customlist_fp_mdfe_tp_emit",
+      "LISTA_MDFE_CUNID": "customlist_fp_mdfe_cunid",
       "DI": "customrecord_fp_di",
       "PAGAMENTO": "customrecord_fp_pagamento",
       "PAIS": "customrecord_fp_pais",

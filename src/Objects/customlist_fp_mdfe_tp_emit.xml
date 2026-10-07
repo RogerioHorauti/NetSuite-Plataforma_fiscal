@@ -1,0 +1,11 @@
+<customlist scriptid="customlist_fp_mdfe_tp_emit">
+  <description>tpEmit do MDF-e. O CODIGO abre o valor.</description>
+  <isinactive>F</isinactive>
+  <isordered>T</isordered>
+  <name>Tipo de Emitente do MDF-e</name>
+  <customvalues>
+    <customvalue scriptid="val_fp_mdfe_tp_emit_1"><isinactive>F</isinactive><value>1 - Prestador de servico de transporte</value></customvalue>
+    <customvalue scriptid="val_fp_mdfe_tp_emit_2"><isinactive>F</isinactive><value>2 - Carga propria</value></customvalue>
+    <customvalue scriptid="val_fp_mdfe_tp_emit_3"><isinactive>F</isinactive><value>3 - CT-e globalizado</value></customvalue>
+  </customvalues>
+</customlist>

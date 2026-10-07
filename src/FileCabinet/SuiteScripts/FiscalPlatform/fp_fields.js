@@ -206,6 +206,11 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
     return resolver('pagamento', chave);
   }
 
+  /** Campo do manifesto MDF-e (`customrecord_fp_mdfe`) e da sublista de documentos dele. */
+  function idMdfe(chave) {
+    return resolver('mdfe', chave);
+  }
+
   /** Campo da sublista de volumes. */
   function idVolume(chave) {
     return resolver('volume', chave);
@@ -414,6 +419,7 @@ define(['N/runtime', 'N/log', './perfis/fp_perfil_original', './perfis/fp_perfil
     idDi: idDi,
     idPagamento: idPagamento,
     idVolume: idVolume,
+    idMdfe: idMdfe,
     idCliente: idCliente,
     idPais: idPais,
     idEndereco: idEndereco,
