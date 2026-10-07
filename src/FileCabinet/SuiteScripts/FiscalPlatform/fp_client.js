@@ -70,11 +70,18 @@ define([
   var MARGEM_TTL_S = 300;
 
   /**
-   * A URL DA API, NO CÓDIGO (2026-10-07, Rogerio). É uma plataforma só para toda subsidiária: o
-   * que muda por subsidiária é o client OAuth (id e segredo, na Subsidiary + Secrets), não o
-   * endereço. Sem barra no fim; os caminhos já começam com `/`.
+   * A CONEXÃO, NO CÓDIGO (2026-10-07, Rogerio) — nada de configuração por subsidiária.
+   *
+   *   BASE_URL        a API. Sem barra no fim; os caminhos já começam com `/`.
+   *   SECRET_*        os SCRIPTIDS dos dois segredos em Setup > Company > Secrets. O VALOR (client
+   *                   id e client secret do OAuth) mora lá, nunca aqui nem em campo texto.
+   *
+   * Uma plataforma e um client OAuth para a conta inteira. O escopo do tenant vem do token, e a
+   * filial de cada documento, do CNPJ da Location (`cnpjDaFilial`).
    */
   var BASE_URL = '';
+  var SECRET_CLIENT_ID = 'custsecret_fp_client_id';
+  var SECRET_CLIENT_SECRET = 'custsecret_fp_client_secret';
 
   /** Escopo do bundle. `fiscal:write` é edição de régua — a fronteira proíbe usar, logo não se pede. */
   var ESCOPO = 'fiscal:read nfe:emit';
@@ -521,7 +528,7 @@ define([
    */
   function baixar(caminho, opcoes) {
     opcoes = opcoes || {};
-    var cfg = configuracao(opcoes.subsidiaria);
+    var cfg = configuracao();
     var url = cfg.baseUrl + caminho;
 
     var inicio = new Date().getTime();
@@ -546,7 +553,7 @@ define([
 
   function chamar(metodo, caminho, payload, opcoes) {
     opcoes = opcoes || {};
-    var cfg = configuracao(opcoes.subsidiaria);
+    var cfg = configuracao();
     var url = cfg.baseUrl + caminho;
 
     var cabecalhos = {
@@ -616,12 +623,6 @@ define([
    * antes do encode produziria um base64 do texto errado.
    */
   function emitirToken(cfg) {
-    if (!cfg.secretSegredo) {
-      throw new Error(
-        'fp_client: subsidiária sem "FP - Script Id do Secret" para ' +
-          cfg.chaveCache + '. O segredo vive em Setup > Company > Secrets, nunca em campo texto.'
-      );
-    }
 
     var par = https.createSecureString({
       input: '{' + cfg.secretClientId + '}:{' + cfg.secretSegredo + '}'
@@ -674,49 +675,25 @@ define([
   }
 
   /**
-   * Configuração da empresa, lida da SUBSIDIÁRIA — registro standard do NetSuite.
-   *
-   * `company → branch` do FiscalPlatform é `subsidiary → location` aqui, e os campos moram nos
-   * dois registros nativos. Não há custom record de configuração: `location.subsidiary` já é a
-   * relação, e duplicá-la num cadastro paralelo criaria uma segunda verdade.
-   *
-   * Mapeamento subsidiária ↔ filial continua sendo RÉGUA — o que impede o bundle de virar um
-   * `if (subsidiary === 3)` disfarçado. Só que agora a régua é o CNPJ na Location.
+   * A configuração da conexão — constantes do topo deste arquivo. O parâmetro `subsidiaria` que os
+   * chamadores passam não decide mais nada aqui; a filial de cada documento vem do CNPJ da Location.
    */
-  function configuracao(subsidiaria) {
-    var k = String(subsidiaria || 'default');
-    if (cfgMemo[k]) return cfgMemo[k];
-
-    if (!subsidiaria) {
-      throw new Error('fp_client: configuração exige a subsidiária da transação');
-    }
-
-    var l = search.lookupFields({
-      type: search.Type.SUBSIDIARY,
-      id: subsidiaria,
-      columns: [
-        fpFields.idSubsidiaria('API_CLIENTID'),
-        fpFields.idSubsidiaria('API_SECRET')
-      ]
-    });
-
+  function configuracao() {
+    if (cfgMemo.fp) return cfgMemo.fp;
     if (!BASE_URL) {
       throw new Error('fp_client: BASE_URL da API não definida no fp_client.js.');
     }
-
-    var cfg = {
+    cfgMemo.fp = {
       baseUrl: BASE_URL,
-      secretClientId: l[fpFields.idSubsidiaria('API_CLIENTID')] || '',
-      secretSegredo: l[fpFields.idSubsidiaria('API_SECRET')] || '',
-      chaveCache: k,
+      secretClientId: SECRET_CLIENT_ID,
+      secretSegredo: SECRET_CLIENT_SECRET,
+      chaveCache: 'fp',
       // TTL do cache abaixo do TTL do token, para nunca usar token no fio da navalha. O `/oauth/
       // token` do motor tem default 3.600 s (`oauth.dto.ts:26`); se o client for configurado com
       // outro, este número tem de acompanhar.
       ttlToken: 3600 - MARGEM_TTL_S
     };
-
-    cfgMemo[k] = cfg;
-    return cfg;
+    return cfgMemo.fp;
   }
 
   /**
