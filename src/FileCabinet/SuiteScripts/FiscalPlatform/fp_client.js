@@ -69,6 +69,13 @@ define([
   var NOME_CACHE = 'fp_token';
   var MARGEM_TTL_S = 300;
 
+  /**
+   * A URL DA API, NO CÓDIGO (2026-10-07, Rogerio). É uma plataforma só para toda subsidiária: o
+   * que muda por subsidiária é o client OAuth (id e segredo, na Subsidiary + Secrets), não o
+   * endereço. Sem barra no fim; os caminhos já começam com `/`.
+   */
+  var BASE_URL = '';
+
   /** Escopo do bundle. `fiscal:write` é edição de régua — a fronteira proíbe usar, logo não se pede. */
   var ESCOPO = 'fiscal:read nfe:emit';
 
@@ -93,7 +100,7 @@ define([
    * cadeia inteira sem rede: sublist de impostos, plug-in de GL, persistência e anexo.
    *
    * As duas chamadas de verdade estão logo abaixo, comentadas, e é só descomentar quando houver
-   * host HTTPS alcançável no `custrecord_fp_api_baseurl`.
+   * host HTTPS alcançável no `BASE_URL`.
    */
   function chumbado() {
     return {
@@ -688,22 +695,17 @@ define([
       type: search.Type.SUBSIDIARY,
       id: subsidiaria,
       columns: [
-        fpFields.idSubsidiaria('API_BASEURL'),
         fpFields.idSubsidiaria('API_CLIENTID'),
         fpFields.idSubsidiaria('API_SECRET')
       ]
     });
 
-    var base = (l[fpFields.idSubsidiaria('API_BASEURL')] || '').replace(/\/+$/, '');
-    if (!base) {
-      throw new Error(
-        'fp_client: subsidiária ' + k + ' sem "FP - Base URL da API". Preencha os campos FP na ' +
-        'subsidiária (Setup > Company > Subsidiaries) antes de integrar.'
-      );
+    if (!BASE_URL) {
+      throw new Error('fp_client: BASE_URL da API não definida no fp_client.js.');
     }
 
     var cfg = {
-      baseUrl: base,
+      baseUrl: BASE_URL,
       secretClientId: l[fpFields.idSubsidiaria('API_CLIENTID')] || '',
       secretSegredo: l[fpFields.idSubsidiaria('API_SECRET')] || '',
       chaveCache: k,
