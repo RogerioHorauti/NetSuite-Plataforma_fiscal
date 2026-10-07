@@ -267,7 +267,7 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita.</description>
-      <displaytype>INLINE</displaytype>
+      <displaytype>STATICTEXT</displaytype>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>
@@ -291,7 +291,7 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita.</description>
-      <displaytype>INLINE</displaytype>
+      <displaytype>STATICTEXT</displaytype>
       <encryptatrest>F</encryptatrest>
       <fieldtype>INTEGER</fieldtype>
       <globalsearch>F</globalsearch>
@@ -315,7 +315,7 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita.</description>
-      <displaytype>INLINE</displaytype>
+      <displaytype>STATICTEXT</displaytype>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>
@@ -339,7 +339,7 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita. EM_TRANSMISSAO, AUTORIZADO, REJEITADO, ENCERRADO, CANCELADO, NAO_CONSTA.</description>
-      <displaytype>INLINE</displaytype>
+      <displaytype>STATICTEXT</displaytype>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>
@@ -363,7 +363,7 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita.</description>
-      <displaytype>INLINE</displaytype>
+      <displaytype>STATICTEXT</displaytype>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>
@@ -387,7 +387,7 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita.</description>
-      <displaytype>INLINE</displaytype>
+      <displaytype>STATICTEXT</displaytype>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXTAREA</fieldtype>
       <globalsearch>F</globalsearch>
@@ -411,7 +411,7 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita.</description>
-      <displaytype>INLINE</displaytype>
+      <displaytype>STATICTEXT</displaytype>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>

@@ -1633,7 +1633,7 @@ REJEITADO, ENCERRADO, CANCELADO, NAO_CONSTA; evento REGISTRADO leva a ENCERRADO/
 
 | peça | o quê |
 |---|---|
-| `customrecord_fp_mdfe` | filial (Location), tipo de emitente, UF fim, placa, reboques, CPF do condutor, valor e peso da carga, unidade; retorno INLINE (chave, número, série, status, cStat, motivo, protocolo) |
+| `customrecord_fp_mdfe` | filial (Location), tipo de emitente, UF fim, placa, reboques, CPF do condutor, valor e peso da carga, unidade; retorno STATICTEXT (chave, número, série, status, cStat, motivo, protocolo) |
 | `customrecord_fp_mdfe_doc` | sublista: documento (transação) → chave pelo `DOC_CHAVE`, município de descarga pelo endereço de entrega |
 | `fp_mdfe.js` | payload (carregamento = endereço da filial; descarga agrupada por município; `idExterno` = `mdfe-<id>`), eventos, retorno → campos |
 | `fp_sl_emissao.executarMdfe` | mesma porta; rastro anexado ao manifesto |
