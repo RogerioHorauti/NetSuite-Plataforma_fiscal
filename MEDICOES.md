@@ -1654,3 +1654,8 @@ custom record (o mesmo mecanismo do `fp_ue_emissao`; na compra ele não funciono
 FUNCIONA no custom record: AUTORIZADO, cStat 100, chave `35260110664687000113580029000000011000000010`
 (modelo 58), número 900000001, série 2, protocolo 190000000110000, `idExterno` `mdfe-1`; gravado
 nos 7 campos de retorno (`fp_mdfe.gravar`) e 2 anexos `FP-customrecord_fp_mdfe-1-emissao-*`.
+
+**Encerramento medido (2026-10-07), botão Encerrar do manifesto 1 com `MANAUS/AM`:** chumbado,
+nada à rede; evento REGISTRADO, cStat 135, protocolo do evento 290000000110000 no rastro
+(`FP-customrecord_fp_mdfe-1-encerrar-*`); no manifesto muda SÓ o status → ENCERRADO (cStat 100 e
+protocolo da autorização ficam). O ciclo emitir → encerrar do MDF-e fecha no bundle.
