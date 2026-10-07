@@ -319,6 +319,12 @@ novo conclui o save** com `sim_status = INDISPONIVEL` e `ERROR` sob `MENSAGEM DO
 a página **não repinta** a mensagem (a chave de sessão foi zerada); importar 50 pedidos por CSV faz
 **zero** chamadas ao motor (contadas no `customrecord_fp_log`).
 
+> ⚠ **REVISTO em 2026-10-02 (Rogerio): o último critério caiu.** Não há guarda de contexto nem de
+> "nada mudou": todo save simula, em todo contexto, inclusive CSV e webservice (como a Avalara), e só
+> o STATUS (AUTORIZADA/CANCELADA/DENEGADA) impede. O GL plug-in recebe os impostos pelo `N/cache`
+> com chave `corrId`, porque a sublista de registro filho não chega em CSV/webservice (MEDICOES §8.10).
+> Aceite novo: importar 1 transação por CSV simula, e o plug-in loga `cache · N linha(s)`.
+
 ### Fase 2 — emissão de NF-e de saída
 `fp_map_emitir.js`, `fp_sl_emissao.js` (emitir + consultar + reconciliar), `fp_persist.js`,
 `customrecord_fp_doc`, botão na transação.
@@ -352,6 +358,61 @@ natureza no ERP **não é declarado** (o resolvedor de CFOP do motor decide) em 
 - **Com SuiteTax:** os valores entram pelo caminho de *tax detail*, e chamada HTTP **não cabe** ali —
   o padrão é `/simular` persistido (Fase 1 ou Map/Reduce) e o caminho de tax lendo o **resultado
   persistido**.
+
+### Fase 6 — entrega das obrigações acessórias (EFD ICMS/IPI, EFD Contribuições, ECD, ECF)
+
+Levantado no fonte da plataforma em 2026-10-07 (`backend/src/modules/compliance/`, abreviado
+`entrada/` e `leiaute/`; `DOC` = `fiscal-platform/ARQUITETURA_OBRIGACOES.md`). Todas as frentes estão
+🟢 do lado da plataforma. **O bundle não fez nada desta fase.**
+
+**A divisão, nas palavras do DOC:** "a plataforma resolve a RÉGUA, o ERP manda as MOVIMENTAÇÕES"
+(DOC:36-41); não existe cadastro na plataforma — nem de item (DOC:41-43, 840-842); antes de pedir um
+campo, "a plataforma já tem? dá para derivar de régua? em que movimentação o ERP já fala disso?"
+(DOC:45-47). A obrigação entra por PORTA PRÓPRIA, não pelo `/fiscal/emitir`; quem dispara a geração é
+o contador ou um agendador no fechamento, e o chamador não monta o arquivo (DOC:730-764). A plataforma
+não transmite a EFD: recebe o recibo (DOC:4288-4291).
+
+**Contrato.** `/api/v1/compliance/entrada/*` (envio) e `/api/v1/compliance/efd/{icms-ipi,
+contribuicoes,ecd,ecf}[/arquivo]` (geração), com o MESMO Bearer OAuth do bundle (controller:100-101;
+`common/auth/principal.ts:2-14`). Escopo não é conferido em código; um guard recusa com 404 CNPJ de
+outra empresa (`enderecamento-no-escopo.guard.ts:16,39-44`). `GET /situacao?cnpj&competencia` devolve
+`pronto` + `pendencias[{item, registro, gravidade: impede|incompleto|nao-implementado|documento}]`
+(`situacao-da-entrada.service.ts:47-78`).
+
+**O que a plataforma já monta sozinha:** blocos C/D e E110 da EFD a partir dos documentos
+(DOC:104-106, 257, 265); G130/G140 pela nota capturada (controller:331-340); K010 pela CNAE
+(controller:507-511). **Fora do `/compliance`, mas trava a EFD:** CFOP de entrada, TIPO_ITEM e
+COD_ITEM vêm do `POST /transacoes/reclassificar` — que o bundle já chama na vendor bill; CFOP ausente é
+`impede` (situacao:310-342).
+
+| envio | registros | sem ele, a geração… | fonte |
+|---|---|---|---|
+| `obrigacoes-a-recolher` | E116 | **RECUSA** quando há ICMS a recolher | `conferir-e116.ts:61-85` |
+| `plano-de-contas` | 0500, J050 | sai sem conta; `/situacao` marca `impede` | controller:158; situacao:147 |
+| `lancamentos-contabeis` | C170.COD_CTA, ECD I200/I250 | COD_CTA vazio; ECD recusa lançamento sem `indLcto` | `gerar-bloco-c.service.ts:249-251`; `derivar-bloco-i-ecd.ts:22-26` |
+| `ajustes-apuracao` | E111-E113 | E110 sai com zeros | controller:398-401 |
+| `inventario` | H005/H010 | bloco H sem movimento | DOC:1603 |
+| `saldos-abertura` | ECD I155/J100, ECF K155 | abertura em zero | controller:579-580 |
+| `signatarios-ecd` | J930, ECF 0930 | **RECUSA** | `derivar-livro-ecd.ts:182-189`; `gerar-ecf.service.ts:445-450` |
+| `socios` | Y600 | **RECUSA** com FORMA_TRIB 1 a 7 | `derivar-y600.ts:93-99` |
+| `apuracao-ecf` | P200-P500 | linhas editáveis saem zeradas | `derivar-bloco-p-ecf.ts:29-33` |
+| `entrega` / `entrega-contabil` | COD_FIN, retificação | opcional; original com entrega já registrada é recusada | controller:480-482, 606-607 |
+| `termo-de-verificacao` | J801/J932 | **RECUSA** a ECD substituta | `derivar-termo-verificacao.ts:335-344` |
+| `estoque` / `producao` | K200/K280, K210-K302 | só quem deve o bloco K | controller:507-552 |
+| `bens` / `ciap` | 0300/0305/0600, G125/G126 | **RECUSA** G125 sem 0300 | `gerar-bloco-0.service.ts:757-764` |
+
+**De onde cada dado sai no NetSuite: NÃO LIDO.** Cada envio começa medindo na conta (registro,
+campo, SuiteQL) — nenhuma origem entra nesta tabela de cabeça.
+
+**Ordem (EFD ICMS/IPI primeiro, porque é mensal):**
+1. Tela "Obrigações" (Suitelet): filial + competência → `GET /situacao` → baixar o arquivo da EFD.
+2. E116 → plano de contas → razão.
+3. Inventário (bloco H) e E111.
+4. ECD/ECF: saldos de abertura, signatários, sócios, apuração.
+5. Bloco K e CIAP — só se o piloto tiver indústria ou ativo com crédito.
+
+**Aceite (etapa 1):** escolher filial e competência mostra as pendências literais do `/situacao`; com
+`pronto = true`, o arquivo da EFD ICMS/IPI baixa como sai da plataforma, sem tocar no conteúdo.
 
 ## 7. Medições pendentes
 
@@ -415,10 +476,37 @@ nota coerente na tela e incoerente no XML.
 > mapeados e medidos na conta (MEDICOES §14). Seguem abertos só os grupos de OUTROS modelos
 > (`participantes`, `prestacao`, `manifesto`, `guiaValores`) e a `substituicao` de NFS-e.
 > **`substituicao` de NFS-e mapeada em 2026-10-02** (MEDICOES §22; o `rpsSubstituido` depende do HANDOFF item 13).
+> **CT-e (`participantes` + `prestacao`) mapeado em 2026-10-02** a partir da invoice de frete (MEDICOES §23).
+> ICMS e CFOP da prestação o motor resolve (HANDOFF 14, feito). ⚠ O município do CT-e ainda exige IBGE
+> na plataforma (HANDOFF 15, parcial) — até lá a emissão de CT-e é recusada.
+> **MDF-e FEITO em 2026-10-07** (MEDICOES §24): emissão e encerramento medidos na conta, chumbados.
+> Fica aberto só o `guiaValores` (CT-e de transporte de valores) — se o piloto transportar valores.
 
 Estes existem no contrato e o bundle simplesmente não os monta — são frentes, não pendências de
 medição: `contingencia`, `exportacao`, `substituicao`, e os de outros modelos (`participantes` e
 `prestacao` do CT-e, `manifesto` do MDF-e, `guiaValores`).
+
+#### MDF-e — frente PARADA antes de escrever (2026-10-06)
+
+> ✅ **Implementada em 2026-10-07** com as peças abaixo (`customrecord_fp_mdfe`, `fp_mdfe.js`,
+> `fp_sl_emissao.executarMdfe`, `fp_ue_mdfe`). O texto é o registro da decisão.
+
+Dois motivos, ambos medidos:
+
+1. ~~**Depende do HANDOFF item 16**~~ ✅ **destravado em 06/10/2026**: a plataforma expõe
+   `POST /fiscal/mdfe/:chave/encerrar` e `/cancelar` (contrato no HANDOFF item 16), e os municípios do
+   manifesto aceitam `{ nome, uf }` (item 15 estendido). O lado da plataforma não bloqueia mais o MDF-e.
+2. **É uma frente maior que as outras.** Todo o caminho de emissão do bundle supõe uma TRANSAÇÃO: o
+   resultado é gravado nos `custbody_fp_*` por `submitFields`, a filial vem da subsidiária e a emissão
+   parte do payload simulado. O MDF-e não é transação nem tem simulação. Peças necessárias:
+
+| peça | o quê |
+|---|---|
+| `customrecord_fp_mdfe` "Manifesto MDF-e" | filial (location: CNPJ e município de carregamento), tipo de emitente (1/2/3), UF de fim, placa de tração, placas de reboque, CPF do condutor, valor e peso da carga; mais os campos de retorno (chave, número, série, status, cStat, protocolo) |
+| sublista "Documentos" | as invoices/fulfillments da viagem: a chave sai do campo de chave de cada uma, e o município de descarga do endereço de entrega, agrupando as chaves por município |
+| `fp_sl_emissao` + `fp_persist` | um ramo para o custom record: monta o payload direto, sem simulado, e grava nos campos do record |
+| UE no custom record | botões Emitir, Encerrar, Cancelar e Consultar, pelo status |
+| HANDOFF 15 | estender ao MDF-e: os municípios do MDF-e também exigem IBGE |
 
 `indFinal` fica FORA de propósito: o motor o deriva da natureza, e o DTO diz que `null` deriva e
 valor explícito é override. Ele é eixo do DIFAL, e um `0` mandado por engano sai como recolhimento
