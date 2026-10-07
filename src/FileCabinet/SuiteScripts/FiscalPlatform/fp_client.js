@@ -382,6 +382,16 @@ define([
    *   inutilizar    → { sucesso, cStat, xMotivo, nProt, dhRecbto, id } — da INUTILIZAÇÃO, não da nota
    */
   function eventoChumbado(caminho, payload) {
+    // MDF-e: `ResultadoEventoMdfe` (`mdfe-eventos.service.ts:57`) no encerrar/cancelar; a forma da
+    // reconciliação (`situacao.service.ts:78-81`) no reconciliar.
+    var md = /\/mdfe\/([^/]+)\/(encerrar|cancelar|reconciliar)$/.exec(caminho);
+    if (md) {
+      var tp = { encerrar: '110112', cancelar: '110111' }[md[2]];
+      if (!tp) return { chaveAcesso: md[1], situacaoAnterior: 'EM_TRANSMISSAO', situacaoNova: 'AUTORIZADO',
+        cStat: '100', xMotivo: 'Autorizado o uso do MDF-e (CHUMBADO)' };
+      return { id: null, chaveAcesso: md[1], tpEvento: tp, nSeqEvento: 1, situacao: 'REGISTRADO', cStat: '135',
+        xMotivo: 'Evento registrado e vinculado a MDF-e (CHUMBADO)', nProt: '2' + String(md[1]).substring(25, 39) };
+    }
     var m = /\/(?:emitir|nfe)\/([^/]+)\/([a-z-]+)$/.exec(caminho) || [];
     var chave = m[1] || '';
     var acao = m[2] || '';

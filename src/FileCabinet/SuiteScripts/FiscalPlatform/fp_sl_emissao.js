@@ -278,6 +278,7 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
         serie: doc.serie || '',
         protocolo: corpo.nProt || '',
         nSeqEvento: corpo.nSeqEvento || '',
+        ambiente: corpo.ambiente || '',
         arquivos: arquivos
       };
     }

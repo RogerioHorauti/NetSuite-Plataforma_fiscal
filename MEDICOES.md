@@ -1638,7 +1638,7 @@ REJEITADO, ENCERRADO, CANCELADO, NAO_CONSTA; evento REGISTRADO leva a ENCERRADO/
 | `fp_mdfe.js` | payload (carregamento = endereço da filial; descarga agrupada por município; `idExterno` = `mdfe-<id>`), eventos, retorno → campos |
 | `fp_sl_emissao.executarMdfe` | mesma porta; rastro anexado ao manifesto |
 | `fp_ue_mdfe` (`customscript_fp_ue_mdfe`) | Emitir / Consultar / Encerrar (MUNICIPIO/UF[/data]) / Cancelar pelo status |
-| `fp_client.emissaoChumbada` | com `tipoDocumento MDFE` devolve a forma da entidade `Mdfe` (`situacao: AUTORIZADO`, modelo 58). Os eventos do MDF-e NÃO têm chumbado: vão à rede |
+| `fp_client` chumbado | emissão com `tipoDocumento MDFE` na forma da entidade `Mdfe` (`situacao: AUTORIZADO`, modelo 58); encerrar/cancelar na forma do `ResultadoEventoMdfe` (REGISTRADO, 135); reconciliar com `situacaoNova` |
 
 **Medido depois do deploy (2026-10-07):** validate 0 erros (os campos de retorno são
 STATICTEXT — o SDF recusa INLINE). `transactionShippingAddress` e `locationMainAddress` respondem;
@@ -1649,3 +1649,8 @@ com "A Filial do manifesto não tem município e UF" até a filial ter endereço
 
 **Antes desse deploy:** CLI e MCP sem sessão em 2026-10-07. Pendente: o `clientScriptModulePath` no
 custom record (o mesmo mecanismo do `fp_ue_emissao`; na compra ele não funcionou — §21).
+
+**Emissão medida na conta (2026-10-07), pelo botão do manifesto 1** — o `clientScriptModulePath`
+FUNCIONA no custom record: AUTORIZADO, cStat 100, chave `35260110664687000113580029000000011000000010`
+(modelo 58), número 900000001, série 2, protocolo 190000000110000, `idExterno` `mdfe-1`; gravado
+nos 7 campos de retorno (`fp_mdfe.gravar`) e 2 anexos `FP-customrecord_fp_mdfe-1-emissao-*`.
