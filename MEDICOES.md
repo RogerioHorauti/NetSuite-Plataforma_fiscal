@@ -1640,6 +1640,12 @@ REJEITADO, ENCERRADO, CANCELADO, NAO_CONSTA; evento REGISTRADO leva a ENCERRADO/
 | `fp_ue_mdfe` (`customscript_fp_ue_mdfe`) | Emitir / Consultar / Encerrar (MUNICIPIO/UF[/data]) / Cancelar pelo status |
 | `fp_client.emissaoChumbada` | com `tipoDocumento MDFE` devolve a forma da entidade `Mdfe` (`situacao: AUTORIZADO`, modelo 58). Os eventos do MDF-e NÃO têm chumbado: vão à rede |
 
-**NÃO validado nem medido:** CLI e MCP sem sessão em 2026-10-07. Pendentes: `project:validate`,
-os joins `transactionShippingAddress` e `locationMainAddress`, e o `clientScriptModulePath` no
+**Medido depois do deploy (2026-10-07):** validate 0 erros (os campos de retorno são
+STATICTEXT — o SDF recusa INLINE). `transactionShippingAddress` e `locationMainAddress` respondem;
+a consulta do `documentos()` contra o manifesto de teste 1 (invoice 2833) devolve a chave de 44 e
+Manaus/AM. ⚠ As três locations da conta estão SEM cidade/UF no endereço principal: o Emitir recusa
+com "A Filial do manifesto não tem município e UF" até a filial ter endereço. Manifesto de teste
+`customrecord_fp_mdfe` 1 (filial 4, carga própria, R$ 1.000, 150 kg) com a invoice 2833.
+
+**Antes desse deploy:** CLI e MCP sem sessão em 2026-10-07. Pendente: o `clientScriptModulePath` no
 custom record (o mesmo mecanismo do `fp_ue_emissao`; na compra ele não funcionou — §21).
