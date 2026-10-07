@@ -1,0 +1,25 @@
+<suitelet scriptid="customscript_fp_sl_obrigacoes">
+  <description>Tela Obrigacoes: escolhe o arquivo, dispara o fp_mr_obrigacoes e lista os CSVs prontos para a importacao da plataforma.</description>
+  <isinactive>F</isinactive>
+  <name>FP Obrigacoes</name>
+  <notifyadmins>F</notifyadmins>
+  <notifyemails></notifyemails>
+  <notifyowner>T</notifyowner>
+  <notifyuser>F</notifyuser>
+  <scriptfile>[/SuiteScripts/FiscalPlatform/fp_sl_obrigacoes.js]</scriptfile>
+  <scriptdeployments>
+    <scriptdeployment scriptid="customdeploy_fp_sl_obrigacoes">
+      <allemployees>F</allemployees>
+      <allpartners>F</allpartners>
+      <allroles>T</allroles>
+      <audslctrole></audslctrole>
+      <eventtype></eventtype>
+      <isdeployed>T</isdeployed>
+      <isonline>F</isonline>
+      <loglevel>DEBUG</loglevel>
+      <runasrole>ADMINISTRATOR</runasrole>
+      <status>RELEASED</status>
+      <title>FP Obrigacoes</title>
+    </scriptdeployment>
+  </scriptdeployments>
+</suitelet>

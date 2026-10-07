@@ -458,6 +458,24 @@ declarada na filial (`enquadramentos_transporte` com `MG_ANEXO_X_162_OPCAO_ISENC
 
 ---
 
+## 17. Natureza da conta (`COD_NAT_CC`) no CSV do plano de contas
+
+**O que:** o layout `contratos/importacao-csv/plano_de_contas.v1.md` não tem coluna de TIPO de
+conta, e a `natureza` é opcional. Sem ela a conta grava `natureza = NULL`
+(`receber-plano-contas.service.ts:203`) e o `0500` sai sem `COD_NAT_CC` (`gerar-bloco-0.service.ts:534-545`),
+campo obrigatório — sem pendência no `/situacao`. Antes, o importador derivava do `Account Type`
+(`importar-plano-contas.ts:101-108`, `naturezaDoTipo`).
+
+**Pedido:** ou o layout aceita o tipo de conta do ERP (o rótulo do NetSuite, que a `naturezaDoTipo`
+já lê) e a plataforma deriva, ou a natureza ausente vira pendência `impede` no `/situacao`. O
+bundle NÃO classifica: a natureza é régua.
+
+**E a regex:** `Deferred Expense` cai em `04` (casa com "expense"), mas no NetSuite é conta de
+ATIVO (despesa antecipada); `Deferred Revenue` cai em `04` (casa com "revenue"), mas é PASSIVO.
+A sandbox tem 2 contas `DeferExpense`.
+
+---
+
 ## Fora de escopo deste handoff
 
 Nada aqui pede régua nova, CST, alíquota, cBenef ou fórmula de base. O conector **traduz e

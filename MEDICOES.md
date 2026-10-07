@@ -1659,3 +1659,18 @@ nos 7 campos de retorno (`fp_mdfe.gravar`) e 2 anexos `FP-customrecord_fp_mdfe-1
 nada à rede; evento REGISTRADO, cStat 135, protocolo do evento 290000000110000 no rastro
 (`FP-customrecord_fp_mdfe-1-encerrar-*`); no manifesto muda SÓ o status → ENCERRADO (cStat 100 e
 protocolo da autorização ficam). O ciclo emitir → encerrar do MDF-e fecha no bundle.
+
+## 25. Obrigações por arquivo CSV — plano de contas (2026-10-07, Rogerio)
+
+Em vez de um request por movimentação, o bundle gera CSV no layout da plataforma
+(`fiscal-platform/contratos/importacao-csv/<tipo>.v<n>.md`) e a tela de importação de lá processa.
+`fp_sl_obrigacoes` (tela) → `N/task` → `fp_mr_obrigacoes` (Map/Reduce: volume) → CSV em partes de
+até 9 MB na pasta `custscript_fp_pasta_payload`, `FP-<arquivo>-<AAAAMMDDHHmm>-<parte>.csv`.
+
+**PLANO_DE_CONTAS v1, medido na conta:** 178 contas, 10 `NonPosting` (fora). `account.subsidiary`
+volta como LISTA ("1, 2, 3, 4") — filiais = locations com CNPJ dessas subsidiárias, cruzadas em
+memória; conta sem filial brasileira não entra (subsidiária pode não ser do Brasil). Só a location 4
+tem CNPJ. `nome` = `accountsearchdisplaynamecopy` (o `fullname` traz "Sales : Sales - Merchandise").
+`natureza`, `codigoReduzido`, `codigoReferencialSped`, `codigoAglutinacao`: VAZIOS — sem origem
+nesta conta (os três campos custom do export do cliente não existem aqui) e a natureza é régua
+(HANDOFF 17). Validate 0 erros; **falta deploy e gerar o arquivo pela tela**.
