@@ -21,6 +21,12 @@ define(['N/ui/serverWidget', 'N/task', 'N/query', 'N/runtime', 'N/url', 'N/log',
         var tipo = contexto.request.parameters.custpage_fp_arquivo;
         var subsidiaria = contexto.request.parameters.custpage_fp_subsidiaria;
         try {
+          // Sem filial com CNPJ não há o que importar: avisa AQUI, em vez de o Map/Reduce falhar
+          // e o motivo ficar só no log.
+          if (!fpArquivos.filiaisDaSubsidiaria(subsidiaria).length) {
+            throw new Error('a subsidiária escolhida não tem filial (location) com CNPJ. Cadastre o CNPJ da ' +
+              'Filial na Location — sem ele a plataforma não sabe de que empresa é o arquivo.');
+          }
           var id = task.create({
             taskType: task.TaskType.MAP_REDUCE,
             scriptId: 'customscript_fp_mr_obrigacoes',
@@ -39,10 +45,10 @@ define(['N/ui/serverWidget', 'N/task', 'N/query', 'N/runtime', 'N/url', 'N/log',
       fpArquivos.tipos().forEach(function (t) { sel.addSelectOption({ value: t, text: t }); });
       sel.isMandatory = true;
 
-      // POR SUBSIDIÁRIA: a importação na plataforma é por empresa, e só subsidiária com filial
-      // (location com CNPJ) tem o que importar.
+      // POR SUBSIDIÁRIA: a importação na plataforma é por empresa. Lista todas; a que não tem filial
+      // com CNPJ é recusada no disparo, com o motivo na tela.
       var sub = form.addField({ id: 'custpage_fp_subsidiaria', type: serverWidget.FieldType.SELECT, label: 'Subsidiária' });
-      fpArquivos.subsidiariasComFilial().forEach(function (s) { sub.addSelectOption({ value: String(s.id), text: s.nome }); });
+      fpArquivos.subsidiarias().forEach(function (s) { sub.addSelectOption({ value: String(s.id), text: s.nome }); });
       sub.isMandatory = true;
       form.addSubmitButton({ label: 'Gerar' });
 

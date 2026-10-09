@@ -54,12 +54,9 @@ define(['N/query'], function (query) {
     return cnpjs;
   }
 
-  /** As subsidiárias que TÊM filial com CNPJ — as únicas que geram arquivo. `[{id, nome}]`. */
-  function subsidiariasComFilial() {
-    // Subconsulta e não JOIN + DISTINCT: este dá "Invalid or unsupported search" (medido na conta).
-    return todas("SELECT s.id, s.name AS nome FROM subsidiary s WHERE s.isinactive = 'F' AND s.id IN " +
-      "(SELECT l.subsidiary FROM location l WHERE l.custrecord_fp_cnpj_filial IS NOT NULL AND l.isinactive = 'F') " +
-      'ORDER BY s.name');
+  /** Todas as subsidiárias ativas, `[{id, nome}]` — a tela lista todas (Rogerio, 2026-10-09). */
+  function subsidiarias() {
+    return todas("SELECT id, name AS nome FROM subsidiary WHERE isinactive = 'F' ORDER BY name");
   }
 
   /**
@@ -117,5 +114,5 @@ define(['N/query'], function (query) {
   }
 
   return { definicao: definicao, tipos: function () { return Object.keys(ARQUIVOS); }, linhaCsv: linhaCsv,
-    subsidiariasComFilial: subsidiariasComFilial };
+    subsidiarias: subsidiarias, filiaisDaSubsidiaria: filiaisDaSubsidiaria };
 });
