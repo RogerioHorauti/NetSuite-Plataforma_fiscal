@@ -1689,3 +1689,22 @@ que não tem location com CNPJ é recusada no disparo, com o motivo na tela, ant
 inteiras e a subsidiária filtrada em memória (`location.subsidiary` = "3"). As TRÊS consultas do
 arquivo rodadas na conta como estão no código: locations com CNPJ (1), subsidiárias ativas (4),
 contas não-`NonPosting` (168). Subsidiária vazia no POST (`SSS_INVALID_TYPE_ARG` no log) vira aviso.
+
+## 26. Lançamentos contábeis por CSV (2026-10-09)
+
+Contrato: `fiscal-platform/contratos/importacao-csv/lancamentos_contabeis.v1.md` — uma linha por
+PARTIDA, colunas do lançamento repetidas, chave `idExterno`, débito = crédito por lançamento
+conferido em centavos pela plataforma.
+
+| medido na conta | resultado |
+|---|---|
+| origem | `transactionaccountingline` `posting = 'T'`; um livro só (id 1; a tabela `accountingbook` "not found" sem MULTIBOOK) — 3.818 linhas em 434 transações lançadas |
+| GL plug-in | as linhas dele estão lá como as outras (1705: 13 linhas, D = C = 176,38; 1688/1693 com `2310.8`/`5010.5`) |
+| ⚠ linhas SEM conta | NÃO são partida: com elas a bill 1633 dá D 50.600 × C 25.300, e o excesso é exatamente as duas linhas sem conta (10.000 + 15.300); idem 1681/1683/1685. INNER JOIN em `account` |
+| balanço | com o INNER JOIN, **0** transação desbalanceada em todo o razão lançado da subsidiária 3 |
+| location do cabeçalho | 372 transações com, 5 sem (sub 3). Sem location: a filial ÚNICA da subsidiária; com mais de uma, fora do arquivo e contada no log |
+| `numeroItem` | `custcol_fp_numero_item` da linha (via perfil `LINHA_NUMERO_ITEM`); a chave via `DOC_CHAVE` |
+
+Competência (AAAA-MM) filtra `trandate`; `indLcto` vazio (o contrato: a plataforma não deriva, vazio
+é legítimo até a ECD). MULTIBOOK ligado: só o livro principal — NÃO medido. Validate 0 erros.
+**Falta deploy e gerar pela tela** (ex.: Produtos, 2022-03 → 119 partidas com conta, 25 transações).

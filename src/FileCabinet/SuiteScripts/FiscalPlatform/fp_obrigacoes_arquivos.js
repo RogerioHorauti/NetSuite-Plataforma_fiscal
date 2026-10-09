@@ -14,7 +14,7 @@
  * O bundle TRADUZ e não classifica: o que não tem origem no NetSuite sai VAZIO — nunca derivado
  * aqui (a `natureza` do plano de contas é o caso: régua da plataforma).
  */
-define(['N/query'], function (query) {
+define(['N/query', 'N/runtime', './fp_fields'], function (query, runtime, fpFields) {
 
   /** Um campo CSV pelas regras do contrato: aspas quando tem `;`, aspas ou quebra de linha. */
   function campo(v) {
@@ -44,19 +44,31 @@ define(['N/query'], function (query) {
    * compartilhada entre subsidiárias sairia com CNPJ de duas empresas, e o arquivo seria recusado.
    */
   function filiaisDaSubsidiaria(subsidiaria) {
-    // ⚠ Filtrar `location` por `subsidiary = ?` dá "Invalid or unsupported search" (medido em
-    // 2026-10-09). Lê as locations com CNPJ e filtra aqui — como as contas, cuja subsidiária também
-    // volta como lista.
-    var cnpjs = [];
-    todas("SELECT subsidiary, custrecord_fp_cnpj_filial AS cnpj FROM location " +
+    var porLocation = locationsDaSubsidiaria(subsidiaria), cnpjs = [];
+    Object.keys(porLocation).forEach(function (k) {
+      if (cnpjs.indexOf(porLocation[k]) === -1) cnpjs.push(porLocation[k]);
+    });
+    return cnpjs;
+  }
+
+  /**
+   * `{ idDaLocation: cnpj }` das locations com CNPJ da subsidiária.
+   *
+   * ⚠ Filtrar `location` por `subsidiary = ?` dá "Invalid or unsupported search" (medido em
+   * 2026-10-09). Lê as locations com CNPJ e filtra aqui — como as contas, cuja subsidiária também
+   * volta como lista.
+   */
+  function locationsDaSubsidiaria(subsidiaria) {
+    var mapa = {};
+    todas("SELECT id, subsidiary, custrecord_fp_cnpj_filial AS cnpj FROM location " +
           "WHERE custrecord_fp_cnpj_filial IS NOT NULL AND isinactive = 'F'")
       .forEach(function (l) {
         var subs = String(l.subsidiary || '').split(',').map(function (x) { return x.trim(); });
         if (subs.indexOf(String(subsidiaria)) === -1) return;
         var cnpj = String(l.cnpj || '').replace(/\D/g, '');
-        if (cnpj.length === 14 && cnpjs.indexOf(cnpj) === -1) cnpjs.push(cnpj);
+        if (cnpj.length === 14) mapa[String(l.id)] = cnpj;
       });
-    return cnpjs;
+    return mapa;
   }
 
   /** Todas as subsidiárias ativas, `[{id, nome}]` — a tela lista todas (Rogerio, 2026-10-09). */
@@ -80,7 +92,8 @@ define(['N/query'], function (query) {
     arquivo: 'plano_de_contas_v1',
     colunas: ['codigo', 'nome', 'indicador', 'natureza', 'nivel', 'codigoPai', 'codigoReduzido',
       'codigoReferencialSped', 'codigoAglutinacao', 'dataAlteracao', 'ativa', 'filiais'],
-    linhas: function (subsidiaria) {
+    linhas: function (p) {
+      var subsidiaria = p.subsidiaria;
       var filiais = filiaisDaSubsidiaria(subsidiaria);
       if (!filiais.length) {
         throw new Error('a subsidiária ' + subsidiaria + ' não tem filial (location) com CNPJ: não há o que importar.');
@@ -110,7 +123,81 @@ define(['N/query'], function (query) {
     }
   };
 
-  var ARQUIVOS = { PLANO_DE_CONTAS: PLANO_DE_CONTAS };
+  /**
+   * LANCAMENTOS_CONTABEIS v1 — `contratos/importacao-csv/lancamentos_contabeis.v1.md`.
+   *
+   * O razão LANÇADO da subsidiária na competência: `transactionaccountingline` com `posting = 'T'`
+   * — inclusive as linhas do GL plug-in, que estão lá como as outras (medido na transação 1705: 13
+   * linhas, débito = crédito = 176,38). Uma linha do CSV por PARTIDA, as colunas do lançamento
+   * repetidas, como o contrato pede.
+   *
+   *   idExterno     o internal id da transação — identidade estável; reimportar substitui
+   *   cnpj          o da location do CABEÇALHO; sem location, o da filial ÚNICA da subsidiária;
+   *                 com mais de uma filial e sem location, a transação NÃO entra (contada no log)
+   *   data          `trandate` (DT_LCTO); a competência filtra por ela
+   *   numero        `tranid` · historico `memo` · origem o tipo da transação · chaveAcesso `DOC_CHAVE`
+   *   conta         `acctnumber`. Linha de `transactionaccountingline` SEM conta NÃO é partida: medido
+   *                 em 2022-03 (sub 3), com elas a bill 1633 dá débito 50.600 × crédito 25.300, e o
+   *                 excesso é exatamente as duas linhas sem conta (10.000 + 15.300); sem elas, fecha —
+   *                 idem 1681, 1683, 1685. Por isso o JOIN em `account` é INNER
+   *   natureza/valor  D/C pelo lado em que o valor está, sem sinal; partida de valor zero não entra
+   *   numeroItem    `custcol_fp_numero_item` da linha da transação — o elo do COD_CTA com o C170
+   *   indLcto       VAZIO: "a plataforma não deriva; vazio é legítimo até a ECD" (o contrato)
+   *
+   * ⚠ MULTIBOOK: com a feature ligada, só o livro principal. NÃO medido (a sandbox tem um livro só).
+   */
+  var LANCAMENTOS_CONTABEIS = {
+    tipo: 'LANCAMENTOS_CONTABEIS',
+    arquivo: 'lancamentos_contabeis_v1',
+    porCompetencia: true,
+    colunas: ['cnpj', 'idExterno', 'data', 'chaveAcesso', 'numero', 'historico', 'origem', 'indLcto',
+      'conta', 'natureza', 'valor', 'numeroItem', 'codigoParticipante', 'centroCusto'],
+    linhas: function (p) {
+      var locs = locationsDaSubsidiaria(p.subsidiaria);
+      var unicas = {};
+      Object.keys(locs).forEach(function (k) { unicas[locs[k]] = true; });
+      var cnpjsDaSub = Object.keys(unicas);
+      if (!cnpjsDaSub.length) {
+        throw new Error('a subsidiária ' + p.subsidiaria + ' não tem filial (location) com CNPJ: não há o que importar.');
+      }
+      var m = /^(\d{4})-(\d{2})$/.exec(String(p.competencia || ''));
+      if (!m) throw new Error('competência inválida: "' + p.competencia + '" (use AAAA-MM).');
+      var de = m[1] + '-' + m[2] + '-01';
+      var ate = new Date(Date.UTC(Number(m[1]), Number(m[2]), 0)).toISOString().substring(0, 10);
+
+      var livro = runtime.isFeatureInEffect({ feature: 'MULTIBOOK' })
+        ? " AND tal.accountingbook = (SELECT id FROM accountingbook WHERE isprimary = 'T')" : '';
+      var cChave = fpFields.id('DOC_CHAVE'), cItem = fpFields.idLinha('LINHA_NUMERO_ITEM');
+      var partidas = todas('SELECT t.id, t.tranid, TO_CHAR(t.trandate, \'YYYY-MM-DD\') AS data, t.memo, ' +
+        'BUILTIN.DF(t.type) AS origem, ' + (cChave ? 't.' + cChave : 'NULL') + ' AS chave, tlm.location AS loc, a.acctnumber AS conta, ' +
+        'tal.debit, tal.credit, ' + (cItem ? 'tl.' + cItem : 'NULL') + ' AS item ' +
+        'FROM transactionaccountingline tal JOIN transaction t ON t.id = tal.transaction ' +
+        "JOIN transactionline tlm ON tlm.transaction = t.id AND tlm.mainline = 'T' " +
+        'JOIN account a ON a.id = tal.account ' +
+        'LEFT JOIN transactionline tl ON tl.transaction = tal.transaction AND tl.id = tal.transactionline ' +
+        "WHERE tal.posting = 'T' AND tlm.subsidiary = ? AND t.trandate BETWEEN TO_DATE(?, 'YYYY-MM-DD') " +
+        "AND TO_DATE(?, 'YYYY-MM-DD')" + livro + ' ORDER BY t.id, tal.transactionline',
+        [p.subsidiaria, de, ate]);
+
+      var out = [], semFilial = {};
+      partidas.forEach(function (x) {
+        var deb = Number(x.debit) || 0, cred = Number(x.credit) || 0;
+        if (!deb && !cred) return;
+        var cnpj = (x.loc && locs[String(x.loc)]) || (!x.loc && cnpjsDaSub.length === 1 ? cnpjsDaSub[0] : '');
+        if (!cnpj) { semFilial[x.id] = true; return; }
+        out.push(linhaCsv([cnpj, x.id, x.data, String(x.chave || '').replace(/\D/g, ''), x.tranid, x.memo,
+          x.origem, '', x.conta, deb ? 'D' : 'C', (deb || cred).toFixed(2), x.item, '', '']));
+      });
+      p.avisos = [];
+      if (Object.keys(semFilial).length) {
+        p.avisos.push(Object.keys(semFilial).length + ' transação(ões) fora do arquivo: sem location com CNPJ desta ' +
+          'subsidiária no cabeçalho, e a subsidiária tem mais de uma filial (ids ' + Object.keys(semFilial).slice(0, 20).join(', ') + ').');
+      }
+      return out;
+    }
+  };
+
+  var ARQUIVOS = { PLANO_DE_CONTAS: PLANO_DE_CONTAS, LANCAMENTOS_CONTABEIS: LANCAMENTOS_CONTABEIS };
 
   function definicao(tipo) {
     var d = ARQUIVOS[tipo];

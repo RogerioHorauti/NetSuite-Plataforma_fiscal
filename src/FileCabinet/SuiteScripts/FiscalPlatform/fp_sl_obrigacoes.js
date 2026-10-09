@@ -20,10 +20,14 @@ define(['N/ui/serverWidget', 'N/task', 'N/query', 'N/runtime', 'N/url', 'N/log',
       if (contexto.request.method === 'POST') {
         var tipo = contexto.request.parameters.custpage_fp_arquivo;
         var subsidiaria = contexto.request.parameters.custpage_fp_subsidiaria;
+        var competencia = String(contexto.request.parameters.custpage_fp_competencia || '').trim();
         try {
           // Sem filial com CNPJ não há o que importar: avisa AQUI, em vez de o Map/Reduce falhar
           // e o motivo ficar só no log.
           if (!tipo || !subsidiaria) throw new Error('escolha o arquivo e a subsidiária.');
+          if (fpArquivos.definicao(tipo).porCompetencia && !/^\d{4}-\d{2}$/.test(competencia)) {
+            throw new Error(tipo + ' é por competência: informe a competência como AAAA-MM.');
+          }
           if (!fpArquivos.filiaisDaSubsidiaria(subsidiaria).length) {
             throw new Error('a subsidiária escolhida não tem filial (location) com CNPJ. Cadastre o CNPJ da ' +
               'Filial na Location — sem ele a plataforma não sabe de que empresa é o arquivo.');
@@ -32,7 +36,8 @@ define(['N/ui/serverWidget', 'N/task', 'N/query', 'N/runtime', 'N/url', 'N/log',
             taskType: task.TaskType.MAP_REDUCE,
             scriptId: 'customscript_fp_mr_obrigacoes',
             deploymentId: 'customdeploy_fp_mr_obrigacoes',
-            params: { custscript_fp_obr_arquivo: tipo, custscript_fp_obr_subsidiaria: subsidiaria }
+            params: { custscript_fp_obr_arquivo: tipo, custscript_fp_obr_subsidiaria: subsidiaria,
+              custscript_fp_obr_competencia: competencia }
           }).submit();
           aviso = 'Geração de ' + tipo + ' da subsidiária ' + subsidiaria + ' disparada (tarefa ' + id + '). Atualize a página para ver o arquivo na lista.';
           log.audit('fp_sl_obrigacoes', aviso);
@@ -51,6 +56,9 @@ define(['N/ui/serverWidget', 'N/task', 'N/query', 'N/runtime', 'N/url', 'N/log',
       var sub = form.addField({ id: 'custpage_fp_subsidiaria', type: serverWidget.FieldType.SELECT, label: 'Subsidiária' });
       fpArquivos.subsidiarias().forEach(function (s) { sub.addSelectOption({ value: String(s.id), text: s.nome }); });
       sub.isMandatory = true;
+
+      form.addField({ id: 'custpage_fp_competencia', type: serverWidget.FieldType.TEXT, label: 'Competência (AAAA-MM)' })
+        .setHelpText({ help: 'Obrigatória nos arquivos por competência (lançamentos contábeis). O plano de contas não usa.' });
       form.addSubmitButton({ label: 'Gerar' });
 
       if (aviso) {
