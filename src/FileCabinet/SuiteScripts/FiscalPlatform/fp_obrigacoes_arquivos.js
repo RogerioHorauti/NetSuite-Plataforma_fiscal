@@ -193,6 +193,15 @@ define(['N/query', 'N/runtime', './fp_fields'], function (query, runtime, fpFiel
         p.avisos.push(Object.keys(semFilial).length + ' transação(ões) fora do arquivo: sem location com CNPJ desta ' +
           'subsidiária no cabeçalho, e a subsidiária tem mais de uma filial (ids ' + Object.keys(semFilial).slice(0, 20).join(', ') + ').');
       }
+      // Pendente de aprovação não lança (posting = 'F'): fica fora do razão e o arquivo sai sem ela —
+      // vazio, se for o mês inteiro (medido: sub 3, 2023-11, 8 invoices/bills, nenhuma partida).
+      var pendentes = todas("SELECT t.id FROM transaction t JOIN transactionline tlm ON tlm.transaction = t.id " +
+        "AND tlm.mainline = 'T' WHERE t.posting = 'F' AND t.approvalstatus = 1 AND tlm.subsidiary = ? " +
+        "AND t.trandate BETWEEN TO_DATE(?, 'YYYY-MM-DD') AND TO_DATE(?, 'YYYY-MM-DD')", [p.subsidiaria, de, ate]);
+      if (pendentes.length) {
+        p.avisos.push(pendentes.length + ' transação(ões) pendente(s) de aprovação na competência, fora do razão ' +
+          'lançado (ids ' + pendentes.slice(0, 20).map(function (x) { return x.id; }).join(', ') + ').');
+      }
       return out;
     }
   };

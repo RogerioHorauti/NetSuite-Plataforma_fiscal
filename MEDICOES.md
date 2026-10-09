@@ -1708,3 +1708,10 @@ conferido em centavos pela plataforma.
 Competência (AAAA-MM) filtra `trandate`; `indLcto` vazio (o contrato: a plataforma não deriva, vazio
 é legítimo até a ECD). MULTIBOOK ligado: só o livro principal — NÃO medido. Validate 0 erros.
 **Falta deploy e gerar pela tela** (ex.: Produtos, 2022-03 → 119 partidas com conta, 25 transações).
+
+**Gerado pela tela (2026-10-09), sub 3, 2023-11 → arquivo vazio, e está CERTO.** As 10 transações
+da sub 3 no mês têm `posting = 'F'`: 6 invoices + 3 bills em *Pending Approval* (`approvalstatus = 1`)
+e 2 sales orders. Em nenhum dos 36 meses com partida da sub 3 aparece 2023-11. O defeito era o
+silêncio: agora o log do Map/Reduce traz o aviso "N transação(ões) pendente(s) de aprovação na
+competência" com os ids. A consulta, rodada na conta como está no código, devolve as 8 (sales order
+fica fora). Competência com partida para conferir: 2022-03 (25 transações, 119 partidas).
