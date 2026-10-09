@@ -44,10 +44,15 @@ define(['N/query'], function (query) {
    * compartilhada entre subsidiárias sairia com CNPJ de duas empresas, e o arquivo seria recusado.
    */
   function filiaisDaSubsidiaria(subsidiaria) {
+    // ⚠ Filtrar `location` por `subsidiary = ?` dá "Invalid or unsupported search" (medido em
+    // 2026-10-09). Lê as locations com CNPJ e filtra aqui — como as contas, cuja subsidiária também
+    // volta como lista.
     var cnpjs = [];
-    todas('SELECT custrecord_fp_cnpj_filial AS cnpj FROM location ' +
-          "WHERE subsidiary = ? AND custrecord_fp_cnpj_filial IS NOT NULL AND isinactive = 'F'", [subsidiaria])
+    todas("SELECT subsidiary, custrecord_fp_cnpj_filial AS cnpj FROM location " +
+          "WHERE custrecord_fp_cnpj_filial IS NOT NULL AND isinactive = 'F'")
       .forEach(function (l) {
+        var subs = String(l.subsidiary || '').split(',').map(function (x) { return x.trim(); });
+        if (subs.indexOf(String(subsidiaria)) === -1) return;
         var cnpj = String(l.cnpj || '').replace(/\D/g, '');
         if (cnpj.length === 14 && cnpjs.indexOf(cnpj) === -1) cnpjs.push(cnpj);
       });

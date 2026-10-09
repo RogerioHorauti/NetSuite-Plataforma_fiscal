@@ -23,6 +23,7 @@ define(['N/ui/serverWidget', 'N/task', 'N/query', 'N/runtime', 'N/url', 'N/log',
         try {
           // Sem filial com CNPJ não há o que importar: avisa AQUI, em vez de o Map/Reduce falhar
           // e o motivo ficar só no log.
+          if (!tipo || !subsidiaria) throw new Error('escolha o arquivo e a subsidiária.');
           if (!fpArquivos.filiaisDaSubsidiaria(subsidiaria).length) {
             throw new Error('a subsidiária escolhida não tem filial (location) com CNPJ. Cadastre o CNPJ da ' +
               'Filial na Location — sem ele a plataforma não sabe de que empresa é o arquivo.');

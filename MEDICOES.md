@@ -1683,3 +1683,9 @@ subconsulta `IN (SELECT l.subsidiary …)` responde. 13 contas sem `acctnumber` 
 plataforma recusa por LINHA (`importacao_job_erro`, `validacao-generica.ts:13-14`) e o tenant vê.
 **Correção (Rogerio, 2026-10-09):** a tela lista TODAS as subsidiárias ativas (4 na sandbox); a
 que não tem location com CNPJ é recusada no disparo, com o motivo na tela, antes do Map/Reduce.
+⚠ **Defeito meu (2026-10-09):** a validação do disparo filtrava `location WHERE subsidiary = ?` —
+"Invalid or unsupported search" na conta — e a tela dizia "não tem filial" até na Produtos (location
+4 com CNPJ). Não tinha rodado a consulta antes do commit. Agora as locations com CNPJ são lidas
+inteiras e a subsidiária filtrada em memória (`location.subsidiary` = "3"). As TRÊS consultas do
+arquivo rodadas na conta como estão no código: locations com CNPJ (1), subsidiárias ativas (4),
+contas não-`NonPosting` (168). Subsidiária vazia no POST (`SSS_INVALID_TYPE_ARG` no log) vira aviso.
