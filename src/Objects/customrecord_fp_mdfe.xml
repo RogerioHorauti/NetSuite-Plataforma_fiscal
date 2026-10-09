@@ -41,9 +41,10 @@
   <showowner>T</showowner>
   <showownerallowchange>F</showownerallowchange>
   <showowneronlist>F</showowneronlist>
-    <customrecordcustomfields>
+  <customrecordcustomfields>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_location">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -51,23 +52,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>Location emitente: CNPJ e serie da filial, e o municipio do endereco dela e o de CARREGAMENTO.</description>
+      <displayheight></displayheight>
       <displaytype>NORMAL</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>SELECT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Filial</label>
+      <linktext></linktext>
       <maxlength></maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete>NO_ACTION</onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype>-103</selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_tp_emit">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -75,23 +93,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>tpEmit: 1 transportador, 2 carga propria, 3 CT-e globalizado. Declarar 1 sem ser transportador puxa RNTRC que a empresa nao tem.</description>
+      <displayheight></displayheight>
       <displaytype>NORMAL</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>SELECT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Tipo de Emitente</label>
+      <linktext></linktext>
       <maxlength></maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete>NO_ACTION</onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype>[scriptid=customlist_fp_mdfe_tp_emit]</selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_uf_fim">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -99,23 +134,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>Vazia = a plataforma usa a UF da filial.</description>
+      <displayheight></displayheight>
       <displaytype>NORMAL</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>UF de Fim do Percurso</label>
+      <linktext></linktext>
       <maxlength>2</maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete></onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype></selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_placa">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -123,23 +175,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>Vazia = o unico veiculo ativo da empresa na plataforma (recusa se houver mais de um).</description>
+      <displayheight></displayheight>
       <displaytype>NORMAL</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Placa de Tracao</label>
+      <linktext></linktext>
       <maxlength>8</maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete></onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype></selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_reboques">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -147,23 +216,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>Separadas por virgula. Cavalo mecanico exige ao menos um (cStat 523) -- quem recusa e a plataforma.</description>
+      <displayheight></displayheight>
       <displaytype>NORMAL</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Placas dos Reboques</label>
+      <linktext></linktext>
       <maxlength>100</maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete></onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype></selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_cpf_condutor">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -171,47 +257,82 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>Vazio = o unico condutor ativo da empresa na plataforma.</description>
+      <displayheight></displayheight>
       <displaytype>NORMAL</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>CPF do Condutor</label>
+      <linktext></linktext>
       <maxlength>14</maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete></onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype></selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_vcarga">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
-      <applyformatting>F</applyformatting>
+      <applyformatting>T</applyformatting>
       <checkspelling>F</checkspelling>
+      <currencysymbolfield></currencysymbolfield>
       <defaultchecked>F</defaultchecked>
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>vCarga.</description>
+      <displayheight></displayheight>
       <displaytype>NORMAL</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>CURRENCY</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Valor da Carga</label>
+      <linktext></linktext>
       <maxlength></maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete></onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype></selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_qcarga">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -219,23 +340,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>qCarga.</description>
+      <displayheight></displayheight>
       <displaytype>NORMAL</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>FLOAT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Peso da Carga</label>
+      <linktext></linktext>
       <maxlength></maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete></onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype></selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_cunid">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -243,23 +381,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>cUnid: 01 KG, 02 TON. Vazio = 01.</description>
+      <displayheight></displayheight>
       <displaytype>NORMAL</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>SELECT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Unidade do Peso</label>
+      <linktext></linktext>
       <maxlength></maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete>NO_ACTION</onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype>[scriptid=customlist_fp_mdfe_cunid]</selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_chave">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -267,23 +422,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita.</description>
+      <displayheight></displayheight>
       <displaytype>STATICTEXT</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Chave de Acesso</label>
+      <linktext></linktext>
       <maxlength>44</maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete></onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype></selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_numero">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -291,23 +463,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita.</description>
+      <displayheight></displayheight>
       <displaytype>STATICTEXT</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>INTEGER</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Numero</label>
+      <linktext></linktext>
       <maxlength></maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete></onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype></selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_serie">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -315,23 +504,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita.</description>
+      <displayheight></displayheight>
       <displaytype>STATICTEXT</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Serie</label>
+      <linktext></linktext>
       <maxlength>3</maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete></onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype></selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_status">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -339,23 +545,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita. EM_TRANSMISSAO, AUTORIZADO, REJEITADO, ENCERRADO, CANCELADO, NAO_CONSTA.</description>
+      <displayheight></displayheight>
       <displaytype>STATICTEXT</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Status</label>
+      <linktext></linktext>
       <maxlength>20</maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete></onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype></selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_cstat">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -363,23 +586,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita.</description>
+      <displayheight></displayheight>
       <displaytype>STATICTEXT</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>cStat</label>
+      <linktext></linktext>
       <maxlength>5</maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete></onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype></selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_xmotivo">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -387,23 +627,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita.</description>
+      <displayheight></displayheight>
       <displaytype>STATICTEXT</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXTAREA</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Motivo</label>
+      <linktext></linktext>
       <maxlength></maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete></onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype></selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_protocolo">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -411,20 +668,36 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>O retorno da plataforma, gravado pelo Suitelet de emissao. Ninguem digita.</description>
+      <displayheight></displayheight>
       <displaytype>STATICTEXT</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>TEXT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Protocolo</label>
+      <linktext></linktext>
       <maxlength>20</maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete></onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype></selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
   </customrecordcustomfields>
   <permissions>
@@ -434,4 +707,10 @@
       <restriction></restriction>
     </permission>
   </permissions>
+  <subtabs>
+    <subtab scriptid="tab_30_t1647270_896">
+      <tabparent></tabparent>
+      <tabtitle>Documentos</tabtitle>
+    </subtab>
+  </subtabs>
 </customrecordtype>

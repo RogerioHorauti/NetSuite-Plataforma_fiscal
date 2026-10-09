@@ -41,9 +41,10 @@
   <showowner>T</showowner>
   <showownerallowchange>F</showownerallowchange>
   <showowneronlist>F</showowneronlist>
-    <customrecordcustomfields>
+  <customrecordcustomfields>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_doc_mdfe">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -51,25 +52,40 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>Vinculo com o manifesto (isparent): faz o registro aparecer como sublista nele.</description>
+      <displayheight></displayheight>
       <displaytype>NORMAL</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>SELECT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>T</isparent>
       <label>Manifesto</label>
+      <linktext></linktext>
       <maxlength></maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
       <onparentdelete>SET_NULL</onparentdelete>
-      <parentsubtab></parentsubtab>
+      <parentsubtab>[scriptid=customrecord_fp_mdfe.tab_30_t1647270_896]</parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype>[scriptid=customrecord_fp_mdfe]</selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
     <customrecordcustomfield scriptid="custrecord_fp_mdfe_doc_transacao">
       <accesslevel>2</accesslevel>
+      <aidescription></aidescription>
       <allowquickadd>F</allowquickadd>
       <applyformatting>F</applyformatting>
       <checkspelling>F</checkspelling>
@@ -77,20 +93,36 @@
       <defaultselection></defaultselection>
       <defaultvalue></defaultvalue>
       <description>A transacao que viaja: a chave sai do campo de chave dela, e o municipio de DESCARGA do endereco de entrega.</description>
+      <displayheight></displayheight>
       <displaytype>NORMAL</displaytype>
+      <displaywidth></displaywidth>
+      <dynamicdefault></dynamicdefault>
+      <enabletextenhance>F</enabletextenhance>
       <encryptatrest>F</encryptatrest>
       <fieldtype>SELECT</fieldtype>
       <globalsearch>F</globalsearch>
+      <help></help>
       <isformula>F</isformula>
       <ismandatory>F</ismandatory>
       <isparent>F</isparent>
       <label>Documento</label>
+      <linktext></linktext>
       <maxlength></maxlength>
+      <maxvalue></maxvalue>
+      <minvalue></minvalue>
+      <onparentdelete>SET_NULL</onparentdelete>
+      <parentsubtab></parentsubtab>
       <rolerestrict>F</rolerestrict>
+      <searchcomparefield></searchcomparefield>
+      <searchdefault></searchdefault>
       <searchlevel>2</searchlevel>
       <selectrecordtype>-30</selectrecordtype>
       <showinlist>T</showinlist>
+      <sourcefilterby></sourcefilterby>
+      <sourcefrom></sourcefrom>
+      <sourcelist></sourcelist>
       <storevalue>T</storevalue>
+      <subtab></subtab>
     </customrecordcustomfield>
   </customrecordcustomfields>
   <permissions>
