@@ -14,7 +14,8 @@
  *   summarize      grava o CSV na pasta do bundle (`custscript_fp_pasta_payload`), em partes de
  *                  até ~9 MB — o `N/file` não passa de 10 MB —, cada parte com o cabeçalho
  *
- * Nome: `FP-<arquivo>-<AAAAMMDDHHmm>-<parte>.csv`. Erro de qualquer etapa vai inteiro para o log.
+ * Um arquivo POR SUBSIDIÁRIA (`custscript_fp_obr_subsidiaria`): a importação é por empresa.
+ * Nome: `FP-<arquivo>-sub<id>-<AAAAMMDDHHmm>-<parte>.csv`. Erro de qualquer etapa vai inteiro para o log.
  */
 define(['N/runtime', 'N/file', 'N/log', './fp_obrigacoes_arquivos'],
   function (runtime, file, log, fpArquivos) {
@@ -25,10 +26,14 @@ define(['N/runtime', 'N/file', 'N/log', './fp_obrigacoes_arquivos'],
       return fpArquivos.definicao(runtime.getCurrentScript().getParameter({ name: 'custscript_fp_obr_arquivo' }));
     }
 
+    function subsidiaria() {
+      return runtime.getCurrentScript().getParameter({ name: 'custscript_fp_obr_subsidiaria' });
+    }
+
     function getInputData() {
       var d = definicao();
-      var linhas = d.linhas();
-      log.audit('fp_mr_obrigacoes', d.tipo + ' · ' + linhas.length + ' linha(s)');
+      var linhas = d.linhas(subsidiaria());
+      log.audit('fp_mr_obrigacoes', d.tipo + ' · subsidiária ' + subsidiaria() + ' · ' + linhas.length + ' linha(s)');
       return linhas;
     }
 
@@ -56,7 +61,7 @@ define(['N/runtime', 'N/file', 'N/log', './fp_obrigacoes_arquivos'],
       var partes = [], atual = null, bytes = 0;
       var abrir = function () {
         atual = file.create({
-          name: 'FP-' + d.arquivo + '-' + carimbo + '-' + (partes.length + 1) + '.csv',
+          name: 'FP-' + d.arquivo + '-sub' + subsidiaria() + '-' + carimbo + '-' + (partes.length + 1) + '.csv',
           fileType: file.Type.CSV, folder: pasta, encoding: file.Encoding.UTF_8
         });
         atual.appendLine({ value: cabecalho });

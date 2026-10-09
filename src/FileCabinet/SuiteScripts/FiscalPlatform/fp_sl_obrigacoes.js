@@ -19,14 +19,15 @@ define(['N/ui/serverWidget', 'N/task', 'N/query', 'N/runtime', 'N/url', 'N/log',
 
       if (contexto.request.method === 'POST') {
         var tipo = contexto.request.parameters.custpage_fp_arquivo;
+        var subsidiaria = contexto.request.parameters.custpage_fp_subsidiaria;
         try {
           var id = task.create({
             taskType: task.TaskType.MAP_REDUCE,
             scriptId: 'customscript_fp_mr_obrigacoes',
             deploymentId: 'customdeploy_fp_mr_obrigacoes',
-            params: { custscript_fp_obr_arquivo: tipo }
+            params: { custscript_fp_obr_arquivo: tipo, custscript_fp_obr_subsidiaria: subsidiaria }
           }).submit();
-          aviso = 'Geração de ' + tipo + ' disparada (tarefa ' + id + '). Atualize a página para ver o arquivo na lista.';
+          aviso = 'Geração de ' + tipo + ' da subsidiária ' + subsidiaria + ' disparada (tarefa ' + id + '). Atualize a página para ver o arquivo na lista.';
           log.audit('fp_sl_obrigacoes', aviso);
         } catch (e) {
           aviso = 'Não disparou: ' + (e.message || String(e));
@@ -37,6 +38,12 @@ define(['N/ui/serverWidget', 'N/task', 'N/query', 'N/runtime', 'N/url', 'N/log',
       var sel = form.addField({ id: 'custpage_fp_arquivo', type: serverWidget.FieldType.SELECT, label: 'Arquivo' });
       fpArquivos.tipos().forEach(function (t) { sel.addSelectOption({ value: t, text: t }); });
       sel.isMandatory = true;
+
+      // POR SUBSIDIÁRIA: a importação na plataforma é por empresa, e só subsidiária com filial
+      // (location com CNPJ) tem o que importar.
+      var sub = form.addField({ id: 'custpage_fp_subsidiaria', type: serverWidget.FieldType.SELECT, label: 'Subsidiária' });
+      fpArquivos.subsidiariasComFilial().forEach(function (s) { sub.addSelectOption({ value: String(s.id), text: s.nome }); });
+      sub.isMandatory = true;
       form.addSubmitButton({ label: 'Gerar' });
 
       if (aviso) {

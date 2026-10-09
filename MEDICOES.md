@@ -1674,3 +1674,10 @@ tem CNPJ. `nome` = `accountsearchdisplaynamecopy` (o `fullname` traz "Sales : Sa
 `natureza`, `codigoReduzido`, `codigoReferencialSped`, `codigoAglutinacao`: VAZIOS — sem origem
 nesta conta (os três campos custom do export do cliente não existem aqui) e a natureza é régua
 (HANDOFF 17). Validate 0 erros; **falta deploy e gerar o arquivo pela tela**.
+
+**Por subsidiária (2026-10-09, Rogerio):** a importação é por EMPRESA (o contrato exige que cada
+CNPJ de `filiais` seja da empresa que importa) e subsidiária ↔ empresa — a tela pede a subsidiária
+(só as que têm location com CNPJ: na sandbox, a 3 "Produtos") e o arquivo leva as contas DELA e as
+filiais DELA. `JOIN subsidiary × location` + `DISTINCT` dá "Invalid or unsupported search"; a
+subconsulta `IN (SELECT l.subsidiary …)` responde. 13 contas sem `acctnumber` vão no arquivo: a
+plataforma recusa por LINHA (`importacao_job_erro`, `validacao-generica.ts:13-14`) e o tenant vê.

@@ -36,25 +36,38 @@ define(['N/query'], function (query) {
     return out;
   }
 
-  /** `{ subsidiaria: [cnpj, ...] }` das locations com CNPJ — as FILIAIS do desenho da plataforma. */
-  function filiaisPorSubsidiaria() {
-    var mapa = {};
-    todas('SELECT subsidiary, custrecord_fp_cnpj_filial AS cnpj FROM location ' +
-          "WHERE custrecord_fp_cnpj_filial IS NOT NULL AND isinactive = 'F'").forEach(function (l) {
-      var cnpj = String(l.cnpj || '').replace(/\D/g, '');
-      if (cnpj.length !== 14) return;
-      var s = String(l.subsidiary);
-      (mapa[s] = mapa[s] || []).push(cnpj);
-    });
-    return mapa;
+  /**
+   * Os CNPJs das FILIAIS (locations com CNPJ) de UMA subsidiária.
+   *
+   * O arquivo é POR SUBSIDIÁRIA porque a importação é por EMPRESA: o contrato exige que cada CNPJ
+   * de `filiais` "seja da empresa que importa", e subsidiária ↔ empresa da plataforma. Conta
+   * compartilhada entre subsidiárias sairia com CNPJ de duas empresas, e o arquivo seria recusado.
+   */
+  function filiaisDaSubsidiaria(subsidiaria) {
+    var cnpjs = [];
+    todas('SELECT custrecord_fp_cnpj_filial AS cnpj FROM location ' +
+          "WHERE subsidiary = ? AND custrecord_fp_cnpj_filial IS NOT NULL AND isinactive = 'F'", [subsidiaria])
+      .forEach(function (l) {
+        var cnpj = String(l.cnpj || '').replace(/\D/g, '');
+        if (cnpj.length === 14 && cnpjs.indexOf(cnpj) === -1) cnpjs.push(cnpj);
+      });
+    return cnpjs;
+  }
+
+  /** As subsidiárias que TÊM filial com CNPJ — as únicas que geram arquivo. `[{id, nome}]`. */
+  function subsidiariasComFilial() {
+    // Subconsulta e não JOIN + DISTINCT: este dá "Invalid or unsupported search" (medido na conta).
+    return todas("SELECT s.id, s.name AS nome FROM subsidiary s WHERE s.isinactive = 'F' AND s.id IN " +
+      "(SELECT l.subsidiary FROM location l WHERE l.custrecord_fp_cnpj_filial IS NOT NULL AND l.isinactive = 'F') " +
+      'ORDER BY s.name');
   }
 
   /**
    * PLANO_DE_CONTAS v1 — `contratos/importacao-csv/plano_de_contas.v1.md`.
    *
-   * Uma linha por conta, com as filiais em `filiais`. As filiais são as locations com CNPJ das
-   * subsidiárias da conta (`account.subsidiary` volta como lista "1, 2, 3"): conta sem nenhuma
-   * filial brasileira não entra — a subsidiária pode não ser do Brasil.
+   * Uma linha por conta DA SUBSIDIÁRIA pedida (`account.subsidiary` volta como lista "1, 2, 3"),
+   * com as filiais (locations com CNPJ) DELA em `filiais`. Subsidiária sem filial brasileira não
+   * gera arquivo — ela pode não ser do Brasil.
    *
    *   nome        `accountsearchdisplaynamecopy` (o `fullname` traz "Pai : Filho")
    *   nivel       profundidade na árvore do `parent`, a partir de 1
@@ -65,8 +78,12 @@ define(['N/query'], function (query) {
     arquivo: 'plano_de_contas_v1',
     colunas: ['codigo', 'nome', 'indicador', 'natureza', 'nivel', 'codigoPai', 'codigoReduzido',
       'codigoReferencialSped', 'codigoAglutinacao', 'dataAlteracao', 'ativa', 'filiais'],
-    linhas: function () {
-      var filiais = filiaisPorSubsidiaria();
+    linhas: function (subsidiaria) {
+      var filiais = filiaisDaSubsidiaria(subsidiaria);
+      if (!filiais.length) {
+        throw new Error('a subsidiária ' + subsidiaria + ' não tem filial (location) com CNPJ: não há o que importar.');
+      }
+      var lista = filiais.join('|');
       var contas = todas("SELECT a.id, a.parent, a.acctnumber, a.accountsearchdisplaynamecopy AS nome, " +
         "a.issummary, a.isinactive, a.subsidiary, TO_CHAR(a.lastmodifieddate, 'YYYY-MM-DD') AS alt " +
         "FROM account a WHERE a.accttype <> 'NonPosting'");
@@ -81,15 +98,11 @@ define(['N/query'], function (query) {
 
       var out = [];
       contas.forEach(function (c) {
-        var cnpjs = {};
-        String(c.subsidiary || '').split(',').forEach(function (s) {
-          (filiais[s.trim()] || []).forEach(function (x) { cnpjs[x] = true; });
-        });
-        var lista = Object.keys(cnpjs);
-        if (!lista.length) return;
+        var subs = String(c.subsidiary || '').split(',').map(function (s) { return s.trim(); });
+        if (subs.indexOf(String(subsidiaria)) === -1) return;
         var pai = c.parent && porId[String(c.parent)];
         out.push(linhaCsv([c.acctnumber, c.nome, c.issummary === 'T' ? 'S' : 'A', '', nivel(c),
-          pai ? pai.acctnumber : '', '', '', '', c.alt, c.isinactive === 'T' ? 'false' : 'true', lista.join('|')]));
+          pai ? pai.acctnumber : '', '', '', '', c.alt, c.isinactive === 'T' ? 'false' : 'true', lista]));
       });
       return out;
     }
@@ -103,5 +116,6 @@ define(['N/query'], function (query) {
     return d;
   }
 
-  return { definicao: definicao, tipos: function () { return Object.keys(ARQUIVOS); }, linhaCsv: linhaCsv };
+  return { definicao: definicao, tipos: function () { return Object.keys(ARQUIVOS); }, linhaCsv: linhaCsv,
+    subsidiariasComFilial: subsidiariasComFilial };
 });
