@@ -179,10 +179,10 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
       if (tipo === fpMdfe.tipo()) return executarMdfe(tipo, id, acao, texto);
       var rec = record.load({ type: tipo, id: id });
       var subsidiaria = rec.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') });
-      var opcoes = { subsidiaria: subsidiaria, transacao: id, pasta: pastaDoAnexo() };
+      var opcoes = { subsidiaria: subsidiaria, transacao: id, pasta: pastaDoAnexo(), acao: acao };
 
-      // O payload viaja em `opcoes` para chegar à persistência: ele é gravado JUNTO do retorno,
-      // e é o que se confere quando o motor recusa.
+      // O payload é gravado e anexado ANTES da rede (`fpPersist.gravarEnvio`, dentro de `emitir`
+      // e `evento`); o retorno, na volta — inclusive a recusa.
       var resposta = acao === ACOES.EMITIR
         ? emitir(rec, id, opcoes)
         : evento(rec, acao, texto, opcoes);
@@ -191,6 +191,7 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
         // O TEXTO DO MOTOR VAI INTEIRO. Traduzir ou resumir rejeição da SEFAZ é o jeito mais
         // rápido de esconder o cStat, que é a única coisa que quem opera consegue pesquisar.
         log.error('fp_sl_emissao.recusa', { acao: acao, code: resposta.code, body: resposta.body });
+        fpPersist.anexarRastro(tipo, id, resposta.body, opcoes);
         return {
           ok: false,
           titulo: 'Recusado (HTTP ' + resposta.code + ')',
@@ -201,7 +202,6 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
       }
 
       // O RETORNO INTEIRO vai para o rastro; na transação entra só o que descreve o DOCUMENTO.
-      opcoes.acao = acao;
       opcoes.bruto = resposta.body;
       var doc = documentoDaResposta(acao, resposta.body);
       var gravado = fpPersist.aplicar(tipo, id, doc, opcoes);
@@ -241,19 +241,20 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
 
       if (acao === ACOES.EMITIR) {
         var payload = fpMdfe.montar(rec);
-        opcoes.payload = payload;
+        fpPersist.gravarEnvio(tipo, id, payload, opcoes);
         log.audit('fp_sl_emissao.emitirMdfe', 'EMITINDO idExterno=' + payload.idExterno + ' série=' + payload.serie +
           ' — consome numeração');
         resposta = fpClient.emitir(payload, opcoes);
       } else {
         var ev = fpMdfe.evento(rec, acao, texto);
-        opcoes.payload = ev.corpo || {};
+        fpPersist.gravarEnvio(tipo, id, ev.corpo || {}, opcoes);
         log.audit('fp_sl_emissao.eventoMdfe', acao + ' · ' + ev.caminho);
         resposta = fpClient.postar(ev.caminho, ev.corpo, opcoes);
       }
 
       if (!resposta.ok) {
         log.error('fp_sl_emissao.recusa', { acao: acao, code: resposta.code, body: resposta.body });
+        fpPersist.anexarRastro(tipo, id, resposta.body, opcoes);
         return {
           ok: false,
           titulo: 'Recusado (HTTP ' + resposta.code + ')',
@@ -302,12 +303,18 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
           : 'a transação não tem tipo de documento fiscal: declare-o antes de emitir.' } };
       }
 
-      var simulado = payloadSimulado(rec.type, id, opcoes.pasta);
+      var simulado = retornoSimulado(rec.type, id, opcoes.pasta);
       if (!simulado) {
         return { ok: false, code: 0, body: { erro:
-          'não há payload simulado desta transação (FP-' + rec.type + '-' + id + '-payload.json na ' +
-          'pasta do payload). A emissão parte do que o /simular montou: salve a transação para ' +
+          'não há retorno de simulação desta transação (FP-' + rec.type + '-' + id + '-retorno.json na ' +
+          'pasta do payload). A emissão reenvia o que o /simular devolveu: salve a transação para ' +
           'simular, confira o resultado, e emita depois.' } };
+      }
+      if (simulado.recusada) {
+        return { ok: false, code: 0, body: { erro:
+          'a última simulação desta transação foi RECUSADA pelo motor (FP-' + rec.type + '-' + id +
+          '-retorno.json) — corrija o que ela apontou, salve para simular de novo, e emita depois.',
+          recusa: simulado.recusada } };
       }
 
       // Simulação anterior ao contrato `contraparte` (plataforma 31d554b9, sem alias): o
@@ -328,8 +335,6 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
       // nasce — nunca de tentativa, nunca de timestamp, ou a idempotência deixa de existir.
       if (!payload.idExterno) payload.idExterno = String(id);
 
-      opcoes.payload = payload;
-
       // ANTES do número: com o autorizador parado, a emissão reservaria o número e morreria na
       // transmissão, deixando a nota em limbo. Recusar aqui não gasta nada.
       var status = payload.contingencia ? null : fpClient.statusSefaz(payload.cnpjEmpresa, opcoes);
@@ -340,6 +345,8 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
         'EMITINDO idExterno=' + payload.idExterno + ' série=' + payload.serie +
         ' tipo=' + payload.tipoDocumento + ' — consome numeração');
 
+      // Grava ANTES de consumir numeração: se a gravação falhar, nada sai.
+      fpPersist.gravarEnvio(rec.type, id, payload, opcoes);
       return fpClient.emitir(payload, opcoes);
     }
 
@@ -405,22 +412,27 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
     }
 
     /**
-     * O REQUEST DO ÚLTIMO `/simular`, tal como foi enviado.
+     * O RESPONSE DO ÚLTIMO `/simular` — É O CONTRATO (Rogerio, 2026-10-20): o ERP reenvia no
+     * `/emitir` o que o simular devolveu, com `linhas[].impostos[]`, `cfopCodigo` e `ncm` já
+     * resolvidos, e o emitir não recalcula (`SimulacaoLinhaDto`, "ciclo response do simular →
+     * emitir", `simulacao-nota-input.dto.ts:1335`). É o que garante que o emitido é o conferido.
      *
-     * É o arquivo que o `fp_ue_simular.anexarRastro` grava a cada simulação — nome só com tipo e id,
-     * sem carimbo, então o File Cabinet o SUBSTITUI e o que existe é sempre o último. O nome é a
-     * convenção `FP-` do bundle, e tem de ser o mesmo dos dois lados.
+     * É o `-retorno.json` que o `fp_ue_simular.anexarRastro` grava a cada simulação — nome só com
+     * tipo e id, então o File Cabinet o SUBSTITUI e o que existe é sempre o último.
      *
-     * Sem pasta, ou sem arquivo, devolve `null` e quem chama recusa a emissão dizendo por quê.
+     * Sem pasta ou sem arquivo devolve `null`. Simulação RECUSADA também grava o retorno — o corpo
+     * da recusa, sem `linhas` —, e aí volta `{ recusada }`: não se emite o que o motor recusou.
      */
-    function payloadSimulado(tipo, id, pasta) {
+    function retornoSimulado(tipo, id, pasta) {
       if (!pasta) return null;
       var r = query.runSuiteQL({
         query: 'SELECT id FROM file WHERE folder = ? AND name = ?',
-        params: [pasta, 'FP-' + tipo + '-' + id + '-payload.json']
+        params: [pasta, 'FP-' + tipo + '-' + id + '-retorno.json']
       }).asMappedResults();
       if (!r.length) return null;
-      return JSON.parse(file.load({ id: r[0].id }).getContents());
+      var corpo = JSON.parse(file.load({ id: r[0].id }).getContents());
+      if (!corpo || !Array.isArray(corpo.linhas)) return { recusada: corpo };
+      return corpo;
     }
 
     /**
@@ -449,8 +461,8 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
         corpo = montarCorpo(cfg.campo, texto);
       }
 
-      // O corpo do evento é o "payload enviado" dele — sem ele o rastro fica pela metade.
-      opcoes.payload = corpo || {};
+      // O corpo do evento é o "payload enviado" dele — gravado antes da rede.
+      fpPersist.gravarEnvio(rec.type, rec.id, corpo || {}, opcoes);
 
       log.audit('fp_sl_emissao.evento', acao + ' · chave ' + chave);
       return fpClient.postar(cfg.caminho.replace('{chave}', chave), corpo, opcoes);

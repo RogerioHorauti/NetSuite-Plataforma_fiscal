@@ -135,13 +135,12 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
     }
 
     /**
-     * O payload de EMISSÃO = o request que o `/simular` JÁ MONTOU + o que só a emissão exige.
+     * O payload de EMISSÃO = o RESPONSE do `/simular` + o que só a emissão exige.
      *
-     * `base` é o payload simulado, lido do rastro anexado (`FP-<tipo>-<id>-payload.json`). Partir
-     * dele, e não montar de novo, é o que garante que o documento emitido é o que foi simulado e
-     * conferido — mesmas linhas, mesma natureza, mesmo destinatário. Montar duas vezes abriria a
-     * janela para as duas montagens divergirem (cadastro de item alterado entre uma e outra, DI
-     * editada).
+     * `base` é o retorno simulado, lido do rastro anexado (`FP-<tipo>-<id>-retorno.json`): o
+     * contrato é reenviar o response, com `linhas[].impostos[]` resolvidos, e o emitir não
+     * recalcula. Partir dele, e não montar de novo, é o que garante que o documento emitido é o
+     * que foi simulado e conferido — mesmas linhas, mesmos tributos, mesmo destinatário.
      *
      * Aqui só se ACRESCENTA: `serie` e `tipoDocumento` (required no `EmitirNotaDto`) e os grupos que
      * o `SimulacaoNotaInputDto` não tem. Nada do que veio na base é tocado.

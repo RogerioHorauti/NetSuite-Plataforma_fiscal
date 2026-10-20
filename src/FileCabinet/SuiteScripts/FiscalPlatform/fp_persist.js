@@ -9,7 +9,8 @@
  *
  * ── A ORDEM É A REGRA, e ela não é estética ────────────────────────────────────────────────────
  *
- * `aplicar` grava em duas etapas, nesta ordem: campos da transação, depois payload e retorno. É a
+ * O payload é gravado ANTES da rede, pelo `gravarEnvio`. Na volta, `aplicar` grava em duas
+ * etapas, nesta ordem: campos da transação, depois o retorno. É a
  * invariante do projeto — *persistir cada avanço antes de prosseguir*. Quando a emissão volta, o
  * número JÁ FOI GASTO e a nota JÁ ESTÁ na SEFAZ; autorização não pode se perder porque a gravação
  * seguinte falhou.
@@ -136,30 +137,40 @@ define(['N/record', 'N/file', 'N/url', 'N/log', './fp_fields'],
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * O PAYLOAD ENVIADO, junto do retorno. É a invariante do projeto, e o motivo é prático: sem o
-     * que foi mandado, "o motor errou" e "eu mandei errado" são indistinguíveis — e a segunda é a
-     * hipótese mais frequente. Guardar só a resposta deixa metade da prova.
+     * O PAYLOAD, GRAVADO E ANEXADO **ANTES** DA REDE. Sem o que foi mandado, "o motor errou" e "eu
+     * mandei errado" são indistinguíveis — e a segunda é a hipótese mais frequente. Gravado depois
+     * da resposta, recusa, timeout ou exceção no meio levavam a prova junto.
      *
-     * Nome fixo por transação, como o rastro da simulação: emitir de novo substitui em vez de
-     * acumular, e o que interessa é o último par.
+     * Sem pasta, LANÇA, e a requisição não sai: emissão sem prova não se faz (2026-10-20, Rogerio).
+     * Marca `opcoes.enviado`, que é o que autoriza o `anexarRastro` a gravar o retorno.
+     */
+    function gravarEnvio(tipo, id, payload, opcoes) {
+      if (!opcoes.pasta) {
+        throw new Error('o parâmetro "Pasta do Payload" não está preenchido nas Preferências da Empresa — a ' +
+          'requisição NÃO foi enviada: sem o payload gravado, não há como auditar o que se mandou.');
+      }
+      opcoes.enviado = gravarJson(base(tipo, id, opcoes) + 'payload.json', payload, tipo, id, opcoes.pasta);
+      log.audit('fp_persist.gravarEnvio', opcoes.enviado + ' — antes do envio');
+      return opcoes.enviado;
+    }
+
+    /**
+     * O RETORNO, ao lado do payload que o `gravarEnvio` já gravou — sucesso OU recusa: a recusa é a
+     * metade da prova que mais se consulta. Nome fixo por transação: emitir de novo substitui em
+     * vez de acumular, e o que interessa é o último par.
      */
     function anexarRastro(tipo, id, doc, opcoes) {
-      if (!opcoes.pasta || !opcoes.payload) {
-        log.audit('fp_persist.anexarRastro',
-          'payload e retorno NÃO foram anexados — ' +
-          (!opcoes.pasta
-            ? 'o parâmetro "Pasta do XML" não está preenchido nas Preferências da Empresa.'
-            : 'quem chamou não passou o payload em opcoes.payload.'));
+      if (!opcoes.enviado) {
+        log.audit('fp_persist.anexarRastro', 'retorno NÃO anexado — nada foi enviado nesta ação.');
         return [];
       }
+      return [opcoes.enviado, gravarJson(base(tipo, id, opcoes) + 'retorno.json', doc, tipo, id, opcoes.pasta)];
+    }
 
-      // UM PAR POR AÇÃO. Com o nome fixo `-emissao-`, cancelar sobrescrevia a prova da emissão.
-      // Repetir a MESMA ação substitui o par dela; a CC-e, que é repetível, guarda a última.
-      var base = 'FP-' + tipo + '-' + id + '-' + (opcoes.acao && opcoes.acao !== 'emitir' ? opcoes.acao : 'emissao') + '-';
-      return [
-        gravarJson(base + 'payload.json', opcoes.payload, tipo, id, opcoes.pasta),
-        gravarJson(base + 'retorno.json', doc, tipo, id, opcoes.pasta)
-      ];
+    // UM PAR POR AÇÃO. Com o nome fixo `-emissao-`, cancelar sobrescrevia a prova da emissão.
+    // Repetir a MESMA ação substitui o par dela; a CC-e, que é repetível, guarda a última.
+    function base(tipo, id, opcoes) {
+      return 'FP-' + tipo + '-' + id + '-' + (opcoes.acao && opcoes.acao !== 'emitir' ? opcoes.acao : 'emissao') + '-';
     }
 
     function gravarJson(nome, conteudo, tipo, id, pasta) {
@@ -206,6 +217,7 @@ define(['N/record', 'N/file', 'N/url', 'N/log', './fp_fields'],
     return {
       aplicar: aplicar,
       gravarNaTransacao: gravarNaTransacao,
+      gravarEnvio: gravarEnvio,
       anexarRastro: anexarRastro
     };
   });

@@ -8,32 +8,13 @@
  * que fazer com uma recusa é o chamador, que é quem sabe se ela vira mensagem na tela, linha de
  * log ou reprocessamento. Lança só para falha de transporte (DNS, TLS, timeout de plataforma).
  *
- * ── SEGREDO: POR QUE `Authorization: Basic`, E NÃO O CORPO JSON ────────────────────────────────
+ * ── CREDENCIAL: PREFERÊNCIA DE EMPRESA, CORPO FORM-URLENCODED ─────────────────────────────────
  *
- * MEDIDO no SuiteScript 2.x API Reference (`MEDICOES.md` §5.5):
- *
- *   · `https.createSecureString({input: '{custsecret_x}'})` resolve o segredo do Secrets
- *     Management sem que o script consiga LER o valor. É a única forma de usar credencial sem
- *     tê-la em variável.
- *   · os dois lugares documentados onde uma `SecureString` entra são **header** e **URL**;
- *   · `https.post` tipa `options.body` como **`string | Object | Uint8Array`** — `SecureString`
- *     NÃO está na lista.
- *
- * Consequência: **não existe caminho por corpo JSON que preserve o segredo.** Montar
- * `{"client_secret": "..."}` como string exige o valor em claro na variável, e aí ele vaza no
- * primeiro `log.debug` do payload, na primeira exceção com `JSON.stringify(request)`, ou no
- * primeiro que abrir o script. Guardar em Secrets Management e depois interpolar em string é
- * teatro de segurança.
- *
- * Por isso este módulo usa **`client_secret_basic`** (RFC 6749 §2.3.1): as credenciais vão no
- * header `Authorization: Basic base64(client_id:client_secret)`, montado como `SecureString`. É o
- * caminho que o NetSuite suporta e é uma das duas formas padrão de OAuth2.
- *
- * ⚠ DEPENDE DO MOTOR: `POST /api/v1/oauth/token` hoje só aceita as credenciais no CORPO
- * (`TokenRequestDto`, `oauth.dto.ts:40`). Enquanto ele não aceitar Basic, `obterToken` recebe 401
- * e este módulo **falha alto com mensagem acionável** — de propósito. Não há fallback por corpo:
- * um fallback que "funciona hoje" com o segredo em claro é o que acaba em produção.
- * Pedido registrado em `HANDOFF-FISCALPLATFORM.md` item 9.
+ * O motor lê as credenciais só do CORPO (`client_secret_post`, `oauth.controller.ts:43`). O
+ * client_id e o client_secret vêm dos parâmetros de EMPRESA `custscript_fp_client_id` e
+ * `custscript_fp_client_secret` (Setup > Company > General Preferences > Custom Preferences),
+ * declarados no `customscript_fp_ue_simular` como a `custscript_fp_pasta_payload`. API Secrets
+ * não deu para criar em Company na conta (2026-10-19). O segredo nunca vai para log.
  *
  * ── TIMEOUT: NÃO É CONFIGURÁVEL, E ISSO MUDA O DESENHO ─────────────────────────────────────────
  *
@@ -61,11 +42,10 @@ define([
   'N/cache',
   'N/search',
   'N/record',
-  'N/encode',
   'N/runtime',
   'N/log',
   './fp_fields'
-], function (https, cache, search, record, encode, runtime, log, fpFields) {
+], function (https, cache, search, record, runtime, log, fpFields) {
   var NOME_CACHE = 'fp_token';
   var MARGEM_TTL_S = 300;
 
@@ -73,15 +53,15 @@ define([
    * A CONEXÃO, NO CÓDIGO (2026-10-07, Rogerio) — nada de configuração por subsidiária.
    *
    *   BASE_URL        a API. Sem barra no fim; os caminhos já começam com `/`.
-   *   SECRET_*        os SCRIPTIDS dos dois segredos em Setup > Company > Secrets. O VALOR (client
-   *                   id e client secret do OAuth) mora lá, nunca aqui nem em campo texto.
+   *   PARAM_*         os parâmetros de EMPRESA com o client id e o client secret do OAuth. O VALOR
+   *                   mora na preferência, nunca aqui nem em log.
    *
    * Uma plataforma e um client OAuth para a conta inteira. O escopo do tenant vem do token, e a
    * filial de cada documento, do CNPJ da Location (`cnpjDaFilial`).
    */
-  var BASE_URL = '';
-  var SECRET_CLIENT_ID = 'custsecret_fp_client_id';
-  var SECRET_CLIENT_SECRET = 'custsecret_fp_client_secret';
+  var BASE_URL = 'https://hml.fiscalplatform.com.br/api/v1';
+  var PARAM_CLIENT_ID = 'custscript_fp_client_id';
+  var PARAM_CLIENT_SECRET = 'custscript_fp_client_secret';
 
   /** Escopo do bundle. `fiscal:write` é edição de régua — a fronteira proíbe usar, logo não se pede. */
   var ESCOPO = 'fiscal:read nfe:emit';
@@ -99,218 +79,8 @@ define([
    * @param {Object} [opcoes] `{ subsidiaria, corrId, transacao }`
    * @returns {{ok: boolean, code: number, body: Object|string, durationMs: number}}
    */
-  /**
-   * ⚠ RESPOSTA CHUMBADA, enquanto a plataforma não está no ar.
-   *
-   * É um retorno REAL de emissão autorizada, capturado da conta em 08/09/2026 — com `linhas[]`,
-   * `impostos[]`, perna, `geraLancamento`, chave, protocolo e `cStat 100`. Serve para exercitar a
-   * cadeia inteira sem rede: sublist de impostos, plug-in de GL, persistência e anexo.
-   *
-   * As duas chamadas de verdade estão logo abaixo, comentadas, e é só descomentar quando houver
-   * host HTTPS alcançável no `BASE_URL`.
-   */
-  function chumbado() {
-    return {
-        "cnpjEmpresa": "10664687000113",
-        "naturezaOperacaoId": "COMPRA_IMPORT",
-        "dataEmissao": "2026-06-12",
-        "linhas": [
-            {
-                "ncm": "9030.84.90",
-                "descricao": "Importacao PTC-810 - simular-nota via cnpjEmpresa (regra baixa II 20% para 10%)",
-                "valorProduto": 49320.54,
-                "quantidade": 1,
-                "numeroItem": 1,
-                "cfopCodigo": "3102",
-                "valorBruto": 49320.54,
-                "valorTotal": 49320.54,
-                "impostos": [
-                    {
-                        "taxCodigo": "II",
-                        "taxLabel": "II",
-                        "cst": null,
-                        "cclasstrib": null,
-                        "baseCalculo": 49320.54,
-                        "aliquota": 12.6,
-                        "valor": 6214.39,
-                        "retido": false,
-                        "naturezaContabil": "CUSTO",
-                        "sentidoDaPernaFixa": null,
-                        "geraLancamento": false,
-                        "razaoDaPerna": "o tributo é custo: ele já está na perna da operação, e não tem perna própria",
-                        "compoeTotalNf": true,
-                        "comentario": "Imposto de Importacao (base = valor aduaneiro; origem NCM_IMPORTACAO) — ATENCAO: nenhuma despesa aduaneira informada (despesasBaseII/despesasBaseIcms/di.vAFRMM = 0); a base pode estar subestimada. Importacao raramente tem base sem Siscomex/AFRMM/capatazia — confira o valor aduaneiro.",
-                        "origemCalculo": "CALCULADO",
-                        "cenario": "ATUAL",
-                        "deducaoMaterial": null,
-                        "cstOrigem": null,
-                        "ipiCenq": null
-                    },
-                    {
-                        "taxCodigo": "IPI_IMP",
-                        "taxLabel": "IPI",
-                        "cst": "49",
-                        "cclasstrib": null,
-                        "baseCalculo": 55534.93,
-                        "aliquota": 3.25,
-                        "valor": 1804.89,
-                        "retido": false,
-                        "naturezaContabil": "CUSTO",
-                        "sentidoDaPernaFixa": null,
-                        "geraLancamento": false,
-                        "razaoDaPerna": "o tributo é custo: ele já está na perna da operação, e não tem perna própria",
-                        "compoeTotalNf": true,
-                        "comentario": "IPI-importacao (base = aduaneiro + II)",
-                        "origemCalculo": "CALCULADO",
-                        "cenario": "ATUAL",
-                        "deducaoMaterial": null,
-                        "cstOrigem": null,
-                        "ipiCenq": null
-                    },
-                    {
-                        "taxCodigo": "PIS_IMP",
-                        "taxLabel": "PIS",
-                        "cst": "70",
-                        "cclasstrib": null,
-                        "baseCalculo": 49320.54,
-                        "aliquota": 2.1,
-                        "valor": 1035.73,
-                        "retido": false,
-                        "naturezaContabil": "CUSTO",
-                        "sentidoDaPernaFixa": null,
-                        "geraLancamento": false,
-                        "razaoDaPerna": "o tributo é custo: ele já está na perna da operação, e não tem perna própria",
-                        "compoeTotalNf": true,
-                        "comentario": "PIS-importacao (Lei 10.865)",
-                        "origemCalculo": "CALCULADO",
-                        "cenario": "ATUAL",
-                        "deducaoMaterial": null,
-                        "cstOrigem": null,
-                        "ipiCenq": null
-                    },
-                    {
-                        "taxCodigo": "COFINS_IMP",
-                        "taxLabel": "COFINS",
-                        "cst": "70",
-                        "cclasstrib": null,
-                        "baseCalculo": 49320.54,
-                        "aliquota": 9.65,
-                        "valor": 4759.43,
-                        "retido": false,
-                        "naturezaContabil": "CUSTO",
-                        "sentidoDaPernaFixa": null,
-                        "geraLancamento": false,
-                        "razaoDaPerna": "o tributo é custo: ele já está na perna da operação, e não tem perna própria",
-                        "compoeTotalNf": true,
-                        "comentario": "COFINS-importacao (Lei 10.865)",
-                        "origemCalculo": "CALCULADO",
-                        "cenario": "ATUAL",
-                        "deducaoMaterial": null,
-                        "cstOrigem": null,
-                        "ipiCenq": null
-                    },
-                    {
-                        "taxCodigo": "ICMS_IMP",
-                        "taxLabel": "ICMS",
-                        "cst": "00",
-                        "cclasstrib": null,
-                        "baseCalculo": 0,
-                        "aliquota": 0,
-                        "valor": 0,
-                        "retido": false,
-                        "naturezaContabil": "RECUPERAVEL_INTEGRAL",
-                        "sentidoDaPernaFixa": "D",
-                        "geraLancamento": true,
-                        "razaoDaPerna": "crédito do imposto: a perna do tributo é o direito a recuperar",
-                        "compoeTotalNf": true,
-                        "comentario": "ICMS-importacao NAO CALCULADO: interna do estado de desembaraco nao configurada (ncm_tax_rates/uf_difal_config) nem informada no request. Configure a UF de desembaraco.",
-                        "origemCalculo": "CALCULADO",
-                        "cenario": "ATUAL",
-                        "deducaoMaterial": null,
-                        "cstOrigem": null,
-                        "ipiCenq": null
-                    },
-                    {
-                        "taxCodigo": "CBS",
-                        "taxLabel": "CBS",
-                        "cst": "000",
-                        "cclasstrib": "000001",
-                        "baseCalculo": 49320.54,
-                        "aliquota": 0.9,
-                        "aliquotaOriginal": 0.9,
-                        "reducaoAplicada": 0,
-                        "valor": 443.88,
-                        "retido": false,
-                        "naturezaContabil": "SEM_EFEITO",
-                        "sentidoDaPernaFixa": null,
-                        "geraLancamento": false,
-                        "razaoDaPerna": "não credita nem custa: não há partida do tributo",
-                        "compoeTotalNf": false,
-                        "comentario": null,
-                        "origemCalculo": "CALCULADO",
-                        "cenario": "REFORMA",
-                        "deducaoMaterial": null,
-                        "cstOrigem": null,
-                        "ipiCenq": null
-                    },
-                    {
-                        "taxCodigo": "IBS_ESTADUAL",
-                        "taxLabel": "IBS Estadual",
-                        "cst": "000",
-                        "cclasstrib": "000001",
-                        "baseCalculo": 49320.54,
-                        "aliquota": 0.1,
-                        "aliquotaOriginal": 0.1,
-                        "reducaoAplicada": 0,
-                        "valor": 49.32,
-                        "retido": false,
-                        "naturezaContabil": "SEM_EFEITO",
-                        "sentidoDaPernaFixa": null,
-                        "geraLancamento": false,
-                        "razaoDaPerna": "não credita nem custa: não há partida do tributo",
-                        "compoeTotalNf": false,
-                        "comentario": null,
-                        "origemCalculo": "CALCULADO",
-                        "cenario": "REFORMA",
-                        "deducaoMaterial": null,
-                        "cstOrigem": null,
-                        "ipiCenq": null
-                    },
-                    {
-                        "taxCodigo": "IBS_MUNICIPAL",
-                        "taxLabel": "IBS Municipal",
-                        "cst": "000",
-                        "cclasstrib": "000001",
-                        "baseCalculo": 49320.54,
-                        "aliquota": 0,
-                        "aliquotaOriginal": 0,
-                        "reducaoAplicada": 0,
-                        "valor": 0,
-                        "retido": false,
-                        "naturezaContabil": "SEM_EFEITO",
-                        "sentidoDaPernaFixa": null,
-                        "geraLancamento": false,
-                        "razaoDaPerna": "não credita nem custa: não há partida do tributo",
-                        "compoeTotalNf": false,
-                        "comentario": null,
-                        "origemCalculo": "CALCULADO",
-                        "cenario": "REFORMA",
-                        "deducaoMaterial": null,
-                        "cstOrigem": null,
-                        "ipiCenq": null
-                    }
-                ]
-            }
-        ],
-        "totalProdutos": 49320.54,
-        "totalNf": 63134.98
-    }
-
-  }
-
   function simularNota(payload, opcoes) {
-    // return chamar('POST', '/fiscal/simular-nota', payload, opcoes);
-    return { ok: true, code: 200, body: chumbado(), durationMs: 0 };
+    return chamar('POST', '/fiscal/simular-nota', payload, opcoes);
   }
 
   /**
@@ -321,19 +91,12 @@ define([
    * inclusive rejeitada. Timeout sem resposta se resolve por `reconciliar`, não reemitindo.
    */
   function emitir(payload, opcoes) {
-    // return chamar('POST', '/fiscal/emitir', payload, opcoes);
-    //
-    // CHUMBADO. ⚠ Até 2026-09-30 esta linha devolvia o `chumbado()` do SIMULAR — sem chave, sem
-    // status —, e o comentário dizia o contrário. Nenhuma transação chegava a AUTORIZADA, e a
-    // gravação do retorno da emissão nunca rodou (MEDICOES §15). Agora é a forma de
-    // `TransactionComLinks`, que é o que o `POST /fiscal/emitir` devolve.
-    log.audit('fp_client.emitir', 'RESPOSTA CHUMBADA — nada foi transmitido à SEFAZ. ' +
-      'idExterno=' + (payload && payload.idExterno));
-    return { ok: true, code: 200, body: emissaoChumbada(payload), durationMs: 0 };
+    return chamar('POST', '/fiscal/emitir', payload, opcoes);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // CHUMBADO — enquanto a plataforma não está no ar
+  // CHUMBADO — só os eventos que gravam na SEFAZ (cancelar, CC-e, inutilizar, encerrar/cancelar
+  // MDF-e). A plataforma está no ar em hml desde 2026-10-19; o resto, emitir incluso, vai à rede.
   // ─────────────────────────────────────────────────────────────────────────────
   //
   // Cada resposta tem a FORMA que a rota real devolve, lida no fonte (emissao.controller.ts,
@@ -341,51 +104,7 @@ define([
   // se exercita aqui — o persist e o Suitelet —, não o conteúdo fiscal. Tudo sai no log como
   // "RESPOSTA CHUMBADA", e nada vai à rede.
   //
-  // Para voltar ao real: `emitir` e `postar` chamam `chamar`, e as funções abaixo saem.
-
-  /**
-   * Nota AUTORIZADA derivada do payload. Idempotente como a rota real: o mesmo `idExterno` dá o
-   * mesmo número e a mesma chave. cUF 35 fixo — a filial desta conta é SP. Número na faixa
-   * 900.000.000+, que nenhuma série real alcança, para não se confundir com número de verdade.
-   */
-  function emissaoChumbada(p) {
-    p = p || {};
-    var numero = 900000000 + (parseInt(p.idExterno, 10) || 0);
-    var serie = String(p.serie || '1');
-    var d = String(p.dataEmissao || '2026-01-01');
-    var mdfe = p.tipoDocumento === 'MDFE';
-    if (mdfe) numero = 900000000 + (parseInt(String(p.idExterno).replace(/\D/g, ''), 10) || 0);
-    var chave = chaveDeAcesso('35', d.substring(2, 4) + d.substring(5, 7), p.cnpjEmpresa, mdfe ? '58' : '55',
-      serie, numero, '1', String(p.idExterno || 0).replace(/\D/g, '') || '0');
-    // MDF-e: a forma da entidade `Mdfe` (`situacao` masculino, `mdfe.entity.ts:15`).
-    if (mdfe) {
-      return { chaveAcesso: chave, numero: numero, serie: serie, situacao: 'AUTORIZADO', cStat: '100',
-        xMotivo: 'Autorizado o uso do MDF-e (CHUMBADO)', nProt: '1' + chave.substring(25, 39), ambiente: 2,
-        idExterno: p.idExterno || null };
-    }
-    return {
-      chaveAcesso: chave,
-      numero: numero,
-      serie: serie,
-      status: 'AUTORIZADA',
-      cStat: '100',
-      xMotivo: 'Autorizado o uso da NF-e (CHUMBADO)',
-      nProt: '1' + chave.substring(25, 39),
-      ambiente: '2',
-      idExterno: p.idExterno || null
-    };
-  }
-
-  /** 44 dígitos: cUF AAMM CNPJ mod série(3) nNF(9) tpEmis cNF(8) DV — DV módulo 11, pesos 2..9. */
-  function chaveDeAcesso(cUF, aamm, cnpj, mod, serie, nNF, tpEmis, semente) {
-    var zeros = function (v, n) { v = String(v).replace(/\D/g, ''); while (v.length < n) v = '0' + v; return v.slice(-n); };
-    var base = zeros(cUF, 2) + zeros(aamm, 4) + zeros(cnpj, 14) + zeros(mod, 2) + zeros(serie, 3) +
-      zeros(nNF, 9) + zeros(tpEmis, 1) + zeros(semente, 8);
-    var soma = 0, peso = 2;
-    for (var i = base.length - 1; i >= 0; i--) { soma += Number(base.charAt(i)) * peso; peso = peso === 9 ? 2 : peso + 1; }
-    var resto = soma % 11;
-    return base + (resto < 2 ? 0 : 11 - resto);
-  }
+  // Para voltar ao real: `postar` chama `chamar`, e a função abaixo sai.
 
   /**
    * A resposta de cada rota de evento, na forma dela:
@@ -447,10 +166,7 @@ define([
    */
   function statusSefaz(cnpjEmpresa, opcoes) {
     var caminho = '/fiscal/emitir/status-sefaz?cnpjEmpresa=' + encodeURIComponent(String(cnpjEmpresa || ''));
-    // return obter(caminho, opcoes);
-    log.audit('fp_client.statusSefaz', 'RESPOSTA CHUMBADA — nada foi à rede. ' + caminho);
-    return { ok: true, code: 200, durationMs: 0,
-      body: { cStat: '107', xMotivo: 'Servico em Operacao (CHUMBADO)', emOperacao: true, deCache: false } };
+    return obter(caminho, opcoes);
   }
 
   /**
@@ -461,10 +177,7 @@ define([
   function existePorChave(chave, cnpjFilial, opcoes) {
     var caminho = '/transacoes/chave/' + encodeURIComponent(String(chave)) + '/existe?entradaSaida=E&cnpj=' +
       encodeURIComponent(String(cnpjFilial || ''));
-    // return obter(caminho, opcoes);
-    log.audit('fp_client.existePorChave', 'RESPOSTA CHUMBADA — nada foi à rede. ' + caminho);
-    return { ok: true, code: 200, durationMs: 0,
-      body: { existe: true, ocorrencias: 1, status: 'AUTORIZADA', numero: 12345 } };
+    return obter(caminho, opcoes);
   }
 
   /**
@@ -474,30 +187,7 @@ define([
    * `compoeTotalNf` — os nomes do resultado do `/simular`.
    */
   function reclassificar(payload, opcoes) {
-    // return chamar('POST', '/transacoes/reclassificar', payload, opcoes);
-    log.audit('fp_client.reclassificar', 'RESPOSTA CHUMBADA — nada foi à rede. chave=' + (payload && payload.chaveAcesso));
-    return { ok: true, code: 200, durationMs: 0, body: reclassificacaoChumbada(payload) };
-  }
-
-  /**
-   * O documento detalhado, na forma de `detalhar`. Sem o XML não há valor de verdade: uma linha por
-   * `numeroItem` declarado (ou uma só), base 100 e ICMS/PIS/COFINS de entrada — é a FORMA que se
-   * exercita, não o conteúdo.
-   */
-  function reclassificacaoChumbada(p) {
-    p = p || {};
-    var n = 1;
-    (p.linhas || []).forEach(function (l) { if (l.numeroItem > n) n = l.numeroItem; });
-    var linhas = [];
-    for (var i = 1; i <= n; i++) {
-      linhas.push({ numeroItem: i, impostos: [
-        { taxCodigo: 'ICMS', cst: '00', cclasstrib: null, baseCalculo: 100, reducaoBase: null, aliquota: 12, valor: 12, naturezaContabil: 'RECUPERAVEL_INTEGRAL', compoeTotalNf: false },
-        { taxCodigo: 'PIS', cst: '50', cclasstrib: null, baseCalculo: 88, reducaoBase: null, aliquota: 1.65, valor: 1.45, naturezaContabil: 'RECUPERAVEL_INTEGRAL', compoeTotalNf: false },
-        { taxCodigo: 'COFINS', cst: '50', cclasstrib: null, baseCalculo: 88, reducaoBase: null, aliquota: 7.6, valor: 6.69, naturezaContabil: 'RECUPERAVEL_INTEGRAL', compoeTotalNf: false }
-      ] });
-    }
-    return { chaveAcesso: p.chaveAcesso, origem: 'CAPTURA_XML', status: 'AUTORIZADA', entradaSaida: 'E',
-      naturezaOperacao: p.naturezaOperacao || null, dataEntrada: p.dataEntrada || null, linhas: linhas };
+    return chamar('POST', '/transacoes/reclassificar', payload, opcoes);
   }
 
   /** GET genérico. `caminho` já com query string quando houver. */
@@ -507,8 +197,8 @@ define([
 
   /** POST genérico, para os endpoints de evento (`/fiscal/emitir/{id}/cancelar` etc.). */
   function postar(caminho, payload, opcoes) {
-    // return chamar('POST', caminho, payload, opcoes);
-    var corpo = eventoChumbado(caminho, payload);
+    // consultar/reconciliar só leem a SEFAZ: vão à rede. Os eventos que gravam seguem chumbados.
+    var corpo = /\/(consultar|reconciliar)$/.test(caminho) ? null : eventoChumbado(caminho, payload);
     if (!corpo) return chamar('POST', caminho, payload, opcoes);
     log.audit('fp_client.postar', 'RESPOSTA CHUMBADA — nada foi à rede. ' + caminho);
     return { ok: true, code: 200, body: corpo, durationMs: 0 };
@@ -574,7 +264,9 @@ define([
 
     var duracao = new Date().getTime() - inicio;
     var corpoResposta = interpretar(resposta.body);
-    var ok = resposta.code == 200
+    // 2xx, não só 200: o `/fiscal/emitir` responde 201 Created, e com `== 200` a emissão aceita
+    // caía no ramo de recusa — chave e status não chegavam à transação.
+    var ok = resposta.code >= 200 && resposta.code < 300;
 
     registrar(metodo, url, corpo, resposta.code, resposta.body, duracao, opcoes);
 
@@ -593,7 +285,7 @@ define([
    *
    * O `access_token` volta como texto simples na resposta do `/oauth/token` — não é segredo
    * armazenado, é credencial de curta duração —, então ele pode viver em `N/cache` e ser
-   * concatenado num header comum. O que **nunca** sai de `SecureString` é o `client_secret`.
+   * concatenado num header comum. O `client_secret` nunca vai para cache nem log.
    */
   function token(cfg) {
     var c = cache.getCache({ name: NOME_CACHE, scope: cache.Scope.PROTECTED });
@@ -612,61 +304,61 @@ define([
   }
 
   /**
-   * `POST /oauth/token` com `client_secret_basic`.
+   * `POST /oauth/token` com as credenciais NO CORPO (`client_secret_post`), que é o que o motor lê
+   * (`oauth.controller.ts:43`, `@Body() TokenRequestDto`), em `x-www-form-urlencoded`.
    *
-   * O header é montado em `SecureString`, exatamente como o exemplo de Basic auth da referência
-   * do SuiteScript: `createSecureString` com os dois placeholders, `convertEncoding` para BASE_64,
-   * e `appendSecureString({keepEncoding: true})` sobre o literal `'Basic '`.
-   *
-   * O `client_id` também entra por placeholder e não por concatenação de string: o par
-   * `id:secret` tem de ser base64 do conteúdo INTEIRO, e misturar string comum com SecureString
-   * antes do encode produziria um base64 do texto errado.
+   * Medido (`MEDICOES.md` §27): form-urlencoded dá 200 no hml. Os valores vêm das preferências de
+   * empresa (`credenciais`); o corpo nunca vai para log.
    */
   function emitirToken(cfg) {
-
-    var par = https.createSecureString({
-      input: '{' + cfg.secretClientId + '}:{' + cfg.secretSegredo + '}'
-    });
-    par.convertEncoding({
-      toEncoding: encode.Encoding.BASE_64,
-      fromEncoding: encode.Encoding.UTF_8
-    });
-
-    var basic = https.createSecureString({ input: 'Basic ' });
-    basic.appendSecureString({ secureString: par, keepEncoding: true });
+    var cred = credenciais();
+    var corpo =
+      'grant_type=client_credentials' +
+      '&client_id=' + encodeURIComponent(cred.clientId) +
+      '&client_secret=' + encodeURIComponent(cred.clientSecret) +
+      '&scope=' + encodeURIComponent(ESCOPO);
 
     var inicio = new Date().getTime();
-    var r = https.post({
+    var r = https.request({
+      method: https.Method.POST,
       url: cfg.baseUrl + '/oauth/token',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: basic
-      },
-      // `grant_type` e `scope` NÃO são segredo e vão no corpo normalmente. O que saiu do corpo
-      // foi só o par de credenciais — ver o docblock do módulo.
-      body: JSON.stringify({ grant_type: 'client_credentials', scope: ESCOPO })
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: corpo
     });
     var duracao = new Date().getTime() - inicio;
 
     if (r.code < 200 || r.code >= 300) {
-      // MENSAGEM ACIONÁVEL, e o 401 aqui tem uma causa provável específica.
-      var dica =
-        r.code === 401
-          ? ' — o motor pode não aceitar client_secret_basic ainda. Ver HANDOFF-FISCALPLATFORM.md item 9.'
-          : '';
+      // O corpo da recusa vem do motor ("client_id inválido ou inativo") e é o que diz a causa.
       throw new Error(
-        'fp_client: /oauth/token devolveu HTTP ' + r.code + ' em ' + duracao + 'ms' + dica
+        'fp_client: /oauth/token devolveu HTTP ' + r.code + ' em ' + duracao + 'ms: ' + String(r.body || '').slice(0, 300)
       );
     }
 
-    var corpo = interpretar(r.body);
-    if (!corpo || !corpo.access_token) {
+    var resposta = interpretar(r.body);
+    if (!resposta || !resposta.access_token) {
       throw new Error('fp_client: /oauth/token respondeu 2xx sem access_token');
     }
 
-    log.audit('fp_client.emitirToken', 'token obtido em ' + duracao + 'ms · escopo=' + (corpo.scope || '?'));
-    return corpo.access_token;
+    log.audit('fp_client.emitirToken', 'token obtido em ' + duracao + 'ms · escopo=' + (resposta.scope || '?'));
+    return resposta.access_token;
+  }
+
+  /**
+   * client_id e client_secret das preferências de EMPRESA. Lido só com o cache de token vazio. Em
+   * branco lança com o nome da preferência: o motor responderia só "client_id inválido", que não
+   * diz onde está a falta.
+   */
+  function credenciais() {
+    var script = runtime.getCurrentScript();
+    var clientId = script.getParameter({ name: PARAM_CLIENT_ID });
+    var clientSecret = script.getParameter({ name: PARAM_CLIENT_SECRET });
+    if (!clientId || !clientSecret) {
+      throw new Error(
+        'fp_client: preencha "FiscalPlatform Client ID" e "FiscalPlatform Client Secret" em Setup > Company > ' +
+        'General Preferences > Custom Preferences (' + PARAM_CLIENT_ID + ' / ' + PARAM_CLIENT_SECRET + ').'
+      );
+    }
+    return { clientId: String(clientId).trim(), clientSecret: String(clientSecret).trim() };
   }
 
   function invalidarToken() {
@@ -685,8 +377,6 @@ define([
     }
     cfgMemo.fp = {
       baseUrl: BASE_URL,
-      secretClientId: SECRET_CLIENT_ID,
-      secretSegredo: SECRET_CLIENT_SECRET,
       chaveCache: 'fp',
       // TTL do cache abaixo do TTL do token, para nunca usar token no fio da navalha. O `/oauth/
       // token` do motor tem default 3.600 s (`oauth.dto.ts:26`); se o client for configurado com

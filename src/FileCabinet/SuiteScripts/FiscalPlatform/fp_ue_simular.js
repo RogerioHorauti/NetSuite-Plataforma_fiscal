@@ -192,20 +192,18 @@ define([
     // subsidiária mapeada para filial). Não é erro: é transação que ainda não tem o que simular.
     if (!payload) return;
 
+    // O PAYLOAD VAI PARA O ARQUIVO ANTES DA REDE. Sem ele, "o motor errou" e "eu mandei errado"
+    // são indistinguíveis — e a segunda é a hipótese mais frequente. Gravado depois, timeout ou
+    // exceção no meio levava a prova junto. ARQUIVO, não campo: campo texto trunca em silêncio.
+    var envio = gravarEnvio(rec, corrId, 'payload.json', payload);
+    guardarRastro(corrId, { arquivoPayload: envio, resposta: null });
+
     var resposta = fpClient.simularNota(payload, {
       subsidiaria: rec.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') }),
       transacao: rec.id,
       corrId: corrId
     });
     log.debug('resposta', resposta)
-    // GUARDAR O PAYLOAD ENVIADO, sempre, e ANTES de olhar o resultado. Sem ele, "o motor errou"
-    // e "eu mandei errado" são indistinguíveis — e a segunda é a hipótese mais frequente.
-    //
-    // Vai para ARQUIVO, não para campo: nota de centenas de linhas produz um payload de dezenas
-    // de milhares de caracteres, e campo texto trunca em silêncio — o pior jeito de perder
-    // justamente a prova do que foi enviado. O anexo acontece no `afterSubmit`, porque na
-    // CRIAÇÃO a transação ainda não tem id e `record.attach` não teria a que anexar.
-    guardarRastro(corrId, { payload: payload, resposta: null });
 
     // ENTRADA — compra com chave de acesso declarada. Roda antes de olhar a simulação: a
     // recusa da simulação não impede declarar a natureza da nota que existe.
@@ -216,21 +214,21 @@ define([
     };
     var entrada = rodarEntrada(rec, payload, resposta, opcoesRede, validada);
     if (entrada && entrada.aplicada) {
-      guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada.rastro });
+      guardarRastro(corrId, { arquivoPayload: envio, resposta: resposta.body, entrada: entrada.rastro });
       fpMsg.sucesso(corrId, '');
       if (entrada.avisos.length) fpMsg.aviso(corrId, entrada.avisos);
       log.audit('fp_ue_simular.entrada', 'natureza declarada · ' + entrada.diferentes + ' diferença(s) documento × simulação');
       return;
     }
     if (entrada) {
-      guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada.rastro });
+      guardarRastro(corrId, { arquivoPayload: envio, resposta: resposta.body, entrada: entrada.rastro });
       if (entrada.erro) fpMsg.erro(corrId, fpMsg.ORIGEM.FISCALPLATFORM, entrada.erro.code, entrada.erro.mensagens);
       if (entrada.avisos.length) fpMsg.aviso(corrId, entrada.avisos);
     }
 
     if (!resposta.ok) {
       // RECUSA DO MOTOR. O texto dele vai INTEIRO para a tela — sem traduzir, sem resumir.
-      guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada && entrada.rastro });
+      guardarRastro(corrId, { arquivoPayload: envio, resposta: resposta.body, entrada: entrada && entrada.rastro });
 
       fpMsg.erro(corrId, fpMsg.ORIGEM.FISCALPLATFORM, resposta.code, mensagensDaRecusa(resposta.body));
       log.error('fp_ue_simular.recusa', { code: resposta.code, body: resposta.body });
@@ -243,7 +241,7 @@ define([
     fpImpostosCache.gravar(corrId, resposta.body);
     fpMapSimular.aplicar(rec, resposta.body);
 
-    guardarRastro(corrId, { payload: payload, resposta: resposta.body, entrada: entrada && entrada.rastro });
+    guardarRastro(corrId, { arquivoPayload: envio, resposta: resposta.body, entrada: entrada && entrada.rastro });
 
     // Sem resumo: o que foi apurado está no sublist, linha por linha. Contar linha na
     // mensagem é ruído que cresce junto com a nota.
@@ -309,6 +307,9 @@ define([
       return r;
     }
 
+    // Enviado: o corpo vai para o arquivo ANTES da rede, como o da simulação.
+    r.rastro.arquivoPayload = gravarEnvio(newRecord, opcoes.corrId, 'reclassificar-payload.json', reclass);
+    delete r.rastro.payload;
     var resposta = fpClient.reclassificar(reclass, opcoes);
     r.rastro.resposta = resposta.body;
     if (!resposta.ok) {
@@ -717,7 +718,7 @@ define([
     // NOME SÓ COM O ID DA TRANSAÇÃO, sem carimbo de hora: mesmo nome na mesma pasta faz o File
     // Cabinet SUBSTITUIR o arquivo. Com carimbo, cada save deixava um par novo — dezesseis
     // arquivos numa tarde de teste. O que interessa é o último payload, não o histórico deles.
-    anexar(pasta, tipo, id, 'FP-' + tipo + '-' + id + '-payload.json', rastro.payload);
+    fixarEnvio(rastro.arquivoPayload, tipo, id, 'FP-' + tipo + '-' + id + '-payload.json');
     if (rastro.resposta) {
       anexar(pasta, tipo, id, 'FP-' + tipo + '-' + id + '-retorno.json', rastro.resposta);
     }
@@ -726,10 +727,57 @@ define([
     var e = rastro.entrada;
     if (e) {
       var base = 'FP-' + tipo + '-' + id + '-reclassificar-';
-      anexar(pasta, tipo, id, base + 'payload.json', e.payload);
+      // Sem `arquivoPayload` o reclassificar não chegou a ser chamado: o corpo é só o que se
+      // mandaria, e pode ser gravado agora.
+      if (e.arquivoPayload) fixarEnvio(e.arquivoPayload, tipo, id, base + 'payload.json');
+      else anexar(pasta, tipo, id, base + 'payload.json', e.payload);
       anexar(pasta, tipo, id, base + 'retorno.json', { existe: e.existe || null, resposta: e.resposta || null });
       if (e.comparacao) anexar(pasta, tipo, id, 'FP-' + tipo + '-' + id + '-comparacao.json', e.comparacao);
     }
+  }
+
+  /**
+   * GRAVA O QUE VAI SER ENVIADO, ANTES DA REDE. Sem pasta ou com falha no `save`, LANÇA — e a
+   * chamada não acontece: requisição sem prova não sai (2026-10-20, Rogerio). O `beforeSubmit`
+   * transforma o erro em banner; o save da transação segue.
+   *
+   * Na CRIAÇÃO não há id: o nome leva o `corrId` (`provisorio`) e o `fixarEnvio` do `afterSubmit`
+   * o renomeia para o nome com o id, que é o que a emissão procura (`payloadSimulado`).
+   *
+   * @returns {{id: number, provisorio: boolean}}
+   */
+  function gravarEnvio(rec, corrId, sufixo, conteudo) {
+    var pasta = runtime.getCurrentScript().getParameter({ name: 'custscript_fp_pasta_payload' });
+    if (!pasta) {
+      throw new Error('parâmetro "Pasta do Payload" não definido nas Preferências da Empresa — a requisição ' +
+        'NÃO foi enviada à plataforma: sem o payload gravado, não há como auditar o que se mandou.');
+    }
+    var nome = 'FP-' + rec.type + '-' + (rec.id || corrId) + '-' + sufixo;
+    var idArquivo = file.create({
+      name: nome,
+      fileType: file.Type.JSON,
+      contents: JSON.stringify(conteudo, null, 1),
+      folder: pasta,
+      isOnline: false
+    }).save();
+    log.audit('fp_ue_simular.gravarEnvio', nome + ' (file ' + idArquivo + ') — antes do envio');
+    return { id: idArquivo, provisorio: !rec.id };
+  }
+
+  /** Anexa o arquivo gravado antes do envio; o provisório da criação ganha o nome com o id. */
+  function fixarEnvio(envio, tipo, id, nome) {
+    if (!envio) return;
+    var idArquivo = envio.id;
+    if (envio.provisorio) {
+      var f = file.load({ id: idArquivo });
+      f.name = nome;
+      idArquivo = f.save();
+    }
+    record.attach({
+      record: { type: 'file', id: idArquivo },
+      to: { type: tipo, id: id }
+    });
+    log.audit('fp_ue_simular.anexar', nome + ' (file ' + idArquivo + ')');
   }
 
   function anexar(pasta, tipo, id, nome, conteudo) {

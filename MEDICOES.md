@@ -1715,3 +1715,38 @@ e 2 sales orders. Em nenhum dos 36 meses com partida da sub 3 aparece 2023-11. O
 silêncio: agora o log do Map/Reduce traz o aviso "N transação(ões) pendente(s) de aprovação na
 competência" com os ids. A consulta, rodada na conta como está no código, devolve as 8 (sales order
 fica fora). Competência com partida para conferir: 2022-03 (25 transações, 119 partidas).
+
+## 27. Primeiro simular contra o hml (2026-10-19)
+
+`fp_client.js` com `BASE_URL = https://hml.fiscalplatform.com.br/api/v1`, deployado na
+`tstdrv1647270`. Sales order **2933** (location 4, sub 3, cliente 28, natureza `VENDA_PROD`, item 23
+NonInvtPart, 3 × 150,00), criado e depois alterado por PATCH REST para passar a guarda 3.
+
+| sonda | resultado |
+|---|---|
+| `GET /health` | 200 `{"status":"ok","banco":"ok"}` |
+| `POST /oauth/token`, credenciais **no corpo** (`client_secret_post`), escopo `fiscal:read nfe:emit` | 200, `expires_in 3600`, escopo reduzido aceito |
+| `POST /oauth/token`, credenciais em **`Authorization: Basic`** — par certo, par errado, uuid inexistente | **500 `Internal server error` nos três** |
+| simular do SO 2933 (scriptnote 17649) | `fp_client: /oauth/token devolveu HTTP 500 em 653ms` (`fp_client.js:368`) |
+| `status-sefaz` da filial 10664687000113 com token da empresa | 400 "Nenhum certificado A1 ativo para a filial" |
+| mesmo token, CNPJ de outra empresa (47829163000145) | 404 "A filial ... não foi encontrada" — o token vale só para a empresa dele |
+
+Leitura: o HANDOFF item 9 (`client_secret_basic`) **não está no hml**. O `issueToken`
+(`oauth.controller.ts:43`) lê só `@Body() TokenRequestDto`, e o pedido sem `client_id` no corpo cai em
+500, não em 400/401. O bundle não obtém token até a plataforma aceitar Basic.
+
+Fatura de teste não foi criada: `POST /invoice` em 2026-09-30 e 2026-10-19 recusa com "transaction date
+... not within the date range of your accounting period"; a fatura mais recente da conta é de
+11/14/2023, e o papel do token não lê `accountingperiod`.
+
+Limites da conta medidos na carga das empresas do hml: **250 subsidiárias, 100 locations**.
+
+### 27.1 Token pelo corpo, no NetSuite (2026-10-19)
+
+| tentativa no `fp_client.emitirToken` | resultado no SO 2933 (scriptnote) |
+|---|---|
+| `https.request`, JSON com `"{custsecret_fp_client_id}"` no corpo + `credentials: ['custsecret_fp_client_id', 'custsecret_fp_client_secret']` | **401 `client_id inválido ou inativo`** (17466, 17478) — mesma resposta que o curl dá ao placeholder literal |
+
+Leitura: `options.credentials` não troca scriptid do Secrets Management (a referência fala em "GUIDs",
+os do campo de credencial antigo). Curl ao hml com `x-www-form-urlencoded` → **200**, então o corpo
+passou a ser `SecureString` em form (literal + `appendSecureString`), sem as chaves do JSON.
