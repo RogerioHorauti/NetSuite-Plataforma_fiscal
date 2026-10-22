@@ -131,6 +131,15 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
       // Não há guarda de lista vazia: o NetSuite não salva transação sem linha.
       payload.linhas = montarLinhas(newRecord);
 
+      // `UFCons` (LA06) é obrigatório no grupo comb, e a plataforma não o deriva: a UF de consumo é a
+      // do destinatário, que é o endereço que já vai na contraparte. Só na venda — na compra a
+      // contraparte é o fornecedor, e o grupo comb vem no XML dele.
+      var venda = TIPOS_DE_COMPRA.indexOf(String(newRecord.type)) === -1;
+      var ufCons = venda && contraparte && contraparte.uf;
+      if (ufCons) {
+        payload.linhas.forEach(function (l) { if (l.cProdANP) l.UFCons = ufCons; });
+      }
+
       return payload;
     }
 
@@ -1193,6 +1202,14 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
           if (cad.codigoCnae) linha.codigoCnae = cad.codigoCnae;
           if (!linha.descricao && cad.descricao) linha.descricao = cad.descricao;
 
+          // COMBUSTÍVEL (grupo LA). O código ANP é a chave do ICMS monofásico no motor, e sem ele o
+          // combustível da LC 192 é recusado. Descrição e pBio só têm sentido com o código.
+          if (cad.cProdANP) {
+            linha.cProdANP = cad.cProdANP;
+            if (cad.descANP) linha.descANP = cad.descANP;
+            if (cad.pBio !== undefined) linha.pBio = cad.pBio;
+          }
+
           // A unidade tributável e o fator andam juntos: sem a unidade não há o que converter, e
           // mandar o fator sozinho é um número sem denominador.
           if (cad.unidadeTributavel) {
@@ -1563,7 +1580,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
                       codigoServicoMunicipal: 'ITEM_SERVICO_MUNICIPAL',
                       desdobramentoTribNac: 'ITEM_DESDOBRAMENTO', nbs: 'ITEM_NBS',
                       nFci: 'ITEM_NFCI', codigoBarrasTrib: 'ITEM_EAN_TRIB',
-                      codigoCnae: 'ITEM_CNAE' };
+                      codigoCnae: 'ITEM_CNAE', cProdANP: 'ITEM_COD_ANP',
+                      descANP: 'ITEM_DESC_ANP', pBio: 'ITEM_PBIO' };
       var mapa = {};
 
       // `origem` é List/Record; as outras são texto. O prefixo diz ao SuiteQL qual precisa de
@@ -1638,6 +1656,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         if (reg.tipoItem) reg.tipoItem = codigoDaLista(reg.tipoItem);
         if (reg.fatorConversao) reg.fatorConversao = numero(reg.fatorConversao);
         if (reg.codigoCnae) reg.codigoCnae = digitos(reg.codigoCnae);
+        if (reg.cProdANP) reg.cProdANP = digitos(reg.cProdANP);
+        if (reg.pBio) reg.pBio = numero(reg.pBio);
         if (reg.servicoLc116) reg.servicoLc116 = texto(reg.servicoLc116).trim().replace(',', '.');
         out[String(r.id)] = reg;
       }
