@@ -33,13 +33,17 @@ define(['N/cache', 'N/log'], function (cache, log) {
   /**
    * Linha compacta: [imposto, natureza, valor, compoe, base, aliquota, perna, gera]. Array e não
    * objeto porque nota de 500 linhas com oito tributos cada cabe com folga só assim.
+   *
+   * O `valor` aqui é o da PERNA (`valorDaPerna`): o cache só existe para o GL, e é ele que se lança.
+   * Resposta sem o campo é de antes do contrato de 22/10/2026, em que perna e valor eram o mesmo.
    */
   function gravar(corrId, resposta) {
     if (!corrId) return;
     var linhas = [];
     ((resposta && resposta.linhas) || []).forEach(function (l) {
       (l.impostos || []).forEach(function (t) {
-        linhas.push([t.taxCodigo || '', t.naturezaContabil || '', t.valor || 0, t.compoeTotalNf === true ? 1 : 0,
+        var perna = t.valorDaPerna !== undefined && t.valorDaPerna !== null ? t.valorDaPerna : t.valor;
+        linhas.push([t.taxCodigo || '', t.naturezaContabil || '', perna || 0,t.compoeTotalNf === true ? 1 : 0,
           t.baseCalculo || 0, t.aliquota === undefined ? null : t.aliquota, t.sentidoDaPernaFixa || '',
           t.geraLancamento === true ? 1 : 0]);
       });

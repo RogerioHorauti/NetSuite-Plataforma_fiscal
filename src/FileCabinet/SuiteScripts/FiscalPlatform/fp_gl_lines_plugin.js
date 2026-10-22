@@ -114,6 +114,7 @@ define(['N/query', 'N/log', './fp_fields', './fp_governanca', './fp_impostos_cac
         TAXCODIGO: fpFields.idImposto('TAXCODIGO'),
         NATUREZA: fpFields.idImposto('NATUREZA_CONTABIL'),
         VALOR: fpFields.idImposto('VALOR'),
+        VALOR_PERNA: fpFields.idImposto('VALOR_PERNA'),
         COMPOE: fpFields.idImposto('COMPOE_TOTAL'),
         LINHA: fpFields.idImposto('NUMERO_LINHA'),
         BASE: fpFields.idImposto('BASE_CALCULO'),
@@ -312,7 +313,8 @@ define(['N/query', 'N/log', './fp_fields', './fp_governanca', './fp_impostos_cac
       linhas.push({
         imposto: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.TAXCODIGO, line: i })),
         natureza: texto(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.NATUREZA, line: i })),
-        valor: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.VALOR, line: i })),
+        valor: valorDaPerna(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.VALOR_PERNA, line: i }),
+          tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.VALOR, line: i })),
         compoe: booleano(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.COMPOE, line: i })),
         base: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.BASE, line: i })),
         aliquota: numero(tx.getSublistValue({ sublistId: C.SUBLIST, fieldId: C.IMP.ALIQUOTA, line: i })),
@@ -332,6 +334,7 @@ define(['N/query', 'N/log', './fp_fields', './fp_governanca', './fp_impostos_cac
       '  ' + C.IMP.TAXCODIGO + ' AS imposto, ' +
       '  ' + C.IMP.NATUREZA + ' AS natureza, ' +
       '  ' + C.IMP.VALOR + ' AS valor, ' +
+      '  ' + C.IMP.VALOR_PERNA + ' AS valorperna, ' +
       '  ' + C.IMP.COMPOE + ' AS compoe, ' +
       '  ' + C.IMP.BASE + ' AS base, ' +
       '  ' + C.IMP.ALIQUOTA + ' AS aliquota, ' +
@@ -346,7 +349,7 @@ define(['N/query', 'N/log', './fp_fields', './fp_governanca', './fp_impostos_cac
       linhas.push({
         imposto: texto(r[i].imposto),
         natureza: texto(r[i].natureza),
-        valor: numero(r[i].valor),
+        valor: valorDaPerna(r[i].valorperna, r[i].valor),
         compoe: booleano(r[i].compoe),
         base: numero(r[i].base),
         aliquota: numero(r[i].aliquota),
@@ -356,6 +359,16 @@ define(['N/query', 'N/log', './fp_fields', './fp_governanca', './fp_impostos_cac
     }
   
     return linhas;
+  }
+
+  /**
+   * O VALOR QUE SE LANÇA é o `valorDaPerna` da plataforma, não o `valor`. Os dois só diferem no ICMS
+   * monofásico de combustível: o `valor` é 0 para não somar no vICMS, e a perna leva o vICMSMono
+   * (contrato de 22/10/2026). Linha gravada antes do campo existir tem perna vazia, e nela perna e
+   * valor eram o mesmo por definição.
+   */
+  function valorDaPerna(perna, valor) {
+    return perna === null || perna === undefined || perna === '' ? numero(valor) : numero(perna);
   }
 
   /**

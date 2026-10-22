@@ -375,6 +375,7 @@ define([], function () {
       "REDUCAO_BASE": "custrecord_fp_reducaobase_imp",
       "ALIQUOTA": "custrecord_fp_aliquota_imp",
       "VALOR": "custrecord_fp_valor_imp",
+      "VALOR_PERNA": "custrecord_fp_valor_perna_imp",
       "NATUREZA_CONTABIL": "custrecord_fp_naturezacontabil_imp",
       "COMPOE_TOTAL": "custrecord_fp_compoetotalnf_imp",
       "PERNA": "custrecord_fp_perna_imp",

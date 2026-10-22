@@ -1686,6 +1686,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         REDUCAO: fpFields.idImposto('REDUCAO_BASE'),
         ALIQUOTA: fpFields.idImposto('ALIQUOTA'),
         VALOR: fpFields.idImposto('VALOR'),
+        VALOR_PERNA: fpFields.idImposto('VALOR_PERNA'),
         NATUREZA: fpFields.idImposto('NATUREZA_CONTABIL'),
         COMPOE: fpFields.idImposto('COMPOE_TOTAL'),
         PERNA: fpFields.idImposto('PERNA'),
@@ -1726,6 +1727,9 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
           gravar(newRecord, SUBLIST, linha, CAMPO.REDUCAO, t.reducaoBase);
           gravar(newRecord, SUBLIST, linha, CAMPO.ALIQUOTA, t.aliquota);
           gravar(newRecord, SUBLIST, linha, CAMPO.VALOR, t.valor);
+          // O que o GL lança. Difere do `valor` só no ICMS monofásico de combustível, em que o
+          // `valor` é 0 para não somar no vICMS e a perna leva o vICMSMono (contrato de 22/10/2026).
+          gravar(newRecord, SUBLIST, linha, CAMPO.VALOR_PERNA, t.valorDaPerna);
           gravar(newRecord, SUBLIST, linha, CAMPO.NATUREZA, t.naturezaContabil);
           gravar(newRecord, SUBLIST, linha, CAMPO.COMPOE, t.compoeTotalNf === true);
 
