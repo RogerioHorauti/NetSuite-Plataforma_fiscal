@@ -58,3 +58,8 @@ doc/
 
 2026_1_Schema_and_Records_Browser
 NetSuite AI Connector Service.txt
+
+# saída dos runners de teste do hml (payloads e respostas completos)
+testes/hml/*.json
+testes/hml/*.jsonl
+testes/hml/r10_ns_cache/
