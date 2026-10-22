@@ -4,16 +4,16 @@
   <isordered>T</isordered>
   <name>Categoria da Bebida Fria</name>
   <customvalues>
-    <customvalue scriptid="val_cat_bebida_cerveja"><isinactive>F</isinactive><value>CERVEJA - Cerveja ou chope comum (22.03)</value></customvalue>
-    <customvalue scriptid="val_cat_bebida_cerveja_especial"><isinactive>F</isinactive><value>CERVEJA_ESPECIAL - Cerveja ou chope especial, >= 75% de malte de cevada (Dec. 8.442/2015, art. 2)</value></customvalue>
-    <customvalue scriptid="val_cat_bebida_agua"><isinactive>F</isinactive><value>AGUA - Agua</value></customvalue>
-    <customvalue scriptid="val_cat_bebida_refrigerante"><isinactive>F</isinactive><value>REFRIGERANTE - Refrigerante</value></customvalue>
-    <customvalue scriptid="val_cat_bebida_cha"><isinactive>F</isinactive><value>CHA - Cha</value></customvalue>
-    <customvalue scriptid="val_cat_bebida_refresco"><isinactive>F</isinactive><value>REFRESCO - Refresco</value></customvalue>
-    <customvalue scriptid="val_cat_bebida_cerveja_sem_alcool"><isinactive>F</isinactive><value>CERVEJA_SEM_ALCOOL - Cerveja sem alcool</value></customvalue>
-    <customvalue scriptid="val_cat_bebida_repositor_hidroeletrolitico"><isinactive>F</isinactive><value>REPOSITOR_HIDROELETROLITICO - Repositor hidroeletrolitico</value></customvalue>
-    <customvalue scriptid="val_cat_bebida_bebida_energetica"><isinactive>F</isinactive><value>BEBIDA_ENERGETICA - Bebida energetica</value></customvalue>
-    <customvalue scriptid="val_cat_bebida_composto_liquido_pronto"><isinactive>F</isinactive><value>COMPOSTO_LIQUIDO_PRONTO - Composto liquido pronto (inositol, glucoronolactona, taurina ou cafeina)</value></customvalue>
-    <customvalue scriptid="val_cat_bebida_outra_bebida"><isinactive>F</isinactive><value>OUTRA_BEBIDA - Outra bebida de 22.01/22.02 (nectar, lactea, achocolatado): regra geral</value></customvalue>
+    <customvalue scriptid="val_cat_beb_cerveja"><isinactive>F</isinactive><value>CERVEJA - Cerveja ou chope comum (22.03)</value></customvalue>
+    <customvalue scriptid="val_cat_beb_cerveja_especial"><isinactive>F</isinactive><value>CERVEJA_ESPECIAL - Cerveja ou chope especial, >= 75% de malte de cevada (Dec. 8.442/2015, art. 2)</value></customvalue>
+    <customvalue scriptid="val_cat_beb_agua"><isinactive>F</isinactive><value>AGUA - Agua</value></customvalue>
+    <customvalue scriptid="val_cat_beb_refrigerante"><isinactive>F</isinactive><value>REFRIGERANTE - Refrigerante</value></customvalue>
+    <customvalue scriptid="val_cat_beb_cha"><isinactive>F</isinactive><value>CHA - Cha</value></customvalue>
+    <customvalue scriptid="val_cat_beb_refresco"><isinactive>F</isinactive><value>REFRESCO - Refresco</value></customvalue>
+    <customvalue scriptid="val_cat_beb_cerveja_sem_alcool"><isinactive>F</isinactive><value>CERVEJA_SEM_ALCOOL - Cerveja sem alcool</value></customvalue>
+    <customvalue scriptid="val_cat_beb_repositor_hidroeletrolitico"><isinactive>F</isinactive><value>REPOSITOR_HIDROELETROLITICO - Repositor hidroeletrolitico</value></customvalue>
+    <customvalue scriptid="val_cat_beb_bebida_energetica"><isinactive>F</isinactive><value>BEBIDA_ENERGETICA - Bebida energetica</value></customvalue>
+    <customvalue scriptid="val_cat_beb_composto_liquido_pronto"><isinactive>F</isinactive><value>COMPOSTO_LIQUIDO_PRONTO - Composto liquido pronto (inositol, glucoronolactona, taurina ou cafeina)</value></customvalue>
+    <customvalue scriptid="val_cat_beb_outra_bebida"><isinactive>F</isinactive><value>OUTRA_BEBIDA - Outra bebida de 22.01/22.02 (nectar, lactea, achocolatado): regra geral</value></customvalue>
   </customvalues>
 </customlist>
