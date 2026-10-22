@@ -17,7 +17,11 @@ mapeamento** na tela de import. Linha desativada usa o `Inactive` nativo do regi
 ## O que a carga do classificador cobre
 
 **Saída** — é o caminho que o retorno do PV704 exercita hoje: `ICMS`, `PIS` e `COFINS` em `DEBITO`,
-mais `IPI` em `DEBITO` com `compoeTotalNf = SIM`.
+mais `IPI` em `DEBITO` com `compoeTotalNf = SIM`. Medido nas rodadas de régua do hml (2026-10-22):
+`ICMS` em `ST_A_RECOLHER` sem compor o total (monofásico de combustível, CST 02), `ICMS_ST` em
+`ST_A_RECOLHER` composto no total (contrapartida no cliente) e `FCP` em `DEBITO`. Essas três usam
+contas próprias, que **o plano tem de ter antes do import**: 2310.13 ICMS ST on Sales - Payable,
+2310.14 FCP on Sales - Payable, 5010.8 ICMS ST - Sales Expense, 5010.9 FCP - Sales Expense.
 
 **Entrada** — escrito a partir da doutrina, **não medido**: recuperável de ICMS/PIS/COFINS/IPI, e
 `CUSTO`/`ST_JA_RECOLHIDO` **sem conta em nenhuma das duas pernas**, que é como se diz "não lança".

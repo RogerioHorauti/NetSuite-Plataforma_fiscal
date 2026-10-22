@@ -2,6 +2,9 @@ custrecord_fp_imposto_cc,custrecord_fp_natureza_cc,custrecord_fp_perna_cc,custre
 ICMS,DEBITO,C,NAO,2310.7 ICMS on Sales - Payable,CONTA_FIXA,5010.4 ICMS - Sales Expense,tributo no passivo; contrapartida e a deducao de receita
 PIS,DEBITO,C,NAO,2310.10 PIS on Sales - Payable,CONTA_FIXA,5010.1 PIS - Sales Expense,
 COFINS,DEBITO,C,NAO,2310.2 COFINS on Sales - Payable,CONTA_FIXA,5010.2 COFINS - Sales Expense,
+ICMS,ST_A_RECOLHER,C,NAO,2310.13 ICMS ST on Sales - Payable,CONTA_FIXA,5010.8 ICMS ST - Sales Expense,"monofasico de combustivel (LC 192/2022, CST 02): ad rem dentro do preco, fora do vNF"
+ICMS_ST,ST_A_RECOLHER,C,SIM,2310.13 ICMS ST on Sales - Payable,CONTA_DO_PARCEIRO,,"ST retida e cobrada por fora: contrapartida e o a receber"
+FCP,DEBITO,C,NAO,2310.14 FCP on Sales - Payable,CONTA_FIXA,5010.9 FCP - Sales Expense,"adicional do ICMS (ADCT art.82), recolhido em guia propria"
 IPI,DEBITO,C,SIM,2310.8 IPI on Sales - Payable,CONTA_DO_PARCEIRO,,IPI nao e receita (DL 1.598/77 art.12 4o): contrapartida e o a receber
 ICMS,RECUPERAVEL_INTEGRAL,D,NAO,1310.4 ICMS on Purchases - Credit,CONTA_DA_LINHA,,"expurgo do custo, CPC 16 R1 item 11"
 PIS,RECUPERAVEL_INTEGRAL,D,NAO,1310.8 PIS on Purchases - Credit,CONTA_DA_LINHA,,
