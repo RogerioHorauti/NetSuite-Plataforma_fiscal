@@ -576,3 +576,44 @@ Confirmado pela resposta (CBS 620), não pelo ECS. `origin/main` em `336b6320`.
   e importador (Lei 9.718/1998, art. 4º; opção por alíquota por unidade na Lei 10.865/2004, art. 23). O esperado seria
   CST 02 (alíquota diferenciada) ou 03 (por unidade). O commit `39a19a4b` diz que deixou a produção "sem CST na régua (aviso)",
   mas o retorno traz CST 01, sem aviso.
+
+## Rodadas 17 e 18 — 2026-10-22 · monofásico depois do deploy do `08f0235` (GL lança o `valorDaPerna`)
+`origin/main` da plataforma em **`bf7dbe4a`** (recusa cita todas as linhas; cBenef no `/simular`). Os commits
+`068eca09` (etanol), `4e6c28e7` (Lei 10.485 inteira), `21cacadc` (banana), `8c2911fd` (NCM extinto) e `85a949ba`
+(régua por nota) estão só no disco do fiscal-platform, **sem push** — não estão no hml.
+
+**Rodada 17** (`RODADA=r17`, natureza VENDA; `SO=PIS` 27 pedidos + `SO=COMB UM=1` 108 pedidos, 135 salvos):
+| Grupo | Resultado nas 27 UFs |
+|---|---|
+| medicamento 3004.90.99, perfumaria 3303/3304.99.10/3305.10 | PIS/COFINS **04** ✅ |
+| pneu 4011.10, autopeça 8708.30.90, veículo 8703.23.10 | PIS/COFINS **01**, sem aviso (o `4e6c28e7` não está no hml) |
+| cerveja 2203, refrigerante 2202.10, água 2201.10 | PIS/COFINS 01 com ATENÇÃO de incidência concentrada |
+| etanol 2207.10.90 | PIS/COFINS **01, sem aviso** (o `068eca09` não está no hml) |
+| GLP 2711.19.10 | CFOP 5655, ICMS 61, PIS/COFINS 04, CBS/IBS 620/620006 zero; **cBenef GO890004 em GO e RS052905 em RS** ✅ (SP sem código no 61) |
+| gasolina C, diesel B, biodiesel | 81 recusas, todas rejeição 909 (falta `origComb`) — aguardam o desenho do `origComb` |
+
+**Rodada 18** (`RODADA=r18 SO=GLP NAT=64`, VENDA_PROD, 27 salvos): igual nas 27 UFs — CFOP 5652, ICMS **02** com
+`valorDaPerna` 1,47 (`valor` 0), IPI 53, PIS/COFINS 01 a 0,65%/3%, CBS/IBS 620/620001 zero. RS sem cBenef no 02
+(linha de dispensa da tabela RS, `1810261000000-OCbenefDoMonofasicoNasUfsQueOExigem.ts:10`).
+
+### GL (invoice 5934, GLP de produção em TO, VENDA_PROD) — `gl_ver.js 5934`
+O plug-in roda **assíncrono** na invoice criada por REST: o GL só aparece segundos depois do save.
+| Conta | D | C |
+|---|---|---|
+| 1100 Accounts Receivable | 100,00 | |
+| 4000 Sales | | 100,00 |
+| 2310.13 ICMS ST on Sales - Payable | | **1,47** |
+| 5010.8 ICMS ST - Sales Expense | **1,47** | |
+| 2310.10 / 5010.1 PIS | 0,65 | 0,65 |
+| 2310.2 / 5010.2 COFINS | 3,00 | 3,00 |
+
+Antes das regras novas, o plug-in recebia o 1,47 (o `08f0235` funciona) e recusava por **falta de regra**
+`ICMS / ST_A_RECOLHER / C / NAO`. O mesmo faltava para `FCP / DEBITO` (172 linhas nas rodadas) e
+`ICMS_ST / ST_A_RECOLHER / C / SIM` (3). Criadas as contas 2310.13, 2310.14, 5010.8 e 5010.9 e as regras 407, 408 e
+409 do classificador (`carga/customrecord_fp_classificador_contabil.csv`). Levantamento dos 266 retornos em cache:
+as seis combinações com `geraLancamento` têm regra.
+
+### Suspeitas para o contador (rodadas 17 e 18)
+- **ICMS monofásico próprio (CST 02) com natureza `ST_A_RECOLHER`** e razão "ST retida pelo substituto". No 02 o
+  produtor recolhe o próprio imposto ad rem (LC 192/2022, art. 4º); não há retenção de terceiro. A natureza
+  junta no mesmo razão o 02 próprio e a ST cobrada do cliente — o EFD separa os dois (E110 × E210).
