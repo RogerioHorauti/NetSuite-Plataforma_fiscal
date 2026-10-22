@@ -1,0 +1,314 @@
+E ADMISSAO_TEMPORARIA            ----/----/3930 f1 IPC- Entrada de bem em admissão temporária
+S ANULA_COMPRA_COMUNIC           5205/6205/7205 f1 I-C- Anulação de serviço de comunicação tomado
+S ANULA_COMPRA_ENERGIA           5207/6207/7207 f1 I-C- Anulação de compra de energia elétrica
+S ANULA_FRETE_TOMADO             5206/6206/7206 f1 I-C- Anulação de serviço de transporte tomado
+E ANULA_SERV_COMUNIC             1205/2205/---- f1 I-C- Anulação de serviço de comunicação prestado
+E ANULA_SERV_COMUNIC_EXT         ----/----/3205 f1 IPC- Anulação de serviço de comunicação ao exterior
+E ANULA_SERV_TRANSP_EXT          ----/----/3206 f1 IPC- Anulação de serviço de transporte ao exterior
+E ANULA_SERV_TRANSPORTE          1206/2206/---- f1 I-C- Anulação de serviço de transporte prestado
+E ANULA_VENDA_ENERGIA            1207/2207/---- f1 I-C- Anulação de venda de energia elétrica
+E ANULA_VENDA_ENERGIA_EXT        ----/----/3207 f1 IPC- Anulação de venda de energia elétrica ao exterior
+S BAIXA_ENCERRAMENTO             5928/----/---- f1 ---- Baixa de estoque por encerramento de atividade
+S BAIXA_PERDA                    5927/----/---- f1 ---- Baixa de estoque por perda, roubo ou deterioração
+S BONIFICACAO                    5910/6910/---- f1 I-C- Bonificação / Brinde
+E COMBUST_BORDO_IMPORT           ----/----/3667 f1 IPC- Combustível do exterior para consumo de bordo
+S COMPENSACAO_SALDO_CREDOR       5606/----/---- f3 I--- Uso de saldo credor de ICMS para compensar débitos
+S COMPL_ICMS                     ----/----/---- f2 I-C- Complemento de ICMS
+S COMPL_IPI                      ----/----/---- f2 IPC- Complemento de IPI
+S COMPL_PRECO                    ----/----/---- f2 IPC- Complemento de Preço
+E COMPRA                         1102/2102/---- f1 I-C- Compra de Mercadoria
+E COMPRA_ATIVO                   1551/2551/3551 f1 I-C- Compra de Ativo Imobilizado
+E COMPRA_ATIVO_ST                1406/2406/---- f1 I-C- Compra de ativo imobilizado com substituição tributária
+E COMPRA_COMBUST_CONS_IMPORT     ----/----/3653 f1 IPC- Importação de combustível para consumo próprio
+E COMPRA_COMBUST_CONSUMO         1653/2653/---- f1 I-C- Compra de combustível para consumo próprio
+E COMPRA_COMBUST_IND_IMPORT      ----/----/3651 f1 IPC- Importação de combustível para industrialização
+E COMPRA_COMBUST_INDUST          1651/2651/---- f1 I-C- Compra de combustível para industrialização
+E COMPRA_COMBUST_REV_IMPORT      ----/----/3652 f1 IPC- Importação de combustível para comercialização
+E COMPRA_COMBUST_REVENDA         1652/2652/---- f1 I-C- Compra de combustível para comercialização
+E COMPRA_COMUNIC_COMERCIO        1303/2303/---- f1 I-C- Serviço de comunicação tomado por comércio
+E COMPRA_COMUNIC_ENERGIA         1305/2305/---- f1 I-C- Serviço de comunicação tomado por empresa de energia
+E COMPRA_COMUNIC_IMPORT          ----/----/3301 f1 IPC- Serviço de comunicação do exterior para mesma natureza
+E COMPRA_COMUNIC_INDUST          1302/2302/---- f1 I-C- Serviço de comunicação tomado por indústria
+E COMPRA_COMUNIC_REVENDA         1301/2301/---- f1 I-C- Serviço de comunicação para serviço da mesma natureza
+E COMPRA_COMUNIC_RURAL           1306/2306/---- f1 I-C- Serviço de comunicação tomado por produtor rural
+E COMPRA_COMUNIC_TRANSP          1304/2304/---- f1 I-C- Serviço de comunicação tomado por transportador
+E COMPRA_CONSIGN_MERCANTIL       1113/2113/---- f1 --C- Compra de mercadoria recebida em consignação mercantil
+E COMPRA_DRAWBACK_IMPORT         ----/----/3127 f1 IPC- Importação para industrialização em drawback
+E COMPRA_ENERGIA_COMERCIO        1253/2253/---- f1 I-C- Compra de energia elétrica por comércio
+E COMPRA_ENERGIA_COMUNIC         1255/2255/---- f1 I-C- Compra de energia elétrica por prestador de comunicação
+E COMPRA_ENERGIA_DEMANDA         1257/2257/---- f1 I-C- Compra de energia elétrica por demanda contratada
+E COMPRA_ENERGIA_DISTRIB         1251/2251/---- f1 I-C- Compra de energia para distribuição ou comercialização
+E COMPRA_ENERGIA_IMPORT          ----/----/3251 f1 IPC- Importação de energia elétrica
+E COMPRA_ENERGIA_INDUST          1252/2252/---- f1 I-C- Compra de energia elétrica por indústria
+E COMPRA_ENERGIA_RURAL           1256/2256/---- f1 I-C- Compra de energia elétrica por produtor rural
+E COMPRA_ENERGIA_TRANSP          1254/2254/---- f1 I-C- Compra de energia elétrica por transportador
+E COMPRA_ENTREGA_FUTURA          1117/2117/---- f1 I-C- Compra para comercialização com recebimento futuro
+E COMPRA_ENTREPOSTO_IMPORT       ----/----/3129 f1 IPC- Importação para industrialização em entreposto industrial
+E COMPRA_IMPORT                  ----/----/3102 f1 IPC- Importação de Mercadoria
+E COMPRA_INDUST_CONSIGN          1111/2111/---- f1 IPC- Compra para industrialização de consignação industrial
+E COMPRA_ORDEM_ORIG              1118/2118/---- f1 I-C- Compra em Venda à Ordem (adquirente originário)
+E COMPRA_ORDEM_RECEBIDA          1121/2121/---- f1 I-C- Compra para comercialização em venda à ordem já recebida
+E COMPRA_PROD                    1101/2101/---- f1 IPC- Compra para Industrialização
+E COMPRA_PROD_ENTREGA_FUTURA     1116/2116/---- f1 IPC- Compra para industrialização com recebimento futuro
+E COMPRA_PROD_IMPORT             ----/----/3101 f1 IPC- Importação para Industrialização
+E COMPRA_PROD_ORDEM_RECEB        1120/2120/---- f1 IPC- Compra para industrialização em venda à ordem já recebida
+E COMPRA_PROD_SEM_TRANSITO       1122/2122/---- f1 IPC- Compra para industrialização sem trânsito
+E COMPRA_PROD_ST                 1401/2401/---- f1 IPC- Compra para industrialização com substituição tributária
+E COMPRA_SERV                    1933/2933/---- f1 --C- Tomada de Servico
+E COMPRA_SERV_ICMS               1126/2126/---- f1 I-C- Compra para prestação de serviço sujeita ao ICMS
+E COMPRA_SERV_ICMS_IMPORT        ----/----/3126 f1 IPC- Importação para prestação de serviço sujeita ao ICMS
+E COMPRA_SERV_ISS                1128/2128/---- f1 I-C- Compra para prestação de serviço sujeita ao ISS
+E COMPRA_SERV_ISS_IMPORT         ----/----/3128 f1 IPC- Importação para prestação de serviço sujeita ao ISS
+E COMPRA_SIMPLES_FATURA          1922/2922/---- f1 -P-- Simples faturamento de compra para recebimento futuro
+E COMPRA_ST                      1403/2403/---- f1 I-C- Compra com ST
+E COMPRA_USO                     1556/2556/3556 f1 I-C- Compra para Uso e Consumo
+E COMPRA_USO_ST                  1407/2407/---- f1 I-C- Compra para uso e consumo com substituição tributária
+S CONSUMO_BORDO_EXPORT           ----/----/7552 f1 I-C- Saída para consumo de bordo em transporte internacional
+E CREDITO_ICMS_ATIVO             1604/----/---- f3 I--- Crédito de ICMS de ativo imobilizado
+E CREDITO_ICMS_RECEBIDO          1601/----/---- f3 I--- Recebimento de crédito de ICMS por transferência
+S DEVOL_ADMISSAO_TEMP            ----/----/7930 f1 I--- Devolução de bem em admissão temporária
+S DEVOL_ATIVO_TERCEIRO           5555/6555/---- f4 I--- Devolução de ativo de terceiro recebido para uso
+S DEVOL_COMBUST_ARMAZENADO       5664/6664/---- f1 I--- Retorno de combustível recebido para armazenagem
+S DEVOL_COMODATO                 5909/6909/---- f1 ---- Retorno de bem recebido em comodato ou locação
+S DEVOL_COMPRA                   5202/6202/7202 f4 I-C- Devolução de Compra
+S DEVOL_COMPRA_ATIVO             5553/6553/7553 f4 IPC- Devolução de compra de ativo imobilizado
+S DEVOL_COMPRA_ATIVO_ST          5412/6412/---- f4 I-C- Devolução de compra de ativo imobilizado com ST
+S DEVOL_COMPRA_COMBUST_CONS      5662/6662/---- f4 I-C- Devolução de compra de combustível para consumo
+S DEVOL_COMPRA_COMBUST_IND       5660/6660/---- f4 I-C- Devolução de compra de combustível para industrialização
+S DEVOL_COMPRA_COMBUST_REV       5661/6661/---- f4 I-C- Devolução de compra de combustível para comercialização
+S DEVOL_COMPRA_DRAWBACK          ----/----/7211 f4 I-C- Devolução de compra para industrialização em drawback
+S DEVOL_COMPRA_ENTREPOSTO        ----/----/7212 f4 I-C- Devolução de compra em entreposto industrial
+S DEVOL_COMPRA_PROD              5201/6201/7201 f4 IPC- Devolução de compra para industrialização ou produção rural
+S DEVOL_COMPRA_PROD_ST           5410/6410/---- f4 IPC- Devolução de compra para industrialização com ST
+S DEVOL_COMPRA_SERV              5210/6210/7210 f4 I-C- Devolução de compra para prestação de serviço
+S DEVOL_COMPRA_ST                5411/6411/---- f4 I-C- Devolução de compra para comercialização com ST
+S DEVOL_COMPRA_USO               5556/6556/7556 f4 IPC- Devolução de compra para uso e consumo
+S DEVOL_COMPRA_USO_ST            5413/6413/---- f4 I-C- Devolução de compra para uso e consumo com ST
+S DEVOL_CONSIGN_RECEBIDA         5918/6918/---- f4 IP-- Devolução de Mercadoria Recebida em Consignação
+S DEVOL_DEMO_RECEBIDA            5913/6913/---- f1 IP-- Retorno de Demonstração
+S DEVOL_EMBALAGEM                5921/6921/---- f4 I--- Devolução de embalagens, vasilhames e pallets
+S DEVOL_ENTRADA_FORNEC_COOP      5216/6216/---- f4 I-C- Devolução de entrada de fornecimento em ato cooperativo
+S DEVOL_ENTRADA_PRECO_FIXAR      5213/6213/---- f4 I-C- Devolução de entrada c/ preço a fixar em ato cooperativo
+E DEVOL_EXPORT_FIM_ESPEC         ----/----/3503 f4 I-C- Devolução de exportação de mercadoria c/ fim específico
+E DEVOL_FIM_EXPORT               1504/2504/---- f4 I-C- Devolução de mercadoria remetida para exportação
+E DEVOL_FIM_EXPORT_PROD          1503/2503/---- f4 IPC- Devolução de produção remetida para exportação
+S DEVOL_FIXACAO_PRECO_COM        5214/6214/---- f4 I-C- Devolução de fixação de preço para comercialização
+E DEVOL_FIXACAO_PRECO_COOP       1214/2214/---- f4 I-C- Devolução de fixação de preço em ato cooperativo
+S DEVOL_FIXACAO_PRECO_IND        5215/6215/---- f4 I-C- Devolução de fixação de preço para industrialização
+E DEVOL_FORNEC_COOP              1216/2216/---- f4 I-C- Devolução de fornecimento de mercadoria em ato cooperativo
+E DEVOL_FORNEC_PROD_COOP         1215/2215/---- f4 I-C- Devolução de fornecimento de produção em ato cooperativo
+S DEVOL_IMPORT                   ----/----/7949 f1 I-C- Devolução de importação (exportação)
+E DEVOL_LOTE_EXPORT              1506/2506/---- f4 I--- Devolução de remessa de mercadoria para lote de exportação
+E DEVOL_LOTE_EXPORT_PROD         1505/2505/---- f4 IP-- Devolução de remessa de produção para lote de exportação
+S DEVOL_MERC_DEPOSITADA          5906/6906/---- f1 IP-- Outras saídas - retorno de mercadorias depositadas
+S DEVOL_RECEB_FIM_EXPORT         5503/6503/---- f4 IPC- Devolução de mercadoria recebida para exportação
+E DEVOL_REMESSA_PRECO_FIXAR      1213/2213/---- f4 I-C- Devolução de remessa c/ preço a fixar em ato cooperativo
+S DEVOL_REPARO_RECEBIDO          5916/6916/---- f1 ---- Retorno de bem recebido para conserto ou reparo
+E DEVOL_SIMB_CONSIGN             1919/2919/---- f4 I-C- Devolução simbólica de consignação remetida
+S DEVOL_SIMB_CONSIGN_REC         5919/6919/---- f4 ---- Devolução simbólica de mercadoria recebida em consignação
+E DEVOL_TRANSF                   1209/2209/---- f4 I--- Devolução de mercadoria remetida em transferência
+E DEVOL_TRANSF_PROD              1208/2208/---- f4 IP-- Devolução de produção remetida em transferência
+S DEVOL_TRANSF_RECEB_PROD        5208/6208/---- f4 IP-- Devolução de transferência recebida para industrialização
+S DEVOL_TRANSF_RECEBIDA          5209/6209/---- f4 I--- Devolução de transferência recebida para comercialização
+E DEVOL_VENDA                    1202/2202/3202 f4 I-C- Devolução de Venda
+E DEVOL_VENDA_ATIVO              1553/2553/3553 f4 I--- Devolução de venda de ativo imobilizado
+E DEVOL_VENDA_COMBUST_CONS       1662/2662/---- f4 I-C- Devolução de venda de combustível a consumidor final
+E DEVOL_VENDA_COMBUST_INDUST     1660/2660/---- f4 I-C- Devolução de venda de combustível para industrialização
+E DEVOL_VENDA_COMBUST_REV        1661/2661/---- f4 I-C- Devolução de venda de combustível para comercialização
+E DEVOL_VENDA_DRAWBACK           ----/----/3211 f4 I-C- Devolução de venda de produção em drawback
+E DEVOL_VENDA_ENTREPOSTO         1212/2212/3212 f4 IPC- Devolução de venda de produção em entreposto industrial
+E DEVOL_VENDA_PROD               1201/2201/3201 f4 I-C- Devolução de venda de produção do estabelecimento
+E DEVOL_VENDA_PROD_ZFM           1203/2203/---- f4 IPC- Devolução de venda de produção à Zona Franca de Manaus
+E DEVOL_VENDA_ST                 1411/2411/---- f4 I-C- Devolução de venda com ST - substituto (revenda terceiros)
+E DEVOL_VENDA_ST_PROD            1410/2410/---- f4 I-C- Devolução de venda com ST (produção própria - substituto)
+E DEVOL_VENDA_ST_SUB             1411/2411/---- f4 I-C- Devolução de venda com ST já retida (substituído)
+E DEVOL_VENDA_ZFM                1204/2204/---- f4 I-C- Devolução de venda de mercadoria à Zona Franca de Manaus
+E ENTRADA_AMOSTRA                1911/2911/---- f1 I-C- Entrada de amostra grátis
+E ENTRADA_ARMAZEM_OUTRA_UF       1923/2923/---- f1 IP-- Entrada de armazém geral de outra UF por conta e ordem
+E ENTRADA_ATIVO_TERCEIRO         1555/2555/---- f1 I--- Entrada de ativo de terceiro para uso no estabelecimento
+E ENTRADA_BONIF                  1910/2910/---- f1 I-C- Entrada de Bonificação
+E ENTRADA_COMBUST_ARMAZEM        1663/2663/---- f1 I--- Entrada de combustível para armazenagem
+E ENTRADA_COMODATO               1908/2908/---- f1 ---- Entrada de bem em comodato ou locação
+E ENTRADA_CONSIGN                1917/2917/---- f1 I--- Entrada em Consignação
+E ENTRADA_DEMO                   1912/2912/---- f1 I--- Entrada de Demonstração
+E ENTRADA_DEPOSITO               1905/2905/---- f1 I--- Entrada para depósito fechado ou armazém geral
+E ENTRADA_EMBALAGEM              1920/2920/---- f1 I--- Entrada de embalagens, vasilhames e pallets
+E ENTRADA_FIM_EXPORT             1501/2501/---- f1 --C- Entrada c/ fim específico de exportação
+E ENTRADA_FORNEC_COOP            1159/2159/---- f1 I-C- Entrada de fornecimento em ato cooperativo
+E ENTRADA_INDUST                 1901/2901/---- f1 ---- Entrada para industrialização por encomenda
+E ENTRADA_INDUST_NAO_APLIC       1903/2903/---- f1 ---- Retorno de remessa para industrialização não aplicada
+E ENTRADA_INDUST_ORDEM           1924/2924/---- f1 ---- Entrada para industrialização por conta e ordem
+E ENTRADA_PRECO_A_FIXAR          1131/2131/---- f1 I--- Entrada c/ preço a fixar em ato cooperativo
+E ENTRADA_REPARO                 1915/2915/---- f1 ---- Entrada de bem para conserto ou reparo
+E ENTRADA_SIMB_DEPOSITO          1934/2934/---- f1 ---- Entrada simbólica em depósito fechado ou armazém
+E ENTRADA_TRANSF                 1152/2152/---- f1 I--- Entrada por Transferência
+E ENTRADA_TRANSF_ATIVO           1552/2552/3552 f1 I--- Entrada por Transferência de Ativo Imobilizado
+E ENTRADA_TRANSF_COMBUST         1659/2659/---- f1 I--- Transferência de combustível para comercialização
+E ENTRADA_TRANSF_COMBUST_IND     1658/2658/---- f1 I--- Transferência de combustível para industrialização
+E ENTRADA_TRANSF_ENERGIA         1153/2153/---- f1 I--- Transferência de energia elétrica para distribuição
+E ENTRADA_TRANSF_PROD            1151/2151/---- f1 IP-- Entrada por Transferência para Industrialização
+E ENTRADA_TRANSF_PROD_ST         1408/2408/---- f1 IP-- Transferência para industrialização com ST
+E ENTRADA_TRANSF_SERV            1154/2154/---- f1 I--- Transferência para prestação de serviço
+E ENTRADA_TRANSF_ST              1409/2409/---- f1 I--- Transferência para comercialização com ST
+E ENTRADA_TRANSF_USO             1557/2557/---- f1 I--- Entrada por Transferência de Uso e Consumo
+E ENTRADA_VENDA_ORDEM            1923/2923/---- f1 ---- Entrada do vendedor remetente em venda à ordem
+S EXPORT_DRAWBACK                ----/----/7127 f1 I-C- Exportação de produção em drawback
+S EXPORT_ENTREPOSTO              ----/----/7129 f1 I-C- Exportação de produção em entreposto industrial
+S EXPORT_FIM_ESPECIFICO          ----/----/7501 f1 I-C- Exportação de mercadoria recebida para exportação
+S EXPORT_LOTE                    ----/----/7504 f1 I-C- Exportação de mercadoria de lote de exportação
+S EXPORT_PROD_DEPOSITO           ----/----/7105 f1 I-C- Exportação de produção armazenada em depósito
+E FIXACAO_PRECO_COOP_COM         1132/2132/---- f1 I-C- Fixação de preço em ato cooperativo para comercialização
+E FIXACAO_PRECO_COOP_IND         1135/2135/---- f1 I-C- Fixação de preço em ato cooperativo para industrialização
+S FIXACAO_PRECO_SAIDA            5132/6132/---- f1 IPC- Fixação de preço de produção em ato cooperativo
+S FORNEC_COOP                    5160/6160/---- f1 I-C- Fornecimento de mercadoria em ato cooperativo
+S FORNEC_PROD_COOP               5159/6159/---- f1 IPC- Fornecimento de produção em ato cooperativo
+E FRETE_TOMADO                   1352/2352/3352 f1 I-C- Frete Tomado (CT-e)
+E FRETE_TOMADO_COMERCIO          1353/2353/---- f1 I-C- Frete tomado por comércio
+E FRETE_TOMADO_COMERCIO_EXT      ----/----/3353 f1 IPC- Frete do exterior tomado por comércio
+E FRETE_TOMADO_COMUNIC           1354/2354/---- f1 I-C- Frete tomado por prestador de comunicação
+E FRETE_TOMADO_COMUNIC_EXT       ----/----/3354 f1 IPC- Frete do exterior tomado por prestador de comunicação
+E FRETE_TOMADO_ENERGIA           1355/2355/---- f1 I-C- Frete tomado por empresa de energia elétrica
+E FRETE_TOMADO_ENERGIA_EXT       ----/----/3355 f1 IPC- Frete do exterior tomado por empresa de energia
+E FRETE_TOMADO_OUTRA_UF          1932/2932/---- f1 I-C- Frete tomado iniciado em outra UF
+E FRETE_TOMADO_RETENCAO          1931/2931/---- f1 I-C- Frete de autônomo com ICMS retido pelo remetente
+E FRETE_TOMADO_RURAL             1356/2356/---- f1 I-C- Frete tomado por produtor rural
+E FRETE_TOMADO_RURAL_EXT         ----/----/3356 f1 IPC- Frete do exterior tomado por produtor rural
+E FRETE_TOMADO_SUBSTITUTO        1360/----/---- f1 I-C- Frete tomado por substituto do serviço de transporte
+E FRETE_TOMADO_TRANSP            1351/2351/---- f1 I-C- Frete tomado para serviço de transporte
+E FRETE_TOMADO_TRANSP_EXT        ----/----/3351 f1 IPC- Frete do exterior tomado para serviço de transporte
+S INDUST_ENCOMENDA_SEM_TRANS     5125/6125/---- f1 IPC- Industrialização para outra empresa sem trânsito
+E INDUST_POR_TERCEIRO            1124/2124/---- f1 IPC- Industrialização efetuada por outra empresa
+E INDUST_TERC_SEM_TRANSITO       1125/2125/---- f1 IPC- Industrialização por outra empresa sem trânsito
+S INDUSTRIALIZACAO_ENCOMENDA     5124/6124/---- f1 IPC- Industrialização para outra empresa (insumos próprios)
+S LANC_DOC_VAREJO                5929/6929/---- f1 ---- Lançamento de operação já acobertada por cupom fiscal
+E OUTRA_ENTRADA                  1949/2949/3949 f1 IPC- Outra entrada não especificada
+S OUTRA_SAIDA                    5949/6949/---- f1 IPC- Outra saída não especificada
+E PARCERIA_ENTRADA_ANIMAL        1451/2451/---- f1 I--- Entrada de animal em integração e parceria rural
+E PARCERIA_ENTRADA_INSUMO        1452/2452/---- f1 I--- Entrada de insumo em integração e parceria rural
+S PARCERIA_REMESSA_ANIMAL        5451/6451/---- f1 I--- Remessa de animal em integração e parceria rural
+S PARCERIA_REMESSA_INSUMO        5452/6452/---- f1 I--- Remessa de insumo em integração e parceria rural
+S PARCERIA_REMUNERACAO_ENV       5456/6456/---- f1 I-C- Saída da remuneração do produtor (parceria rural)
+E PARCERIA_REMUNERACAO_REC       1456/2456/---- f1 I-C- Entrada da remuneração do produtor (parceria rural)
+S PARCERIA_RET_INSUMO_ENV        5455/6455/---- f1 I--- Retorno de insumo não utilizado (parceria rural)
+E PARCERIA_RET_INSUMO_REC        1455/2455/---- f1 I--- Retorno recebido de insumo não utilizado (parceria)
+S PARCERIA_RET_SIMB_ENV          5454/6454/---- f1 I--- Retorno simbólico do animal ou da produção (parceria)
+E PARCERIA_RET_SIMB_REC          1454/2454/---- f1 I--- Retorno simbólico recebido de animal ou produção (parceria)
+S PARCERIA_RETORNO_PROD_ENV      5453/6453/---- f1 I--- Retorno do animal ou da produção (parceria rural)
+E PARCERIA_RETORNO_PROD_REC      1453/2453/---- f1 I--- Retorno recebido do animal ou da produção (parceria)
+E RECLASSIF_KIT_ENTRADA          1926/----/---- f1 ---- Reclassificação por formação ou desagregação de kit
+S RECLASSIF_KIT_SAIDA            5926/----/---- f1 ---- Reclassificação por formação ou desagregação de kit
+S REMESSA_AMOSTRA                5911/6911/---- f1 I-C- Remessa de amostra grátis
+S REMESSA_ARMAZEM_GERAL          5905/6905/---- f1 IP-- Outras saídas - remessa para depósito
+S REMESSA_ARMAZEM_OUTRA_UF       5923/6923/---- f1 IP-- Outras saídas - remessa por conta e ordem de terceiros
+S REMESSA_ATIVO_USO_FORA         5554/6554/---- f1 IP-- Remessa de ativo para uso fora do estabelecimento
+S REMESSA_BRINDE                 5910/6910/---- f1 I-C- Remessa de Brinde
+S REMESSA_COMBUST_ARMAZEM        5663/6663/---- f1 I--- Remessa de combustível para armazenagem
+S REMESSA_COMBUST_ORDEM          5666/6666/---- f1 I--- Remessa por conta e ordem de combustível armazenado
+S REMESSA_COMBUST_VENDA_FORA     5657/6657/---- f1 I--- Remessa de combustível para venda fora
+S REMESSA_COMODATO               5908/6908/---- f1 -P-R Remessa de bem por conta de contrato de comodato ou locação
+S REMESSA_CONSIGN                5917/6917/---- f1 IP-- Remessa em Consignação
+S REMESSA_DEMO                   5912/6912/---- f1 IP-- Remessa para Demonstração
+S REMESSA_DEPOSITO               5905/6905/---- f1 IP-- Outras saídas - remessa para depósito fechado
+S REMESSA_EMBALAGEM              5920/6920/---- f1 I--- Remessa de embalagens, vasilhames e pallets
+S REMESSA_EXPORT                 ----/----/7949 f1 I-C- Remessa para o Exterior
+S REMESSA_EXPOSICAO              5914/6914/---- f1 ---- Remessa de mercadoria ou bem para exposição ou feira
+S REMESSA_FIM_EXPORT             5502/6502/---- f1 I-C- Remessa de mercadoria c/ fim específico de exportação
+S REMESSA_FIM_EXPORT_PROD        5501/6501/---- f1 IPC- Remessa de produção c/ fim específico de exportação
+S REMESSA_FUTURA                 5117/6117/---- f1 I-C- Remessa - Entrega Futura
+S REMESSA_INDUST                 5901/6901/---- f1 -P-- Remessa para Industrialização
+S REMESSA_INDUST_TRIANGULAR      5924/6924/---- f1 -P-- Remessa para industrialização por conta e ordem
+S REMESSA_LOTE_EXPORT            5505/6505/---- f1 I--- Remessa de mercadoria para formação de lote de exportação
+S REMESSA_LOTE_EXPORT_PROD       5504/6504/---- f1 IP-- Remessa de produção para formação de lote de exportação
+S REMESSA_PRECO_A_FIXAR          5131/6131/---- f1 IPC- Remessa de produção c/ preço a fixar em ato cooperativo
+S REMESSA_REPARO                 5915/6915/---- f1 ---- Remessa para Conserto/Reparo
+S REMESSA_SIMB_DEPOSITO          5934/6934/---- f1 ---- Outras saídas - remessa simbólica de mercadorias depositadas
+S REMESSA_VENDA_FORA             5904/6904/---- f1 I--- Remessa para venda fora do estabelecimento
+S REMESSA_VENDA_FORA_PROD_ST     5414/6414/---- f1 I--- Remessa de produção para venda fora, com ST
+S REMESSA_VENDA_FORA_ST          5415/6415/---- f1 I--- Remessa de mercadoria para venda fora, com ST
+S REMESSA_VENDA_ORDEM            5923/6923/---- f1 ---- Remessa por Conta e Ordem de Terceiros
+E RESSARC_ICMS_ST_ENTRADA        1603/2603/---- f3 I--- Ressarcimento de ICMS retido por substituição tributária
+S RESSARC_ICMS_ST_SAIDA          5603/6603/---- f3 I--- Ressarcimento de ICMS retido por substituição tributária
+S RET_SIMB_COMBUST_ARMAZEM       5665/6665/---- f1 I--- Retorno simbólico de combustível armazenado
+S RET_SIMB_MERC_DEPOSITADA       5907/6907/---- f1 ---- Outras saídas - retorno simbólico de mercadorias depositadas
+E RETORNO_ATIVO_USO_FORA         1554/2554/---- f1 I--- Retorno de ativo remetido para uso fora do estabelecimento
+E RETORNO_COMBUST_ARMAZEM        1664/2664/---- f1 I--- Retorno de combustível remetido para armazenagem
+E RETORNO_COMBUST_VENDA_FORA     1657/2657/---- f1 I--- Retorno de combustível remetido para venda fora
+E RETORNO_COMODATO               1909/2909/---- f1 ---- Retorno de bem remetido em comodato ou locação
+E RETORNO_CONSIGN                1918/2918/---- f4 IP-- Retorno de Consignação
+E RETORNO_DEMO                   1913/2913/---- f1 IP-- Retorno de mercadoria remetida para Demonstração
+E RETORNO_DEPOSITO               1906/2906/---- f1 I--- Retorno de mercadoria de depósito fechado ou armazém
+E RETORNO_EMBALAGEM              1921/2921/---- f1 I--- Retorno de embalagens, vasilhames e pallets
+E RETORNO_EXPOSICAO              1914/2914/---- f1 ---- Retorno de mercadoria remetida para exposição ou feira
+E RETORNO_INDUST                 1902/2902/---- f1 ---- Retorno de Industrialização
+S RETORNO_INDUST_INSUMO          5902/6902/---- f1 -P-- Retorno de insumo usado na industrialização por encomenda
+S RETORNO_INDUST_NAO_APLICADO    5903/6903/---- f1 ---- Retorno de remessa para industrialização não aplicada
+E RETORNO_INDUST_ORDEM           1925/2925/---- f1 ---- Retorno de industrialização por conta e ordem
+S RETORNO_INDUST_TRIANGULAR      5925/6925/---- f1 ---- Retorno de industrialização por conta e ordem
+E RETORNO_REPARO                 1916/2916/---- f1 ---- Retorno de Conserto/Reparo
+E RETORNO_SIMB_DEPOSITO          1907/2907/---- f1 ---- Retorno simbólico de depósito fechado ou armazém
+E RETORNO_VENDA_FORA             1904/2904/---- f1 I--- Retorno de remessa para venda fora do estabelecimento
+E RETORNO_VENDA_FORA_PROD_ST     1414/2414/---- f1 I--- Retorno de produção remetida para venda fora, com ST
+E RETORNO_VENDA_FORA_ST          1415/2415/---- f1 I--- Retorno de mercadoria remetida para venda fora, com ST
+S SAIDA_ATIVO                    5551/6551/7551 f1 I--R Venda de Ativo Imobilizado
+E SALDO_CREDOR_RECEBIDO          1602/----/---- f3 I--- Recebimento de saldo credor de ICMS de outra filial
+E SALDO_DEVEDOR_RECEBIDO         1605/----/---- f3 I--- Recebimento de saldo devedor de ICMS de outra filial
+S SIMPLES_FATURA                 5922/6922/---- f1 -PC- Simples Faturamento
+S TRANSF_CREDITO_ICMS            5601/----/---- f3 I--- Transferência de crédito acumulado de ICMS
+S TRANSF_SALDO_CREDOR            5602/----/---- f3 I--- Transferência de saldo credor de ICMS a outra filial
+S TRANSF_SALDO_DEVEDOR           5605/----/---- f3 I--- Transferência de saldo devedor de ICMS a outra filial
+S TRANSFER                       5152/6152/---- f1 IP-R Transferência de Mercadoria - Estabelecimentos mesmo titular
+S TRANSFER_ATIVO                 5552/6552/---- f1 IP-- Transferência de ativo imobilizado
+S TRANSFER_COMBUST               5659/6659/---- f1 I--- Transferência de combustível
+S TRANSFER_COMBUST_PROD          5658/6658/---- f1 I--- Transferência de combustível produzido
+S TRANSFER_DEPOSITO              5156/6156/---- f1 I--- Transferência de mercadoria para depósito ou armazém
+S TRANSFER_ENERGIA               5153/6153/---- f1 I--- Transferência de energia elétrica
+S TRANSFER_PROD                  5151/6151/---- f1 IP-R Transferência de Mercadoria - Estabelecimentos mesmo titular
+S TRANSFER_PROD_DEPOSITO         5155/6155/---- f1 IP-- Transferência de produção para depósito ou armazém
+S TRANSFER_PROD_ST               5408/6408/---- f1 IP-- Transferência de produção com substituição tributária
+S TRANSFER_ST                    5409/6409/---- f1 I--- Transferência de mercadoria com substituição tributária
+S TRANSFER_USO                   5557/6557/---- f1 I--- Transferência de material de uso e consumo
+S VENDA                          5102/6102/---- f1 I-C- Venda de Mercadoria
+S VENDA_COMBUST_CONS             5656/6656/---- f1 I-C- Venda de combustível a consumidor final
+S VENDA_COMBUST_IND              5654/6654/7654 f1 I-C- Venda de combustível para industrialização
+S VENDA_COMBUST_OUTRA_UF         5667/6667/7667 f1 I-C- Venda de combustível a consumidor de outra UF
+S VENDA_COMBUST_PROD_CONS        5653/6653/---- f1 IPC- Venda de combustível produzido a consumidor final
+S VENDA_COMBUST_PROD_IND         5651/6651/7651 f1 IPC- Venda de combustível produzido para industrialização
+S VENDA_COMBUST_PROD_REV         5652/6652/---- f1 IPC- Venda de combustível produzido para comercialização
+S VENDA_COMBUST_REV              5655/6655/---- f1 I-C- Venda de combustível para comercialização
+S VENDA_CONSIGN_IND              5112/6112/---- f1 I-C- Venda de mercadoria em consignação industrial
+S VENDA_CONSIGN_MERC             5114/6114/---- f1 --C- Venda de mercadoria em consignação mercantil
+S VENDA_CONSIGN_RECEBIDA         5115/6115/---- f1 I-C- Venda de Mercadoria Recebida em Consignação
+S VENDA_ENERGIA_COMERCIO         5253/6253/---- f1 I-C- Venda de energia elétrica a comércio
+S VENDA_ENERGIA_COMUNIC          5255/6255/---- f1 I-C- Venda de energia elétrica a prestador de comunicação
+S VENDA_ENERGIA_DEMANDA          5257/6257/---- f1 I-C- Venda de energia elétrica por demanda contratada
+S VENDA_ENERGIA_DISTRIB          5251/6251/7251 f1 I-C- Venda de energia para distribuição ou comercialização
+S VENDA_ENERGIA_INDUST           5252/6252/---- f1 I-C- Venda de energia elétrica a indústria
+S VENDA_ENERGIA_NAO_CONTRIB      5258/6258/---- f1 I-C- Venda de energia elétrica a não contribuinte
+S VENDA_ENERGIA_RURAL            5256/6256/---- f1 I-C- Venda de energia elétrica a produtor rural
+S VENDA_ENERGIA_TRANSP           5254/6254/---- f1 I-C- Venda de energia elétrica a transportador
+S VENDA_ENTREGA_ORDEM            5119/6119/---- f1 I-C- Venda de mercadoria entregue por conta e ordem
+S VENDA_ENTREPOSTO               5129/6129/---- f1 IPC- Venda interna de produção em entreposto industrial
+S VENDA_EXPORT                   ----/----/7102 f1 I-C- Exportação de Mercadoria
+S VENDA_FORA                     5104/6104/---- f1 I-C- Venda de mercadoria fora do estabelecimento
+S VENDA_INDUST_ORDEM             5123/6123/---- f1 I-C- Venda de mercadoria remetida para industrialização à ordem
+S VENDA_NAO_CONTRIB              ----/6108/---- f1 I-C- Venda de mercadoria a não contribuinte
+S VENDA_ORDEM                    5120/6120/---- f1 I-C- Remessa Simbólica - Venda à Ordem
+S VENDA_PROD                     5101/6101/---- f1 IPC- Venda de Produção do Estabelecimento
+S VENDA_PROD_CONSIGN_IND         5111/6111/---- f1 IPC- Venda de produção em consignação industrial
+S VENDA_PROD_CONSIGN_MERC        5113/6113/---- f1 --C- Venda de produção em consignação mercantil
+S VENDA_PROD_ENTREGA_FUTURA      5116/6116/---- f1 I--- Remessa - Entrega Futura
+S VENDA_PROD_ENTREGA_ORDEM       5118/6118/---- f1 IPC- Venda de produção entregue por conta e ordem
+S VENDA_PROD_EXPORT              ----/----/7101 f1 I-C- Exportação de Produção do Estabelecimento
+S VENDA_PROD_FORA                5103/6103/---- f1 IPC- Venda de produção fora do estabelecimento
+S VENDA_PROD_INDUST_ORDEM        5122/6122/---- f1 IPC- Venda de produção remetida para industrialização à ordem
+S VENDA_PROD_NAO_CONTRIB         ----/6107/---- f1 I-C- Venda de produção a não contribuinte
+S VENDA_PROD_SEM_TRANSITO        5105/6105/---- f1 IPC- Venda de produção que não transita pelo estabelecimento
+S VENDA_SEM_TRANSITO             5106/6106/7106 f1 I-C- Venda de mercadoria que não transita pelo estabelecimento
+S VENDA_SERV                     5933/6933/---- f1 --C- Prestação de Serviço
+S VENDA_SERV_EXPORT              ----/----/---- f1 ---- Exportação de Serviço
+S VENDA_ST                       5403/6403/---- f1 I-C- Venda com ST (substituto - revenda de terceiros)
+S VENDA_ST_ENTRE_SUBSTITUTOS     5402/6402/---- f1 IPC- Venda com ST entre substitutos do mesmo produto
+S VENDA_ST_PRODUCAO              5401/6401/---- f1 I-C- Venda com ST (producao propria - substituto)
+S VENDA_ST_SUBSTITUIDO           5405/6404/---- f1 I-C- Venda com ST ja retida (substituido)
+S VENDA_ZFM                      5109/6109/---- f1 IPC- Venda para Zona Franca de Manaus
+S VENDA_ZFM_TERCEIROS            5110/6110/---- f1 I-C- Venda de mercadoria de terceiros à Zona Franca de Manaus
