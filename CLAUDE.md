@@ -107,13 +107,18 @@ colar snippet, nem para mudança de uma linha. pt-BR sempre.
 - **Documento errado ou erro próprio: primeira linha da resposta.**
 - **Não escreva as duas possibilidades quando dá para saber qual é.** Leia o código, o Swagger, ou meça.
 
-## Subagentes
+## Subagentes — desligados
 
-| Chame | Para |
+**Não chame subagente nem workflow.** Eles gastam mais tokens do que fazer direto (decisão do Rogerio,
+2026-10-21), e as ferramentas `Agent` e `Workflow` estão em `permissions.deny` no `.claude/settings.json`.
+Os papéis abaixo continuam valendo como **perspectiva** que você mesmo assume no fluxo principal:
+
+| Papel | Para |
 |---|---|
 | `analista-requisitos-senior` | frente nova: processo do ERP + norma → requisito com aceite medível no payload/retorno |
 | `contador-fiscal-senior` | matéria tributária: o que o NetSuite precisa **declarar** e como conferir o que o motor devolveu |
 | `dev-senior-suitescript` | mapeador, integração, custom record, script, SDF, governança, deploy |
 | `gerente-projeto-senior` | escopo, ordem, versão do bundle, risco de prazo normativo e de release do NetSuite |
 
-Ordem default: **requisitos → contador → dev → gerente**. Frente pequena e óbvia: direto no dev.
+Ordem de raciocínio: **requisitos → contador → dev → gerente**. Frente pequena e óbvia: direto no dev.
+Para religar, tire `"Agent"`/`"Workflow"` do `deny` — só com pedido explícito dele.
