@@ -480,3 +480,99 @@ SP, pedidos 4833 (COMB) e 4834 (PIS), 103 s cada:
 ### Suspeitas para o contador (rodada 12)
 - **Bebida fria (Lei 13.097/2015, arts. 14 a 36) e etanol (Lei 9.718/1998, art. 5º)** saem com CST 01 na revenda.
   Conferir se a revenda do atacadista ou varejista tem alíquota zero (CST 04 ou 06).
+
+## Rodada 13 — 2026-10-22 · monofásico pelo bundle, hml com o 39a19a4b
+
+Mesma amostra da rodada 12, nas 27 UFs (`RODADA=r13 node f10_ns_monofasico.js`; leitura `RODADA=r13 node d9_regua.js`
+→ `r13_ns_detalhe.json` / `.log`). hml em `hml-20d0058637ce` (ECS `fp-hml`, deploy de 22/10 11:00 UTC).
+**Bundle: 54 de 54 pedidos salvos.** Cada nota levou de 3 a 23 s; na rodada 12, levou 103 s.
+
+- **COMB (gasolina, diesel, GLP, biodiesel): 27 de 27 recusados com 400**, com a mesma mensagem:
+  "NCM 2710.12.59 é combustível do ICMS monofásico (gasolinas — LC 192/2022, art. 2º, I) e a linha não informou
+  `cProdANP`…". A régua agora barra o que antes saía como venda comum: o D12 está fechado do lado da plataforma.
+  O D33 continua aberto: o bundle não tem campo de ANP no item e o mapeador não monta o grupo `comb`.
+  Sem isso, nenhuma venda de combustível sai pelo NetSuite.
+  - A recusa cita só a primeira linha (a gasolina). Diesel, GLP e biodiesel não aparecem na mensagem.
+  - O pedido salva sem tributo e com status, cStat e motivo vazios. A recusa vai para a mensagem da tela
+    (`fp_ue_simular.js:229-235`), que por REST não dá para conferir.
+- **PIS: 27 de 27 com retorno.** O PIS/COFINS é o mesmo em todas as UFs, com CFOP 5102:
+
+| NCM | Produto | PIS/COFINS | CBS/IBS |
+|---|---|---|---|
+| 3004.90.99 | medicamento | 04 | 200 (redução 60%) |
+| 3303.00.10 · 3304.99.10 · 3305.10.00 | perfume, cosmético, xampu | 04 | 000 |
+| 4011.10.00 · 8708.30.90 · 8703.23.10 | pneu, autopeça, automóvel | **01** a 0,65/3 | 000 |
+| 2203.00.00 · 2202.10.00 · 2201.10.00 | cerveja, refrigerante, água | **01** a 0,65/3 | 000 |
+| 2207.10.90 | etanol | **01** a 0,65/3 | 000 |
+
+| # | Defeito | Prova |
+|---|---|---|
+| D13 | Continua: pneu, autopeça e veículo (Lei 10.485/2002) saem com CST 01 nas 27 UFs. | `r13_ns_detalhe.json` |
+| D33 | Continua: agora com a recusa da plataforma, o combustível não sai pelo bundle. | pedidos 4835–4881 (COMB) |
+
+As suspeitas da rodada 12 (bebida fria e etanol com CST 01 na revenda) valem para as 27 UFs. O etanol fica fora da
+recusa por desenho (`39a19a4b`: a 2207.10 tem anidro combustível e álcool de outro uso).
+
+## Rodada 14 — 2026-10-22 · combustível com o grupo ANP no bundle (SP)
+
+O bundle passou a mandar o grupo ANP: os campos de item `custitem_fp_cod_anp`, `custitem_fp_desc_anp` e
+`custitem_fp_pbio` vão para a linha como `cProdANP`, `descANP` e `pBio`. A linha leva também
+`UFCons` = UF da contraparte, só na venda.
+Itens de teste cadastrados assim: 2245 gasolina C comum 320102001 (L, pBio 30), 2251 diesel B S10 820101034 (L, pBio 15),
+2104 GLP 210203001 (KG) e 9412 biodiesel B100 820101001 (L). Um pedido por produto, porque a recusa é da nota inteira
+(`RODADA=r14 SO=COMB UM=1 node f10_ns_monofasico.js SP`).
+
+| Pedido | Produto | Resultado |
+|---|---|---|
+| 5136 | GLP | **CFOP 5655, ICMS 61, PIS/COFINS 04**, CBS 000 |
+| 5133 | gasolina C | 400: exige `origComb` (rejeição 909) |
+| 5134 | diesel B S10 | 400: exige `origComb` (rejeição 909) |
+| 5135 | biodiesel B100 | 400: exige `origComb` (rejeição 909) |
+
+- O D33 está fechado para os produtos que não exigem origem (GLP, diesel A, gasolina A, combustível de aviação).
+- Falta a origem do combustível (`origComb`: `indImport`, `cUFOrig`, `pOrig`), que a tabela exige na gasolina C,
+  no diesel B, no biodiesel e no etanol anidro.
+- O payload não traz `quantidadeTributavel`, e o GLP passou mesmo assim: o motor usa a quantidade comercial.
+
+### Rodada 14 nas 27 UFs
+
+`RODADA=r14 SO=COMB UM=1 node f10_ns_monofasico.js` → 108 pedidos, **108 salvos pelo bundle**
+(`r14_ns_detalhe.json` / `.log`). Saiu igual nas 27 UFs:
+
+| Produto | Resultado |
+|---|---|
+| GLP 210203001 | CFOP 5655, **ICMS 61** com `mono` = { qBCMonoRet 1, adRemICMSRet 1,47, vICMSMonoRet 1,47 }, PIS/COFINS 04, CBS/IBS 000 / 000001 cheio |
+| gasolina C 320102001 · diesel B S10 820101034 · biodiesel B100 820101001 | 400 por falta de `origComb` (rejeição 909) |
+
+### Suspeitas para o contador (rodada 14)
+- **Ad rem do GLP de R$ 1,47/kg** no `adRemICMSRet`: conferir contra o convênio vigente em 2026.
+- **CBS/IBS do GLP com CST 000 / 000001 e alíquota cheia.** Combustível tem regime específico monofásico
+  no IBS/CBS (LC 214/2025, arts. 172 e seguintes; cClassTrib 620xxx). Conferir se esse regime já vale no ano-teste de 2026.
+- **ICMS 61 com valor 0 e `geraLancamento: true`** (natureza DEBITO): cria uma perna contábil de valor zero.
+
+## Rodadas 15 e 16 — 2026-10-22 · monofásico com o 336b6320 no hml
+
+Confirmado pela resposta (CBS 620), não pelo ECS. `origin/main` em `336b6320`.
+
+**Rodada 15** (`RODADA=r15 SO=COMB UM=1`, natureza VENDA, 108 pedidos, 108 salvos):
+- **GLP, nas 27 UFs:** CFOP 5655, ICMS 61 com `valorDaPerna` 0, PIS/COFINS 04, **CBS/IBS 620 / 620006 a zero**.
+  A correção do CBS/IBS está confirmada.
+- **Gasolina C, diesel B e biodiesel:** 400 por falta de `origComb` (rejeição 909), como esperado.
+- **cBenef não aparece no retorno do `/simular`:** nem o GO890004 em GO, nem o RS052905 em RS. A plataforma
+  o resolve na montagem do XML (`emissao.service.ts`, comentário do `cbenef`). Pelo bundle, só daria para ver por `/emitir`,
+  que não usamos para investigar.
+
+**Rodada 16** (`RODADA=r16 SO=GLP NAT=64`, natureza VENDA_PROD, 27 pedidos, 27 salvos), igual nas 27 UFs:
+
+| Tributo | Resultado |
+|---|---|
+| ICMS | CFOP 5652, **CST 02**, mono { qBCMono 1, adRemICMS 1,47, vICMSMono 1,47 }, `valor` 0, **`valorDaPerna` 1,47**, ST_A_RECOLHER |
+| IPI | 53, SEM_EFEITO |
+| PIS / COFINS | **01 a 0,65% / 3%** sobre 100, DEBITO |
+| CBS / IBS | **620 / 620001** a zero |
+
+### Suspeitas para o contador (rodadas 15 e 16)
+- **PIS/COFINS do produtor de GLP com CST 01 *ad valorem* cumulativo.** O GLP tem regime concentrado no produtor
+  e importador (Lei 9.718/1998, art. 4º; opção por alíquota por unidade na Lei 10.865/2004, art. 23). O esperado seria
+  CST 02 (alíquota diferenciada) ou 03 (por unidade). O commit `39a19a4b` diz que deixou a produção "sem CST na régua (aviso)",
+  mas o retorno traz CST 01, sem aviso.
