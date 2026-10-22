@@ -210,6 +210,7 @@ define([], function () {
       "ITEM_COD_ANP": "custitem_fp_cod_anp",
       "ITEM_DESC_ANP": "custitem_fp_desc_anp",
       "ITEM_PBIO": "custitem_fp_pbio",
+      "ITEM_CAT_BEBIDA": "custitem_fp_categoria_bebida",
       "_nota": [
         "NCM e CEST são CADASTRO, não régua: eles descrevem a mercadoria, não decidem tributo.",
         "O motor tem cadastro próprio de item (/api/v1/item); qual das duas pontas é a fonte é",

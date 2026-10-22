@@ -1192,6 +1192,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
           if (cad.servicoLc116) linha.codigoServicoLc116 = cad.servicoLc116;
           if (cad.tipoItem) linha.tipoItem = cad.tipoItem;
           if (cad.exTipi) linha.exTipi = cad.exTipi;
+          if (cad.categoriaBebidaFria) linha.categoriaBebidaFria = cad.categoriaBebidaFria;
           if (cad.naturezaReceita) linha.naturezaReceita = cad.naturezaReceita;
           if (cad.codigoServicoMunicipal) linha.codigoServicoMunicipal = cad.codigoServicoMunicipal;
           if (cad.desdobramentoTribNac) linha.desdobramentoTribNac = cad.desdobramentoTribNac;
@@ -1581,7 +1582,8 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
                       desdobramentoTribNac: 'ITEM_DESDOBRAMENTO', nbs: 'ITEM_NBS',
                       nFci: 'ITEM_NFCI', codigoBarrasTrib: 'ITEM_EAN_TRIB',
                       codigoCnae: 'ITEM_CNAE', cProdANP: 'ITEM_COD_ANP',
-                      descANP: 'ITEM_DESC_ANP', pBio: 'ITEM_PBIO' };
+                      descANP: 'ITEM_DESC_ANP', pBio: 'ITEM_PBIO',
+                      categoriaBebidaFria: 'ITEM_CAT_BEBIDA' };
       var mapa = {};
 
       // `origem` é List/Record; as outras são texto. O prefixo diz ao SuiteQL qual precisa de
@@ -1591,7 +1593,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         var id = fpFields.idItem(logicas[chave]);
         if (!id) continue;
         // List/Record precisa de `BUILTIN.DF`, senão o SuiteQL devolve o internal id do valor.
-      var col = (chave === 'origem' || chave === 'tipoItem') ? 'DF:' + id : id;
+      var col = (chave === 'origem' || chave === 'tipoItem' || chave === 'categoriaBebidaFria') ? 'DF:' + id : id;
         mapa[chave] = col;
         colunas.push(col);
       }
@@ -1654,6 +1656,7 @@ define(['N/search', 'N/query', 'N/format', 'N/log', './fp_fields', './fp_client'
         if (reg.cest) reg.cest = digitos(reg.cest);
         if (reg.origem) reg.origem = codigoDaOrigem(reg.origem);
         if (reg.tipoItem) reg.tipoItem = codigoDaLista(reg.tipoItem);
+        if (reg.categoriaBebidaFria) reg.categoriaBebidaFria = codigoDaLista(reg.categoriaBebidaFria);
         if (reg.fatorConversao) reg.fatorConversao = numero(reg.fatorConversao);
         if (reg.codigoCnae) reg.codigoCnae = digitos(reg.codigoCnae);
         if (reg.cProdANP) reg.cProdANP = digitos(reg.cProdANP);
