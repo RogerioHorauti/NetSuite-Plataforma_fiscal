@@ -142,7 +142,9 @@ define(['N/record', 'N/file', 'N/query', 'N/runtime', 'N/log',
 
       var pdf = acao === ACOES.DANFE;
       var subsidiaria = rec.getValue({ fieldId: fpFields.padrao('SUBSIDIARY') });
-      var r = fpClient.baixar('/fiscal/nfe/' + chave + '/' + (pdf ? 'danfe' : 'xml'),
+      // `GET /fiscal/emitir/:chaveOuId/xml|danfe` (`emissao.controller.ts:195,224`). O
+      // `/fiscal/nfe/:chave/...` não existe na plataforma — dava 404 nos dois.
+      var r = fpClient.baixar('/fiscal/emitir/' + chave + '/' + (pdf ? 'danfe' : 'xml'),
         { subsidiaria: subsidiaria });
 
       if (!r.ok || !r.corpo) {

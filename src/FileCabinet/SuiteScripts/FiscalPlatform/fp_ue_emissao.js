@@ -72,26 +72,40 @@ define(['N/url', 'N/runtime', 'N/log', './fp_fields', './fp_governanca', './fp_m
       // ── O QUE APARECE, E QUANDO ────────────────────────────────────────────────────────────
       //
       //   sem status              Emitir                    a nota ainda não existe
-      //   REJEITADA               Emitir + Inutilizar       corrigir e reemitir, ou fechar o número
+      //   REJEITADA / RASCUNHO    Emitir + Inutilizar*      corrigir e reemitir, ou fechar o número
+      //                                                     (RASCUNHO = número reservado, nota não
+      //                                                     transmitida — ex.: filial sem certificado)
       //   ENVIADO / PROCESSANDO   Consultar                 assíncrono: falta o desfecho
-      //   AUTORIZADA              Cancelar + Carta          o documento existe e admite evento
+      //   AUTORIZADA              Cancelar + Carta*         o documento existe e admite evento
       //   CANCELADA / DENEGADA    nada                      acabou; resta o XML
+      //
+      //   * só se o TIPO DE DOCUMENTO admite o evento (`eventosDoTipo`). Sem emissão própria,
+      //     nenhum botão.
       //
       // Botão que não leva a nada é pior que botão ausente: convida ao clique e devolve uma
       // recusa que o usuário lê como defeito do sistema.
 
-      // EMITIR SÓ COM EMISSÃO PRÓPRIA. Quem diz é o cadastro do tipo de documento, não a presença
-      // da chave: numa vendor bill com a nota do FORNECEDOR (tipo "NF-e de Terceiro") não há o que
-      // emitir, e emitir gravaria a nossa chave por cima da dele.
+      // NADA SEM EMISSÃO PRÓPRIA. Quem diz é o cadastro do tipo de documento, não a presença da
+      // chave: numa vendor bill com a nota do FORNECEDOR (tipo "NF-e de Terceiro") não há o que
+      // emitir nem evento nosso a registrar — emitir gravaria a nossa chave por cima da dele.
       var tipo = fpMap.tipoDocumento(scriptContext.newRecord);
-      if ((!status || status === 'REJEITADA') && tipo.emissaoPropria) {
+      if (!tipo.emissaoPropria) return;
+      var eventos = eventosDoTipo(tipo.codigo);
+
+      // REEMITÍVEL: rejeitada, ou rascunho que nunca chegou à SEFAZ. Reenviar o mesmo `idExterno`
+      // retoma o documento — não abre outro.
+      var reemitivel = status === 'REJEITADA' || status === 'RASCUNHO';
+
+      if (!status || reemitivel) {
         botao(form, 'custpage_fp_emitir', 'Emitir ' + (tipo.codigo || 'documento fiscal'),
           scriptContext, id, 'emitir', true);
       }
 
       // Inutilizar NÃO consome numeração: fecha a lacuna de um número que já se perdeu na
       // rejeição. Número aberto é que vira pendência na apuração.
-      if (status === 'REJEITADA') {
+      // A plataforma inutiliza o número "preso numa nota REJEITADA ou abandonada em RASCUNHO"
+      // (`emissao.controller.ts:438`).
+      if (reemitivel && eventos.inutilizar) {
         botao(form, 'custpage_fp_inutilizar', 'Inutilizar número', scriptContext, id, 'inutilizar',
           false, 'Justificativa da inutilização (15 a 255 caracteres):');
       }
@@ -105,10 +119,33 @@ define(['N/url', 'N/runtime', 'N/log', './fp_fields', './fp_governanca', './fp_m
       if (status === 'AUTORIZADA') {
         botao(form, 'custpage_fp_cancelar', 'Cancelar', scriptContext, id, 'cancelar',
           false, 'Justificativa do cancelamento (15 a 255 caracteres):');
-        botao(form, 'custpage_fp_carta', 'Carta de correção', scriptContext, id, 'carta',
-          false, 'Texto da correção (15 a 1000). Não pode alterar valor, imposto nem as partes:');
+        if (eventos.carta) {
+          botao(form, 'custpage_fp_carta', 'Carta de correção', scriptContext, id, 'carta',
+            false, 'Texto da correção (15 a 1000). Não pode alterar valor, imposto nem as partes:');
+        }
       }
 
+    }
+
+    /**
+     * QUAIS EVENTOS O TIPO DE DOCUMENTO ADMITE — pelo código do catálogo da plataforma
+     * (`tipo_documento.codigo`). Botão de evento que o documento não tem só polui a tela e devolve
+     * recusa: NFC-e não tem carta de correção; NFS-e não tem carta nem inutilização (a numeração
+     * não é da série do emitente na SEFAZ). Cancelar vale para todos, e tipo fora da tabela fica
+     * só com ele.
+     *
+     * MDF-e não está aqui: é custom record, com os botões no `fp_ue_mdfe`.
+     */
+    var EVENTOS_POR_TIPO = {
+      NFE: { carta: true, inutilizar: true },
+      NFCE: { carta: false, inutilizar: true },
+      CTE: { carta: true, inutilizar: true },
+      CTEOS: { carta: true, inutilizar: true },
+      NFSE: { carta: false, inutilizar: false }
+    };
+
+    function eventosDoTipo(codigo) {
+      return EVENTOS_POR_TIPO[String(codigo || '').toUpperCase()] || { carta: false, inutilizar: false };
     }
 
     /**
